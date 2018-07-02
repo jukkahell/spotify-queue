@@ -1,0 +1,22 @@
+{
+  "name": "spotify-queue",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@types/cors": "^2.8.4",
+    "axios": "0.18.0",
+    "cors": "^2.8.4",
+    "express": "4.16.3"
+  },
+  "scripts": {
+    "build": "tsc -p ./",
+    "start": "npm run build && node build/dist/app.js",
+    "start:dev": "nodemon ./src/app.ts --watch \"src/**/*.ts\" --exec \"ts-node --inspect=0.0.0.0:9229\""
+  },
+  "devDependencies": {
+    "@types/jest": "22.2.3",
+    "@types/node": "10.0.2",
+    "@types/express": "^4.11.1",
+    "typescript": "2.8.3"
+  }
+}
