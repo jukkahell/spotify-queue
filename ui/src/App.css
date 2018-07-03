@@ -26,3 +26,22 @@
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+a {
+  cursor: pointer;
+}
+
+.currentlyPlaying {
+  text-align: center;
+}
+
+input.search {
+  width: 90% !important;
+}
+button.search {
+  width: 10% !important;
+}
+
+.progress {
+  height: 4px;
+}

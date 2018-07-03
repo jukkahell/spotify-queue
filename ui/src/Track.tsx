@@ -1,13 +1,30 @@
+import axios from "axios";
 import * as React from "react";
-
 
 export interface ITrackProps {
     name: string;
     artist: string;
     id: string;
+    onQueued: () => void;
 }
 
 export class Track extends React.Component<ITrackProps> {
+
+    public constructor(props: ITrackProps) {
+        super(props);
+        this.addToQueue = this.addToQueue.bind(this);
+    }
+
+    protected addToQueue(event: React.MouseEvent<HTMLElement>) {
+        event.preventDefault();
+        axios.get("http://spotique.fi:8000/addSong?id=" + event.currentTarget.id)
+            .then(response => {
+                this.props.onQueued();
+            }).catch(err => {
+                console.log(err);
+            }
+        );
+    }
 
     public render() {
         const {
@@ -18,7 +35,7 @@ export class Track extends React.Component<ITrackProps> {
 
         return (
             <div>
-                <a href={`http://10.4.1.40:8000/addSong?id=` + id}>{artist} - {name}</a>
+                <a onClick={this.addToQueue} href="#" id={id}>{artist} - {name}</a>
             </div>
         );
     }

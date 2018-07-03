@@ -5,10 +5,12 @@ import * as Querystring from "querystring";
 import bodyParser = require("body-parser");
 import * as cors from "cors";
 import secrets from "./secrets";
+import { getCurrentSeconds } from "./util";
+import { SpotifyTrack } from "./spotify-track";
 
 const client_id = "da6ea27d63384e858d12bcce0fac006d";
 const secret = secrets.spotify.secret;
-const redirect_uri = "http://localhost:8000/callback";
+const redirect_uri = "http://spotique.fi:8000/callback";
 const authHeader = "Basic " + Buffer.from(client_id + ":" + secret).toString('base64');
 
 const app = express();
@@ -20,31 +22,67 @@ const server = http.createServer(app);
 const port = 8000;
 
 let access_token: string;
+let refresh_token: string;
+let token_expires: number;
+let token_aquired: number;
 
+let currentTrack: SpotifyTrack | null;
 let isPlaying = false;
+let progressInterval: NodeJS.Timer;
 let queue: Array<string> = [];
 let queueTimeout: any;
 
 app.get("/callback", (req, res) => {
-    const data = {
-        grant_type: "authorization_code",
-        code: req.query.code,
-        redirect_uri: redirect_uri
-    };
-
-    axios.post("https://accounts.spotify.com/api/token", Querystring.stringify(data), {
-        headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "Authorization": authHeader
+    getToken(req.query.code)
+        .then(response => {
+            console.log(response.data.access_token);
+            saveToken(response.data);
+            res.status(200).send("<script>window.close();</script>");
+        }).catch(err => {
+            res.status(500).json({msg: "Failed to authenticate."});
         }
-    }).then(function (response) {
-        console.log(response.data.access_token);
-        access_token = response.data.access_token;
-    }).catch(function (error) {
-        console.log(error);
-    });
+    );
+});
 
-    res.status(200).json({msg: "OK"});
+app.get("/isAuthorized", (req, res) => {
+    res.status(200).json({isAuthorized: isAuthorized()});
+});
+
+app.get("/queue", (req, res) => {
+    if (queue.length == 0) {
+        res.status(200).json({tracks:[]});
+    } else {
+        const spotifyIds = queue.map(uri => uri.split(':')[2]).join(',');
+        console.log("Search track data for ids: " + spotifyIds);
+        axios.get("https://api.spotify.com/v1/tracks?ids=" + spotifyIds, {
+        headers: {
+            "Content-Type": "text/plain",
+            "Authorization": "Bearer " + access_token
+        }
+    }).then(response => {
+        res.status(200).json({
+            tracks: response.data.tracks.map((i: any) => {
+                return {
+                    artist: i.artists[0].name,
+                    name: i.name,
+                    id: i.uri
+                };
+            })
+        });
+    }).catch(error => {
+        console.log(error);
+        res.status(500).json({msg: "Unable to get track data for queued ids"});
+    });
+    }
+});
+
+app.get("/currentlyPlaying", (req, res) => {
+    if (!currentTrack) {
+        res.status(204).json({});
+        return;
+    }
+
+    return res.status(200).json(currentTrack);
 });
 
 app.get("/addSong", (req, res) => {
@@ -61,8 +99,9 @@ app.get("/addSong", (req, res) => {
 app.get("/search", (req, res) => {
     const query = {
         q: req.query.q,
-        type: "artist,track",
-        market: "FI"
+        type: "track",
+        market: "FI",
+        limit: 50
     };
 
     axios.get("https://api.spotify.com/v1/search?" + Querystring.stringify(query), {
@@ -81,9 +120,47 @@ app.get("/search", (req, res) => {
             })
         });
     }).catch(error => {
-        res.status(500).json(error);
+        res.status(500).send(error);
     });
 });
+
+const getToken = (code: string) => {
+    const data = {
+        grant_type: "authorization_code",
+        code: code,
+        redirect_uri: redirect_uri
+    };
+
+    return axios.post("https://accounts.spotify.com/api/token", Querystring.stringify(data), {
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Authorization": authHeader
+        }
+    });
+};
+
+const saveToken = (data: any) => {
+    access_token = data.access_token;
+    refresh_token = data.refresh_token;
+    token_expires = data.expires_in;
+
+    token_aquired = getCurrentSeconds();
+};
+
+const isAuthorized = () => {
+    if (token_aquired && getCurrentSeconds() - token_aquired >= token_expires) {
+        getToken(refresh_token)
+            .then(response => {
+                saveToken(response);
+            }).catch(err => {
+                console.log("Failed to refresh token...", err);
+            });
+        
+        return true;
+    }
+
+    return access_token != null;
+};
 
 const startNextSong = () => {
     const id = queue.pop();
@@ -91,9 +168,7 @@ const startNextSong = () => {
     axios.put(
         "https://api.spotify.com/v1/me/player/play",
         {
-            uris: [
-                id
-            ]
+            uris: [id]
         },
         {
             headers: {
@@ -103,11 +178,14 @@ const startNextSong = () => {
         }
     ).then(function(res) {
         getTrackInfo();
+    }).catch(err => {
+        console.log(err);
     });
 };
 
 const getTrackInfo = () => {
     clearTimeout(queueTimeout);
+    clearInterval(progressInterval);
     if (!access_token) {
         return;
     }
@@ -121,16 +199,31 @@ const getTrackInfo = () => {
                 "Authorization": "Bearer " + access_token
             }
         }
-    ).then(function(response) {
+    ).then(response => {
         // If no tracks playing
         if (response.status == 204) {
             isPlaying = false;
+            currentTrack = null;
             return;
         }
 
-        const duration = response.data.item.duration_ms;
-        const progress = response.data.progress_ms;
-        const timeLeft = duration-progress;
+        currentTrack = {
+            name: response.data.item.name,
+            artist: response.data.item.artists[0].name,
+            duration: response.data.item.duration_ms,
+            progress: response.data.progress_ms,
+            cover: response.data.item.album.images[1].url
+        }
+
+        progressInterval = setInterval(() => {
+            if (currentTrack) {
+                currentTrack.progress += 1000;
+            } else {
+                clearInterval(progressInterval);
+            }
+        }, 1000);
+
+        const timeLeft = currentTrack.duration-currentTrack.progress;
 
         // If song is almost over
         if (timeLeft < 5000) {
@@ -141,6 +234,7 @@ const getTrackInfo = () => {
                 setTimeout(startNextSong, timeLeft - 500);
             } else {
                 isPlaying = false;
+                currentTrack = null;
                 console.log("No songs in the queue. Not going to start new timeouts...");
             }
         }
