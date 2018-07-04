@@ -1,3 +1,5 @@
+import { library } from "@fortawesome/fontawesome-svg-core";
+import { faDesktop, faMobile, faPlayCircle, faVolumeOff } from "@fortawesome/free-solid-svg-icons";
 import axios from "axios";
 import "bootstrap/dist/css/bootstrap.min.css";
 import * as React from "react";
@@ -15,7 +17,7 @@ const authorize = () => {
       "&scope=user-modify-playback-state,user-read-currently-playing,user-read-playback-state" +
       "&redirect_uri=" + encodeURIComponent(redirect_uri);
 
-  window.open(url, "Digia Spotify Queue", "WIDTH=400,HEIGHT=500");
+  window.open(url, "SpotiQue", "WIDTH=400,HEIGHT=500");
 };
 
 axios.get("http://spotique.fi:8000/isAuthorized")
@@ -28,8 +30,10 @@ axios.get("http://spotique.fi:8000/isAuthorized")
     }
 );
 
+library.add(faDesktop, faMobile, faVolumeOff, faPlayCircle);
+
 ReactDOM.render(
-  <App />,
-  document.getElementById("root") as HTMLElement
+    <App />,
+    document.getElementById("root") as HTMLElement
 );
 registerServiceWorker();

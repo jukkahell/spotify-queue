@@ -1,3 +1,15 @@
+html, body {
+  height: 100%;
+  background-color: #121212;
+  color: white;
+  font-family: "Montserrat","Helvetica Neue",Helvetica,Arial,sans-serif !important;
+}
+
+#root {
+  height: 100%;
+  margin-top: 1em;
+}
+
 .App {
   text-align: center;
 }
@@ -29,19 +41,61 @@
 
 a {
   cursor: pointer;
+  color: #A0A0A0;
+}
+a:hover {
+  color: #F2F2F2;
+  text-decoration: none;
+}
+
+.btn {
+  font-size: 0.8em;
+  text-transform: uppercase;
+  border-radius: 2em;
+  height: 3em;
+}
+
+.btn-primary {
+  background-color: #1DB954;
+  border-color: #1DB954;
+}
+.btn-primary:hover {
+  background-color: #1ED760;
+  border-color: #1ED760;
+  font-weight: bold;
+}
+
+img.coverImage {
+  width: 100%;
 }
 
 .currentlyPlaying {
   text-align: center;
 }
 
-input.search {
-  width: 90% !important;
-}
-button.search {
-  width: 10% !important;
+input {
+  border-radius: 2em !important;
 }
 
 .progress {
   height: 4px;
+}
+
+.progress-bar {
+  background-color: #1DB954;
+}
+
+.searchResults {
+  margin-top: 0.5em;
+}
+
+.searchForm {
+  position: sticky;
+  top: 0;
+  background-color: #121212;
+  padding-top: 1em;
+}
+
+ol.queuedTracks {
+  padding-left: 1em;
 }

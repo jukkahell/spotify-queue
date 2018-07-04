@@ -1,137 +1,111 @@
 import axios from "axios";
 import * as React from "react";
+import { AlertBox, IAlert } from "./AlertBox";
 import "./App.css";
 import CurrentlyPlaying from "./CurrentlyPlaying";
-import Track, {ITrackProps} from "./Track";
-
-export interface IProps {
-    track?: string;
-}
+import DeviceSelect from "./DeviceSelect";
+import { Queue } from "./Queue";
+import SearchForm from "./SearchForm";
 
 export interface IState {
-    q: string;
-    tracks: ITrackProps[];
-    queue: ITrackProps[];
-    responseMsg: string | null;
+    responseMsg: IAlert | null;
+    deviceId: string | null;
+    isAuthorized: boolean;
 }
 
-export class App extends React.Component<IProps, IState> {
-    public constructor(props: IProps) {
+export class App extends React.Component<{}, IState> {
+
+    private authInterval: NodeJS.Timer;
+
+    public constructor(props: {}) {
         super(props);
         this.state = {
-            q: "",
-            tracks: [],
-            queue: [],
-            responseMsg: null
+            responseMsg: null,
+            deviceId: null,
+            isAuthorized: false
         };
-        this.search = this.search.bind(this);
-        this.handleChangeEvent = this.handleChangeEvent.bind(this);
+
+        axios.get("http://spotique.fi:8000/selectedDevice")
+            .then(response => {
+                this.setState({
+                    deviceId: response.data.deviceId
+                });
+            }).catch(error => {
+                console.log(error);
+            }
+        );
+
         this.onQueued = this.onQueued.bind(this);
-        this.getQueue();
-    }
-
-    public getQueue() {
-        axios.get("http://spotique.fi:8000/queue")
-            .then(response => {
-                this.setState({
-                    queue: response.data.tracks
-                });
-            }).catch(error => {
-                console.log(error);
-            }
-        );
-    }
-
-    public handleChangeEvent(e: React.ChangeEvent<HTMLInputElement>) {
-        e.preventDefault();
-
-        this.setState({
-            q: e.target.value
-        });
-    }
-
-    public search(e: React.MouseEvent<HTMLElement>) {
-        e.preventDefault();
-
-        axios.get("http://spotique.fi:8000/search?q=" + this.state.q)
-            .then(response => {
-                this.setState({
-                    tracks: response.data.tracks
-                });
-            }).catch(error => {
-                console.log(error);
-            }
-        );
+        this.setDevice = this.setDevice.bind(this);
+        this.onSongEnd = this.onSongEnd.bind(this);
     }
 
     protected onQueued() {
         this.setState({
-            responseMsg: "Song added to the queue"
+            responseMsg: null
         });
-        setTimeout(() => {
-            this.setState({
-                responseMsg: null
-            });
-        }, 3000);
-
-        this.getQueue();
     }
 
-    protected renderTracks() {
-        return this.state.tracks.map((track, i) => (
-            <Track
-                name={track.name}
-                artist={track.artist}
-                id={track.id}
-                key={i + "-" + track.id}
-                onQueued={this.onQueued} />
-        ));
+    protected isAuthorized() {
+        axios.get("http://spotique.fi:8000/isAuthorized")
+            .then(response => {
+                if (response.data.isAuthorized) {
+                    clearInterval(this.authInterval);
+                    this.setState({
+                        isAuthorized: true
+                    });
+                }
+            }).catch(error => {
+                console.log(error);
+            }
+        );
+        return false;
     }
 
-    protected renderQueue() {
-        return this.state.queue.map((track, i) => (
-            <li>
-                <Track
-                    name={track.name}
-                    artist={track.artist}
-                    id={track.id}
-                    key={i + "-" + track.id}
-                    onQueued={this.onQueued} />
-            </li>
-        ));
+    protected setDevice(deviceId: string) {
+        this.setState({
+            deviceId
+        });
     }
 
-    protected renderResponseMsg() {
-        if (this.state.responseMsg) {
-            return <div className="alert alert-success fixed-top" role="alert">{this.state.responseMsg}</div>;
-        } else {
-            return;
-        }
+    protected onSongEnd() {
+        this.setState({
+            responseMsg: null
+        });
     }
 
     public render() {
-        return (
-            <div className="container">
-                {this.renderResponseMsg()}
-
-                <CurrentlyPlaying />
-
-                <form className="form-inline">
-                    <input className="form-control search" type="text" name="q" onChange={this.handleChangeEvent}/>
-                    <button type="submit" className="btn btn-primary search" onClick={this.search}>Search</button>
-                </form>
-                <div>
-                    <h3>Tracks</h3>
-                    {this.renderTracks()}
+        if (!this.state.isAuthorized) {
+            if (!this.authInterval) {
+                this.authInterval = setInterval(() => {
+                    this.isAuthorized();
+                }, 2000);
+            }
+            return null;
+        } else if (!this.state.deviceId) {
+            return (
+                <DeviceSelect setDevice={this.setDevice} />
+            );
+        } else {
+            return (
+                <div className="container">
+                    <AlertBox alert={this.state.responseMsg} />
+                    <div className="row">
+                        <div className="col-md-4">
+                            <div className="row">
+                                <CurrentlyPlaying onSongEnd={this.onSongEnd} />
+                            </div>
+                            <div className="row">
+                                <Queue onQueued={this.onQueued} />
+                            </div>
+                        </div>
+                        <div className="col-md-8">
+                            <SearchForm onQueued={this.onQueued} />
+                        </div>
+                    </div>
                 </div>
-                <div>
-                    <h3>Queue</h3>
-                    <ol>
-                        {this.renderQueue()}
-                    </ol>
-                </div>
-            </div>
-        );
+            );
+        }
     }
 }
 
