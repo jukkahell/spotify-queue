@@ -119,6 +119,33 @@ class SpotifyService {
         );
     }
 
+    public getArtistTopTracks = (id: string) => {
+        return axios.get("https://api.spotify.com/v1/artists/" + id + "/top-tracks?country=FI", {
+            headers: {
+                "Content-Type": "text/plain",
+                "Authorization": "Bearer " + this.accessToken
+            }
+        });
+    }
+
+    public getArtistAlbums = (id: string) => {
+        return axios.get("https://api.spotify.com/v1/artists/" + id + "/albums", {
+            headers: {
+                "Content-Type": "text/plain",
+                "Authorization": "Bearer " + this.accessToken
+            }
+        });
+    }
+
+    public getAlbum = (id: string) => {
+        return axios.get("https://api.spotify.com/v1/albums/" + id, {
+            headers: {
+                "Content-Type": "text/plain",
+                "Authorization": "Bearer " + this.accessToken
+            }
+        });
+    }
+
     public search = (query: SpotifySearchQuery) => {
         return axios.get("https://api.spotify.com/v1/search?" + Querystring.stringify(query), {
             headers: {

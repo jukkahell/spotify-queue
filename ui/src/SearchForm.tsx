@@ -1,5 +1,8 @@
 import axios from "axios";
+import * as Querystring from "querystring";
 import * as React from "react";
+import Album, { IAlbumProps } from "./Album";
+import Artist, { IArtistProps } from "./Artist";
 import Track, { ITrackProps } from "./Track";
 
 interface ISearchFormProps {
@@ -8,7 +11,11 @@ interface ISearchFormProps {
 
 interface ISearchFormState {
     q: string;
-    searchResults: ITrackProps[];
+    type: string;
+    limit: number;
+    tracks: ITrackProps[];
+    albums: IAlbumProps[];
+    artists: IArtistProps[];
 }
 
 export class SearchForm extends React.Component<ISearchFormProps, ISearchFormState> {
@@ -17,11 +24,17 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
         super(props);
         this.state = {
             q: "",
-            searchResults: []
+            type: "track,album,artist",
+            limit: 5,
+            tracks: [],
+            albums: [],
+            artists: []
         };
 
         this.search = this.search.bind(this);
         this.handleChangeEvent = this.handleChangeEvent.bind(this);
+        this.selectAlbum = this.selectAlbum.bind(this);
+        this.selectArtist = this.selectArtist.bind(this);
     }
 
     public handleChangeEvent(e: React.ChangeEvent<HTMLInputElement>) {
@@ -32,24 +45,89 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
         });
     }
 
+    protected renderArtists() {
+        if (this.state.artists.length === 0) {
+            return null;
+       }
+
+        const artists = [
+            (<h4 key="artists">Artists</h4>)
+        ];
+        return artists.concat(this.state.artists.map((artist, i) => (
+            <Artist
+                name={artist.name}
+                id={artist.id}
+                key={i + "-" + artist.id}
+                onArtistSelected={this.selectArtist} />
+        )));
+    }
+
+    protected selectArtist(tracks: ITrackProps[], albums: IAlbumProps[]) {
+        this.setState({
+            tracks,
+            albums,
+            artists: []
+        });
+    }
+
+    protected renderAlbums() {
+        if (this.state.albums.length === 0) {
+            return null;
+       }
+
+        const albums = [
+            (<h4 key="albums">Albums</h4>)
+        ];
+        return albums.concat(this.state.albums.map((album, i) => (
+            <Album
+                name={album.name}
+                artist={album.artist}
+                id={album.id}
+                key={i + "-" + album.id}
+                onAlbumSelected={this.selectAlbum} />
+        )));
+    }
+
+    protected selectAlbum(tracks: ITrackProps[]) {
+        this.setState({
+            tracks,
+            albums: [],
+            artists: []
+        });
+    }
+
     protected renderTracks() {
-        return this.state.searchResults.map((track, i) => (
+        if (this.state.tracks.length === 0) {
+             return null;
+        }
+        console.log(this.state.tracks);
+        const tracks = [
+            (<h4 key="tracks">Tracks</h4>)
+        ];
+        return tracks.concat(this.state.tracks.map((track, i) => (
             <Track
                 name={track.name}
                 artist={track.artist}
                 id={track.id}
                 key={i + "-" + track.id}
                 onQueued={this.props.onQueued} />
-        ));
+        )));
     }
 
     public search(e: React.MouseEvent<HTMLElement>) {
         e.preventDefault();
 
-        axios.get("http://spotique.fi:8000/search?q=" + this.state.q)
+        const params = {
+            q: this.state.q,
+            type: this.state.type,
+            limit: this.state.limit
+        };
+        axios.get("http://spotique.fi:8000/search?" + Querystring.stringify(params))
             .then(response => {
                 this.setState({
-                    searchResults: response.data.tracks
+                    tracks: response.data.tracks,
+                    albums: response.data.albums,
+                    artists: response.data.artists
                 });
             }).catch(error => {
                 console.log(error);
@@ -65,6 +143,8 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
                     <button type="submit" className="btn btn-primary search col-md-2" onClick={this.search}>Search</button>
                 </form>
                 <div className="searchResults">
+                    {this.renderArtists()}
+                    {this.renderAlbums()}
                     {this.renderTracks()}
                 </div>
             </div>

@@ -114,12 +114,62 @@ app.get("/addSong", (req, res) => {
     }
 });
 
+app.get("/selectAlbum", (req, res) => {
+    spotify.getAlbum(req.query.id)
+        .then((response: any) => {
+            res.status(200).json(
+                response.data.tracks.items.map((i: any) => {
+                    return {
+                        artist: i.artists[0].name,
+                        name: i.name,
+                        id: i.uri
+                    };
+                })
+            );
+        }).catch((error: any) => {
+            console.log(error);
+            res.status(500).json({msg: "Unable to get requested album"});
+        });
+});
+
+app.get("/selectArtist", (req, res) => {
+    spotify.getArtistTopTracks(req.query.id)
+        .then((topTracks: any) => {
+
+            spotify.getArtistAlbums(req.query.id)
+                .then((albums: any) => {
+                    res.status(200).json({
+                        tracks: topTracks.data.tracks.map((i: any) => {
+                            return {
+                                artist: i.artists[0].name,
+                                name: i.name,
+                                id: i.uri
+                            };
+                        }),
+                        albums: albums.data.items.map((album: any) => {
+                            return {
+                                artist: album.artists[0].name,
+                                name: album.name,
+                                id: album.id
+                            } 
+                         })
+                    });
+                }).catch((error: any) => {
+                    console.log(error);
+                    res.status(500).json({msg: "Unable to get requested artist's albums"});
+                });
+        }).catch((error: any) => {
+            console.log(error);
+            res.status(500).json({msg: "Unable to get requested artist's top tracks"});
+        });
+});
+
 app.get("/search", (req, res) => {
     const query: SpotifySearchQuery = {
         q: req.query.q,
-        type: "track",
+        type: req.query.type,
         market: "FI",
-        limit: 50
+        limit: req.query.limit
     };
 
     spotify.search(query).then((response: any) => {
@@ -130,7 +180,20 @@ app.get("/search", (req, res) => {
                     name: i.name,
                     id: i.uri
                 };
-            })
+            }),
+            albums: response.data.albums.items.map((album: any) => {
+               return {
+                   artist: album.artists[0].name,
+                   name: album.name,
+                   id: album.id
+               } 
+            }),
+            artists: response.data.artists.items.map((artist: any) => {
+                return {
+                    name: artist.name,
+                    id: artist.id
+                } 
+             })
         });
     }).catch((error: any) => {
         console.log(error);
