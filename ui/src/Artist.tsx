@@ -1,12 +1,9 @@
-import axios from "axios";
 import * as React from "react";
-import { IAlbumProps } from "./Album";
-import { ITrackProps } from "./Track";
 
 export interface IArtistProps {
     name: string;
     id: string;
-    onArtistSelected: (tracks: ITrackProps[], albums: IAlbumProps[]) => void;
+    onArtistSelected: (id: string) => void;
 }
 
 export class Artist extends React.Component<IArtistProps> {
@@ -17,14 +14,7 @@ export class Artist extends React.Component<IArtistProps> {
     }
 
     protected selectArtist(event: React.MouseEvent<HTMLElement>) {
-        event.preventDefault();
-        axios.get("http://spotique.fi:8000/selectArtist?id=" + event.currentTarget.id)
-            .then(response => {
-                this.props.onArtistSelected(response.data.tracks, response.data.albums);
-            }).catch(err => {
-                console.log(err);
-            }
-        );
+        this.props.onArtistSelected(event.currentTarget.id);
     }
 
     public render() {
@@ -35,7 +25,7 @@ export class Artist extends React.Component<IArtistProps> {
 
         return (
             <div>
-                <a onClick={this.selectArtist} href="#" id={id}>{name}</a>
+                <a onClick={this.selectArtist} href={"#artist:" + id} id={id}>{name}</a>
             </div>
         );
     }

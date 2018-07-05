@@ -39,7 +39,7 @@ app.get("/callback", (req, res) => {
 });
 
 app.get("/isAuthorized", (req, res) => {
-    res.status(200).json({isAuthorized: spotify.isAuthorized()});
+    res.status(200).json({isAuthorized: spotify.isAuthorized(() => {})});
 });
 
 app.get("/getDevices", (req, res) => {
@@ -245,7 +245,7 @@ const startNextSong = () => {
 const getTrackInfo = () => {
     clearTimeout(queueTimeout);
     clearInterval(progressInterval);
-    if (!spotify.isAuthorized()) {
+    if (!spotify.isAuthorized(getTrackInfo)) {
         return;
     }
 

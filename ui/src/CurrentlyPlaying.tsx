@@ -12,6 +12,7 @@ interface ICurrentlyPlayingState {
     duration: number;
     progress: number;
     isPlaying: boolean;
+    progressUpdated: number;
 }
 
 export class CurrentlyPlaying extends React.Component<ICurrentlyPlayingProps, ICurrentlyPlayingState> {
@@ -26,7 +27,8 @@ export class CurrentlyPlaying extends React.Component<ICurrentlyPlayingProps, IC
             cover: "",
             duration: 0,
             progress: 0,
-            isPlaying: false
+            isPlaying: false,
+            progressUpdated: 0
         };
 
         this.getCurrentlyPlaying();
@@ -53,9 +55,12 @@ export class CurrentlyPlaying extends React.Component<ICurrentlyPlayingProps, IC
 
                     if (this.state.isPlaying) {
                         this.progressInterval = setInterval(() => {
+                            const elapsed = (new Date).getTime() - this.state.progressUpdated;
                             this.setState({
-                                progress: (this.state.progress + 500)
+                                progress: (this.state.progress + elapsed),
+                                progressUpdated: (new Date).getTime()
                             });
+
                             const progress = (this.state.progress / this.state.duration) * 100;
                             if (progress > 100) {
                                 clearInterval(this.progressInterval);

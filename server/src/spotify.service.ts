@@ -50,17 +50,18 @@ class SpotifyService {
         this.tokenAcquired = getCurrentSeconds();
     };
 
-    public isAuthorized = () => {
+    public isAuthorized = (callback: () => void) => {
         if (this.tokenAcquired && getCurrentSeconds() - this.tokenAcquired >= this.tokenExpires) {
             console.log("Getting refresh token...");
             this.refreshAccessToken()
                 .then(response => {
                     this.saveToken(response.data);
+                    callback();
                 }).catch(err => {
                     console.log("Failed to refresh token...", err);
                 });
             
-            return true;
+            return false;
         }
     
         return this.accessToken != null;

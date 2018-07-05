@@ -1,6 +1,6 @@
 html, body {
   height: 100%;
-  background-color: #121212;
+  background: linear-gradient(#393939, #181818);
   color: white;
   font-family: "Montserrat","Helvetica Neue",Helvetica,Arial,sans-serif !important;
 }
@@ -77,6 +77,13 @@ input {
   border-radius: 2em !important;
 }
 
+button.search {
+  margin: 0 5px;
+}
+input.search {
+  margin: 0 5px;
+}
+
 .progress {
   height: 4px;
 }
@@ -92,7 +99,6 @@ input {
 .searchForm {
   position: sticky;
   top: 0;
-  background-color: #121212;
   padding-top: 1em;
 }
 

@@ -32,9 +32,21 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
         };
 
         this.search = this.search.bind(this);
+        this.searchClicked = this.searchClicked.bind(this);
         this.handleChangeEvent = this.handleChangeEvent.bind(this);
         this.selectAlbum = this.selectAlbum.bind(this);
         this.selectArtist = this.selectArtist.bind(this);
+        this.hashSearch = this.hashSearch.bind(this);
+
+        this.hashSearch();
+    }
+
+    public componentDidMount() {
+        window.addEventListener("hashchange", this.hashSearch, false);
+    }
+
+    public componentWillUnmount() {
+        window.removeEventListener("hashchange", this.hashSearch, false);
     }
 
     public handleChangeEvent(e: React.ChangeEvent<HTMLInputElement>) {
@@ -43,6 +55,20 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
         this.setState({
             q: e.target.value
         });
+    }
+
+    protected hashSearch() {
+        const hash = window.location.hash.substr(1);
+
+        if (hash.indexOf(":") < 0) {
+            this.search(hash);
+        } else if (hash.indexOf("album") >= 0) {
+            const id = window.location.hash.split(":")[1];
+            this.selectAlbum(id);
+        } else if (hash.indexOf("artist") >= 0) {
+            const id = window.location.hash.split(":")[1];
+            this.selectArtist(id);
+        }
     }
 
     protected renderArtists() {
@@ -62,12 +88,18 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
         )));
     }
 
-    protected selectArtist(tracks: ITrackProps[], albums: IAlbumProps[]) {
-        this.setState({
-            tracks,
-            albums,
-            artists: []
-        });
+    protected selectArtist(id: string) {
+        axios.get("http://spotique.fi:8000/selectArtist?id=" + id)
+            .then(response => {
+                this.setState({
+                    tracks: response.data.tracks,
+                    albums: response.data.albums,
+                    artists: []
+                });
+            }).catch(err => {
+                console.log(err);
+            }
+        );
     }
 
     protected renderAlbums() {
@@ -88,12 +120,18 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
         )));
     }
 
-    protected selectAlbum(tracks: ITrackProps[]) {
-        this.setState({
-            tracks,
-            albums: [],
-            artists: []
-        });
+    protected selectAlbum(id: string) {
+        axios.get("http://spotique.fi:8000/selectAlbum?id=" + id)
+            .then(response => {
+                this.setState({
+                    tracks: response.data,
+                    albums: [],
+                    artists: []
+                });
+            }).catch(err => {
+                console.log(err);
+            }
+        );
     }
 
     protected renderTracks() {
@@ -114,11 +152,16 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
         )));
     }
 
-    public search(e: React.MouseEvent<HTMLElement>) {
+    public searchClicked(e: React.MouseEvent<HTMLElement>) {
         e.preventDefault();
+        this.search(this.state.q);
+    }
+
+    public search(q: string) {
+        window.location.hash = "#" + q;
 
         const params = {
-            q: this.state.q,
+            q,
             type: this.state.type,
             limit: this.state.limit
         };
@@ -139,8 +182,8 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
         return (
             <div className="searchContainer">
                 <form className="form-inline searchForm">
-                    <input className="form-control search col-md-10" type="text" name="q" onChange={this.handleChangeEvent} placeholder="🔍 Search" />
-                    <button type="submit" className="btn btn-primary search col-md-2" onClick={this.search}>Search</button>
+                    <input className="form-control search col-md-9" type="text" name="q" onChange={this.handleChangeEvent} placeholder="🔍 Search" />
+                    <button type="submit" className="btn btn-primary search col-md-2" onClick={this.searchClicked}>Search</button>
                 </form>
                 <div className="searchResults">
                     {this.renderArtists()}
