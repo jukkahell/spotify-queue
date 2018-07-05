@@ -1,0 +1,7 @@
+const secrets = {
+    spotify: {
+        secret: "REPLACE WITH THE ACTUAL SECRET"
+    }
+};
+
+export default secrets;
