@@ -72,11 +72,15 @@ app.get("/queue", (req, res) => {
     if (!queue.hasItems()) {
         res.status(200).json({tracks:[]});
     } else {
-        const spotifyIds = queue.toString();
+        const spotifyIds = queue.getUniqueIds();
         console.log("Search track data for ids: " + spotifyIds);
         spotify.getTracks(spotifyIds).then((response: any) => {
+            // Get track info for every id
+            const tracks = queue.getQueue().map((id: string) => {
+                return response.data.tracks.find((track: any) => track.uri === id);
+            });
             res.status(200).json({
-                tracks: response.data.tracks.map((i: any) => {
+                tracks: tracks.map((i: any) => {
                     return {
                         artist: i.artists[0].name,
                         name: i.name,

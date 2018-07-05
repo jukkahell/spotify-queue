@@ -19,8 +19,14 @@ class Queue {
         return this.queue.shift();
     }
 
-    public toString() {
-        return this.queue.map(uri => uri.split(':')[2]).join(',');
+    public getUniqueIds() {
+        let uniq = Array.from(new Set(this.queue));
+        uniq = uniq.slice(0, Math.min(uniq.length, 50));
+        return uniq.map(uri => uri.split(':')[2]).join(',');
+    }
+
+    public getQueue() {
+        return this.queue;
     }
 }
 

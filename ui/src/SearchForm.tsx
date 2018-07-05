@@ -100,7 +100,7 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
         if (this.state.tracks.length === 0) {
              return null;
         }
-        console.log(this.state.tracks);
+
         const tracks = [
             (<h4 key="tracks">Tracks</h4>)
         ];
