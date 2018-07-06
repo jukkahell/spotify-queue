@@ -19,7 +19,7 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-var options = {
+const options = {
     key: fs.readFileSync('/etc/letsencrypt/live/spotiqu.eu/privkey.pem'),
     cert: fs.readFileSync('/etc/letsencrypt/live/spotiqu.eu/fullchain.pem')
 };
@@ -40,7 +40,7 @@ app.get("/callback", (req, res) => {
             spotify.saveToken(response.data);
             res.status(200).send("<script>window.close();</script>");
         }).catch((err: any) => {
-            console.log(err.data.error);
+            console.log(err);
             res.status(500).json({msg: "Failed to authenticate."});
         }
     );
