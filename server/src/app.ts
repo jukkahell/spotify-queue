@@ -11,7 +11,7 @@ import { SpotifySearchQuery, SpotifyTrack } from "./spotify";
 import Spotify from "./spotify.service";
 
 const clientId = "da6ea27d63384e858d12bcce0fac006d";
-const redirectUri = env.NODE_ENV === "production" ? "http://spotiqu.eu:8001/callback" : "http://spotique.fi:8000/callback";
+const redirectUri = env.NODE_ENV === "production" ? "https://spotiqu.eu:8001/callback" : "http://spotique.fi:8000/callback";
 const secret = secrets.spotify.secret;
 
 const app = express();
