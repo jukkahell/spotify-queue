@@ -2,7 +2,6 @@ import { library } from "@fortawesome/fontawesome-svg-core";
 import { faDesktop, faMobile, faPlayCircle, faVolumeOff } from "@fortawesome/free-solid-svg-icons";
 import axios from "axios";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { env } from "process";
 import * as React from "react";
 import * as ReactDOM from "react-dom";
 import App from "./App";
@@ -21,7 +20,7 @@ const authorize = () => {
   window.open(url, "SpotiQue", "WIDTH=400,HEIGHT=500");
 };
 
-console.log("ENV: " + env.NODE_ENV);
+console.log("ENV: " + process.env.NODE_ENV);
 
 axios.get("http://spotique.fi:8000/isAuthorized")
     .then(response => {
