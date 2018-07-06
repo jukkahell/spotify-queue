@@ -7,6 +7,7 @@ import * as ReactDOM from "react-dom";
 import App from "./App";
 import "./index.css";
 import registerServiceWorker from "./registerServiceWorker";
+import { env } from "process";
 
 const authorize = () => {
   const client_id = "da6ea27d63384e858d12bcce0fac006d";
@@ -19,6 +20,8 @@ const authorize = () => {
 
   window.open(url, "SpotiQue", "WIDTH=400,HEIGHT=500");
 };
+
+console.log("ENV: " + env.NODE_ENV);
 
 axios.get("http://spotique.fi:8000/isAuthorized")
     .then(response => {
