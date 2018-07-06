@@ -61,7 +61,9 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
     protected hashSearch() {
         const hash = window.location.hash.substr(1);
 
-        if (hash.indexOf(":") < 0) {
+        if (!hash) {
+            return;
+        } else if (hash.indexOf(":") < 0) {
             this.search(hash);
         } else if (hash.indexOf("album") >= 0) {
             const id = window.location.hash.split(":")[1];
