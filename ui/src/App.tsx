@@ -2,6 +2,7 @@ import axios from "axios";
 import * as React from "react";
 import { AlertBox, IAlert } from "./AlertBox";
 import "./App.css";
+import config from "./config";
 import CurrentlyPlaying from "./CurrentlyPlaying";
 import DeviceSelect from "./DeviceSelect";
 import { Queue } from "./Queue";
@@ -25,7 +26,7 @@ export class App extends React.Component<{}, IState> {
             isAuthorized: false
         };
 
-        axios.get("http://spotique.fi:8000/selectedDevice")
+        axios.get(config.backend.url + "/selectedDevice")
             .then(response => {
                 this.setState({
                     deviceId: response.data.deviceId
@@ -47,7 +48,7 @@ export class App extends React.Component<{}, IState> {
     }
 
     protected isAuthorized() {
-        axios.get("http://spotique.fi:8000/isAuthorized")
+        axios.get(config.backend.url + "/isAuthorized")
             .then(response => {
                 if (response.data.isAuthorized) {
                     clearInterval(this.authInterval);

@@ -2,6 +2,7 @@ import { IconProp } from "@fortawesome/fontawesome-svg-core";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import axios from "axios";
 import * as React from "react";
+import config from "./config";
 
 export interface IDevice {
     id: string;
@@ -32,7 +33,7 @@ export class DeviceSelect extends React.Component<IDeviceSelectProps, IDeviceSel
             dropdownVisible: false
         };
 
-        axios.get("http://spotique.fi:8000/getDevices")
+        axios.get(config.backend.url + "/getDevices")
             .then(response => {
                 this.setState({
                     devices: response.data
@@ -73,7 +74,7 @@ export class DeviceSelect extends React.Component<IDeviceSelectProps, IDeviceSel
 
     public setDevice() {
         if (this.state.selectedDeviceId) {
-            axios.post("http://spotique.fi:8000/setDevice", { deviceId: this.state.selectedDeviceId })
+            axios.post(config.backend.url + "/setDevice", { deviceId: this.state.selectedDeviceId })
             .then(response => {
                 this.props.setDevice(this.state.selectedDeviceId!);
             }).catch(error => {

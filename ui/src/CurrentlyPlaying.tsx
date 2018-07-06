@@ -1,5 +1,6 @@
 import axios from "axios";
 import * as React from "react";
+import config from "./config";
 
 interface ICurrentlyPlayingProps {
     onSongEnd: () => void;
@@ -39,7 +40,7 @@ export class CurrentlyPlaying extends React.Component<ICurrentlyPlayingProps, IC
     }
 
     public getCurrentlyPlaying() {
-        axios.get("http://spotique.fi:8000/currentlyPlaying")
+        axios.get(config.backend.url + "/currentlyPlaying")
             .then(response => {
                 if (response.status === 200) {
                     this.setState({

@@ -3,6 +3,7 @@ import * as Querystring from "querystring";
 import * as React from "react";
 import Album, { IAlbumProps } from "./Album";
 import Artist, { IArtistProps } from "./Artist";
+import config from "./config";
 import Track, { ITrackProps } from "./Track";
 
 interface ISearchFormProps {
@@ -89,7 +90,7 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
     }
 
     protected selectArtist(id: string) {
-        axios.get("http://spotique.fi:8000/selectArtist?id=" + id)
+        axios.get(config.backend.url + "/selectArtist?id=" + id)
             .then(response => {
                 this.setState({
                     tracks: response.data.tracks,
@@ -121,7 +122,7 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
     }
 
     protected selectAlbum(id: string) {
-        axios.get("http://spotique.fi:8000/selectAlbum?id=" + id)
+        axios.get(config.backend.url + "/selectAlbum?id=" + id)
             .then(response => {
                 this.setState({
                     tracks: response.data,
@@ -165,7 +166,7 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
             type: this.state.type,
             limit: this.state.limit
         };
-        axios.get("http://spotique.fi:8000/search?" + Querystring.stringify(params))
+        axios.get(config.backend.url + "/search?" + Querystring.stringify(params))
             .then(response => {
                 this.setState({
                     tracks: response.data.tracks,
