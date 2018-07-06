@@ -1,11 +1,14 @@
 import * as express from "express";
+import * as https from "https";
 import * as http from "http";
+import * as fs from "fs";
 import bodyParser = require("body-parser");
 import * as cors from "cors";
 import secrets from "./secrets";
 import Spotify from "./spotify.service";
 import { SpotifySearchQuery, SpotifyTrack } from "./spotify";
 import Queue from "./queue";
+import { env } from "process";
 
 const clientId = "da6ea27d63384e858d12bcce0fac006d";
 const redirectUri = "http://spotique.fi:8000/callback"
@@ -16,7 +19,12 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-const server = http.createServer(app);
+var options = {
+    key: fs.readFileSync('/etc/letsencrypt/live/spotiqu.eu/privkey.pem'),
+    cert: fs.readFileSync('/etc/letsencrypt/live/spotiqu.eu/fullchain.pem')
+};
+
+const server = env.NODE_ENV === "production" ? https.createServer(options, app) : http.createServer(app);
 const port = 8001;
 
 let isPlaying = false;
