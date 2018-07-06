@@ -1,5 +1,6 @@
 import axios from "axios";
 import * as React from "react";
+import config from "./config";
 import Track, { ITrackProps } from "./Track";
 
 interface IQueueProps {
@@ -28,7 +29,7 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
     }
 
     public getQueue() {
-        axios.get("http://spotique.fi:8000/queue")
+        axios.get(config.backend.url + "/queue")
             .then(response => {
                 this.setState({
                     tracks: response.data.tracks
@@ -63,5 +64,3 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
         );
     }
 }
-
-export default Queue;

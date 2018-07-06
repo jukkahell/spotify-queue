@@ -1,17 +1,17 @@
-import * as express from "express";
-import * as https from "https";
-import * as http from "http";
-import * as fs from "fs";
 import bodyParser = require("body-parser");
 import * as cors from "cors";
-import secrets from "./secrets";
-import Spotify from "./spotify.service";
-import { SpotifySearchQuery, SpotifyTrack } from "./spotify";
-import Queue from "./queue";
+import * as express from "express";
+import * as fs from "fs";
+import * as http from "http";
+import * as https from "https";
 import { env } from "process";
+import Queue from "./queue";
+import secrets from "./secrets";
+import { SpotifySearchQuery, SpotifyTrack } from "./spotify";
+import Spotify from "./spotify.service";
 
 const clientId = "da6ea27d63384e858d12bcce0fac006d";
-const redirectUri = "http://spotique.fi:8000/callback"
+const redirectUri = env.NODE_ENV === "production" ? "http://spotiqu.eu:8001/callback" : "http://spotique.fi:8000/callback";
 const secret = secrets.spotify.secret;
 
 const app = express();
@@ -20,8 +20,8 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 const options = {
-    key: fs.readFileSync('/etc/letsencrypt/live/spotiqu.eu/privkey.pem'),
-    cert: fs.readFileSync('/etc/letsencrypt/live/spotiqu.eu/fullchain.pem')
+    key: fs.readFileSync("/etc/letsencrypt/live/spotiqu.eu/privkey.pem"),
+    cert: fs.readFileSync("/etc/letsencrypt/live/spotiqu.eu/fullchain.pem")
 };
 
 const server = env.NODE_ENV === "production" ? https.createServer(options, app) : http.createServer(app);
@@ -30,8 +30,8 @@ const port = 8001;
 let isPlaying = false;
 let progressInterval: NodeJS.Timer;
 let queueTimeout: any;
-let spotify = new Spotify(clientId, secret, redirectUri);
-let queue = new Queue();
+const spotify = new Spotify(clientId, secret, redirectUri);
+const queue = new Queue();
 
 app.get("/callback", (req, res) => {
     spotify.getToken(req.query.code)
@@ -58,9 +58,9 @@ app.get("/getDevices", (req, res) => {
                     id: device.id,
                     name: device.name,
                     type: device.type
-                }
+                };
             }));
-        }).catch((err :any) => {
+        }).catch((err: any) => {
             console.log(err);
             res.status(500).json({error: "Error getting available devices"});
         });
@@ -78,7 +78,7 @@ app.get("/selectedDevice", (req, res) => {
 
 app.get("/queue", (req, res) => {
     if (!queue.hasItems()) {
-        res.status(200).json({tracks:[]});
+        res.status(200).json({tracks: []});
     } else {
         const spotifyIds = queue.getUniqueIds();
         console.log("Search track data for ids: " + spotifyIds);
@@ -163,7 +163,7 @@ app.get("/selectArtist", (req, res) => {
                                 artist: album.artists[0].name,
                                 name: album.name,
                                 id: album.id
-                            } 
+                            };
                          })
                     });
                 }).catch((error: any) => {
@@ -198,13 +198,13 @@ app.get("/search", (req, res) => {
                    artist: album.artists[0].name,
                    name: album.name,
                    id: album.id
-               } 
+               };
             }),
             artists: response.data.artists.items.map((artist: any) => {
                 return {
                     name: artist.name,
                     id: artist.id
-                } 
+                };
              })
         });
     }).catch((error: any) => {
@@ -215,12 +215,14 @@ app.get("/search", (req, res) => {
 
 const getCurrentTrack = () => {
     return new Promise((resolve, reject) => {
-        let currentTrack = spotify.getCurrentTrack();
-        if (currentTrack) return resolve(currentTrack);
+        const currentTrack = spotify.getCurrentTrack();
+        if (currentTrack) {
+            return resolve(currentTrack);
+        }
 
         // Wait a bit so that spotify catches up
         setTimeout(() => {
-            let currentTrack = spotify.getCurrentTrack();
+            const currentTrack = spotify.getCurrentTrack();
             console.log("Got current track: ", currentTrack);
             if (!currentTrack) {
                 return reject(null);
@@ -229,10 +231,12 @@ const getCurrentTrack = () => {
             }
         }, 4000);
     });
-}
+};
 
 const startNextSong = () => {
-    if (!queue.hasItems()) return;
+    if (!queue.hasItems()) {
+        return;
+    }
 
     console.log("Starting next song...");
     const id = queue.shift();
@@ -243,8 +247,8 @@ const startNextSong = () => {
         setTimeout(getTrackInfo, 2000);
     }).catch((err: any) => {
         // If device not selected
-        if (err.status == 404) {
-            throw new Error()
+        if (err.status === 404) {
+            throw new Error();
         }
         console.log(err);
     });
@@ -261,7 +265,7 @@ const getTrackInfo = () => {
 
     spotify.currentlyPlaying().then(response => {
         // If no tracks playing
-        if (response.status == 204) {
+        if (response.status === 204) {
             isPlaying = false;
             spotify.clearCurrentTrack();
             return;
@@ -278,7 +282,7 @@ const getTrackInfo = () => {
             }
         }, 1000);
 
-        const timeLeft = currentTrack.duration-currentTrack.progress;
+        const timeLeft = currentTrack.duration - currentTrack.progress;
 
         // If song is almost over
         if (timeLeft < 5000) {
@@ -292,14 +296,13 @@ const getTrackInfo = () => {
                 spotify.clearCurrentTrack();
                 console.log("No songs in the queue. Not going to start new timeouts...");
             }
-        }
-        // If there's still time, check for progress again after a while
-        else {
-            console.log("Song still playing for " + (timeLeft/1000) + " secs. Starting new timeout after that.");
-            queueTimeout = setTimeout(getTrackInfo, timeLeft-1000);
+        } else {
+            // If there's still time, check for progress again after a while
+            console.log("Song still playing for " + (timeLeft / 1000) + " secs. Starting new timeout after that.");
+            queueTimeout = setTimeout(getTrackInfo, timeLeft - 1000);
         }
 
-    }).catch(function(err) {
+    }).catch(err => {
         console.log(err);
     });
 };

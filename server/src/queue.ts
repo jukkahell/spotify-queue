@@ -1,7 +1,7 @@
 
 class Queue {
 
-    private queue: Array<string>;
+    private queue: string[];
 
     constructor() {
         this.queue = [];
@@ -22,7 +22,7 @@ class Queue {
     public getUniqueIds() {
         let uniq = Array.from(new Set(this.queue));
         uniq = uniq.slice(0, Math.min(uniq.length, 50));
-        return uniq.map(uri => uri.split(':')[2]).join(',');
+        return uniq.map(uri => uri.split(":")[2]).join(",");
     }
 
     public getQueue() {
