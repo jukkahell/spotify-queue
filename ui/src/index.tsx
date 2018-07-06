@@ -2,12 +2,12 @@ import { library } from "@fortawesome/fontawesome-svg-core";
 import { faDesktop, faMobile, faPlayCircle, faVolumeOff } from "@fortawesome/free-solid-svg-icons";
 import axios from "axios";
 import "bootstrap/dist/css/bootstrap.min.css";
+import { env } from "process";
 import * as React from "react";
 import * as ReactDOM from "react-dom";
 import App from "./App";
 import "./index.css";
 import registerServiceWorker from "./registerServiceWorker";
-import { env } from "process";
 
 const authorize = () => {
   const client_id = "da6ea27d63384e858d12bcce0fac006d";
