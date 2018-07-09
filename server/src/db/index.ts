@@ -2,9 +2,9 @@ import { Pool } from "pg";
 import secrets from "../secrets";
 
 const pool = new Pool({
-    user: 'spotiqu',
-    host: 'localhost',
-    database: 'spotiqu',
+    user: "spotiqudev",
+    host: "spotiqu.eu",
+    database: "spotiqudev",
     password: secrets.db.password,
     port: 5433,
 });

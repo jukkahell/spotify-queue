@@ -1,22 +1,22 @@
 import bodyParser = require("body-parser");
+import * as Cookies from "cookies";
 import * as cors from "cors";
 import * as express from "express";
 import * as fs from "fs";
 import * as http from "http";
 import * as https from "https";
-import { env } from "process";
-import QueueService from "./queue.service";
-import { QueueDao, Queue, CurrentTrack } from "./queue";
-import secrets from "./secrets";
-import { SpotifySearchQuery } from "./spotify";
-import Spotify from "./spotify.service";
 import * as Keygrip from "keygrip";
-import * as Cookies from "cookies";
+import {env} from "process";
 import * as randomstring from "randomstring";
 import config from "./config";
-import { getCurrentSeconds } from "./util";
+import {CurrentTrack, Queue, QueueDao} from "./queue";
+import QueueService from "./queue.service";
+import secrets from "./secrets";
+import {SpotifySearchQuery} from "./spotify";
+import Spotify from "./spotify.service";
+import {getCurrentSeconds} from "./util";
 
-let keys = Array.from({length: 10}, () => randomstring.generate(15));
+const keys = Array.from({length: 10}, () => randomstring.generate(15));
 const keygrip = new Keygrip(keys, "sha256");
 
 const app = express();
@@ -52,7 +52,8 @@ app.get("/callback", (req, res) => {
     // User data received
     .then((response: any) => {
         const spotifyUserId = response.data.id;
-        let passcode: string, userId: string;
+        let passcode: string;
+        let userId: string;
 
         // Check if this user already has a queue
         queueService.getQueueBySpotifyId(spotifyUserId)
@@ -72,7 +73,7 @@ app.get("/callback", (req, res) => {
                 return queueService.createQueue(spotifyUserId, accessToken, passcode, userId, refreshToken, expiresIn);
             }
         })
-        .then(result => {
+        .then(() => {
             req.cookies.set("user", userId, config.userCookieOptions);
             req.cookies.set("passcode", passcode, config.passcodeCookieOptions);
             res.status(200).send("<script>window.close();</script>");
@@ -107,7 +108,7 @@ app.put("/join", (req, res) => {
             if (!queue.users.find( user => user.id === userId)) {
                 queue.users.push(user);
                 queueService.updateQueue(queue, passcode)
-                .then(result => {
+                .then(() => {
                     req.cookies.set("passcode", passcode, config.passcodeCookieOptions);
                     req.cookies.set("user", userId, config.userCookieOptions);
                     res.status(200).json({msg: "OK", passcode});
@@ -125,14 +126,14 @@ app.put("/join", (req, res) => {
         } else {
             res.status(404).json({msg: "Queue not found"});
         }
-    }).catch(err => {
+    }).catch(() => {
         res.status(500).json({msg: "Queue not found"});
     });
 });
 
 app.get("/isAuthorized", (req, res) => {
     const id = req.cookies.get("passcode");
-    
+
     queueService.getQueue(id)
     .then(response => {
         if (response.rowCount === 1) {
@@ -145,7 +146,9 @@ app.get("/isAuthorized", (req, res) => {
                     if (response.refresh_token) {
                         queue.refreshToken = response.refresh_token;
                     }
-                    queueService.updateQueue(queue, id);
+                    queueService.updateQueue(queue, id).catch(err => {
+                        console.log("Failed to update queue refresh token.", err);
+                    });
                 }
                 res.status(200).json({isAuthorized: true, passcode: id});
             }).catch(err => {
@@ -161,7 +164,7 @@ app.get("/isAuthorized", (req, res) => {
 });
 
 app.get("/getDevices", (req, res) => {
-    const callback = (accessToken:string) => {
+    const callback = (accessToken: string) => {
         spotify.getDevices(accessToken)
         .then((response: any) => {
             let activeDeviceId: string | undefined;
@@ -202,7 +205,7 @@ app.get("/getDevices", (req, res) => {
         });
     };
 
-    queueService.getAccessToken(req.cookies.get("passcode"), callback, (err) => {
+    queueService.getAccessToken(req.cookies.get("passcode"), callback, () => {
         res.status(500).json({error: "Error getting available devices"});
     });
 });
@@ -220,7 +223,7 @@ app.get("/device", (req, res) => {
         } else {
             res.status(400).json({msg: "Unable to get device with provided passcode"});
         }
-    }).catch(err => {
+    }).catch(() => {
         res.status(500).json({msg: "Unable to get playback device from database"});
     });
 });
@@ -233,7 +236,7 @@ app.get("/queue", (req, res) => {
             return;
         }
 
-        if (result.rows[0].data.queue.length == 0) {
+        if (result.rows[0].data.queue.length === 0) {
             res.status(204).json({msg: "No messages in queue"});
             return;
         }
@@ -283,7 +286,7 @@ app.post("/track", (req, res) => {
 });
 
 app.get("/selectAlbum", (req, res) => {
-    const callback = (accessToken:string) => {
+    const callback = (accessToken: string) => {
         spotify.getAlbum(accessToken, req.query.id)
         .then((response: any) => {
             res.status(200).json(
@@ -300,14 +303,14 @@ app.get("/selectAlbum", (req, res) => {
             res.status(500).json({msg: "Unable to get requested album"});
         });
     };
-    
-    queueService.getAccessToken(req.cookies.get("passcode"), callback, (err) => {
+
+    queueService.getAccessToken(req.cookies.get("passcode"), callback, () => {
         res.status(500).json({error: "Error getting available devices"});
     });
 });
 
 app.get("/selectArtist", (req, res) => {
-    const callback = (accessToken:string) => {
+    const callback = (accessToken: string) => {
         spotify.getArtistTopTracks(accessToken, req.query.id)
         .then((topTracks: any) => {
 
@@ -338,8 +341,8 @@ app.get("/selectArtist", (req, res) => {
             res.status(500).json({msg: "Unable to get requested artist's top tracks"});
         });
     };
-    
-    queueService.getAccessToken(req.cookies.get("passcode"), callback, (err) => {
+
+    queueService.getAccessToken(req.cookies.get("passcode"), callback, () => {
         res.status(500).json({error: "Error getting available devices"});
     });
 });
@@ -398,7 +401,7 @@ const getCurrentTrack = (passcode: string) => {
                     currentTrack.track.progress = response.data.progress_ms;
 
                     // If is playing info is out of sync with Spotify
-                    if (isPlaying != response.data.is_playing) {
+                    if (isPlaying !== response.data.is_playing) {
                         isPlaying = response.data.is_playing;
                         queueService.getQueue(passcode, true).then(result => {
                             if (result.rowCount === 1) {
@@ -409,19 +412,19 @@ const getCurrentTrack = (passcode: string) => {
                                 });
                             }
                         }).catch(err => {
-
+                            console.log("Failed to get queue when saving playing state", err);
                         });
                     }
 
                     return resolve({currentTrack, isPlaying});
-                }).catch(err => {
+                }).catch(() => {
                     console.log("Unable to get track progress from Spotify...resolve anyway.");
                     return resolve({currentTrack, isPlaying});
                 });
             } else {
                 return reject();
             }
-        }
+        };
 
         const onError = () => {
             // Wait a bit so that spotify catches up
@@ -455,17 +458,17 @@ const startPlaying = (queue: Queue, passcode: string) => {
         };
         queue.isPlaying = true;
 
-        queueService.updateQueue(queue, passcode).then(result => {
+        queueService.updateQueue(queue, passcode).then(() => {
             queueService.startPlaying(accessToken, passcode, queuedItem.track, spotify, startNextTrack);
 
-            spotify.startSong(accessToken, queuedItem.track.id, deviceId!).then((res: any) => {
+            spotify.startSong(accessToken, queuedItem.track.id, deviceId!).then(() => {
                 console.log("Song started.");
                 return resolve();
             }).catch((err: any) => {
                 console.log(err.response.data);
                 return reject("Unable to start playing");
             });
-        }).catch(err => {
+        }).catch(() => {
             return reject("Unable to update queue.");
         });
     });
@@ -473,7 +476,7 @@ const startPlaying = (queue: Queue, passcode: string) => {
 
 const startNextTrack = (passcode: string, accessToken: string) => {
     queueService.getQueue(passcode, true).then(result => {
-        if (result.rowCount === 0 || result.rows[0].data.queue.length == 0) {
+        if (result.rowCount === 0 || result.rows[0].data.queue.length === 0) {
             console.log("No more songs in queue. Stop playing.");
             queueService.stopPlaying(result.rows[0].data, accessToken, passcode);
             return;
@@ -484,12 +487,12 @@ const startNextTrack = (passcode: string, accessToken: string) => {
             track: queuedItem.track,
             owner: queuedItem.userId,
             votes: []
-        }
+        };
 
-        queueService.updateQueue(queue, passcode).then(result => {
+        queueService.updateQueue(queue, passcode).then(() => {
             queueService.startPlaying(accessToken, passcode, queuedItem.track, spotify, startNextTrack);
 
-            spotify.startSong(accessToken, queuedItem.track.id, queue.deviceId!).then((res: any) => {
+            spotify.startSong(accessToken, queuedItem.track.id, queue.deviceId!).then(() => {
                 console.log("Song started.");
             }).catch((err: any) => {
                 console.log(err.response.data);
@@ -498,9 +501,9 @@ const startNextTrack = (passcode: string, accessToken: string) => {
             console.log("Unable to update queue", err);
         });
     }).catch(err => {
-
+        console.log("Unable to get queue when starting next track", err);
     });
-}
+};
 
 app.use((error: any, request: express.Request, response: express.Response, next: (error: any) => any) => {
     if (response.headersSent) {
@@ -523,5 +526,3 @@ if (!module.parent) {
     server.listen(config.app.port);
 }
 console.log(`Application running on port: ${config.app.port}`);
-
-export let expressApp = app;

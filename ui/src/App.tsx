@@ -48,10 +48,6 @@ export class App extends React.Component<{}, IState> {
 
     public componentDidMount() {
         this.isAuthorized();
-        if (this.state.passcode) {
-            this.getCurrentTrack();
-            this.getQueue();
-        }
     }
 
     protected joinQueue(e: React.MouseEvent<HTMLElement>) {
@@ -78,6 +74,9 @@ export class App extends React.Component<{}, IState> {
         axios.get(config.backend.url + "/isAuthorized")
             .then(response => {
                 if (response.data.isAuthorized) {
+                    this.getCurrentTrack();
+                    this.getQueue();
+
                     clearInterval(this.authInterval);
                     this.setState({
                         passcode: response.data.passcode
