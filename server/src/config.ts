@@ -5,9 +5,9 @@ const prod = env.NODE_ENV === "production";
 const scheme = prod ? "https://" : "http://";
 const host = prod ? "spotiqu.eu" : "spotique.fi";
 const port = 8001;
-const uiPort = prod ? "" : 3000;
+const uiPort = prod ? 80 : 3000;
 
-var whitelist = [scheme + host + ":" + port, scheme + host + ":" + uiPort]
+var whitelist = [scheme + host + ":" + port, scheme + host + ":" + uiPort, scheme + host]
 
 export interface IConfig {
     app: {
