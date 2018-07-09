@@ -6,11 +6,11 @@ export interface IAlert {
 }
 
 export interface IAlertBoxProps {
-    alert: IAlert | null;
+    alert: IAlert;
 }
 
 export interface IAlertBoxState {
-    alert: IAlert | null;
+    showAlert: boolean;
 }
 
 export class AlertBox extends React.Component<IAlertBoxProps, IAlertBoxState> {
@@ -19,30 +19,28 @@ export class AlertBox extends React.Component<IAlertBoxProps, IAlertBoxState> {
         super(props);
 
         this.state = {
-            alert: props.alert
+            showAlert: false
         };
     }
 
-    public componentDidUpdate(nextProps: IAlertBoxProps) {
-        if (this.props.alert === nextProps.alert) {
-            return;
-        }
-
-        setTimeout(() => {
+    public componentDidUpdate(prevProps: IAlertBoxProps) {
+        if (this.props.alert.msg !== prevProps.alert.msg) {
+            console.log("JOOJOO");
             this.setState({
-                alert: null
+                showAlert: true
             });
-        }, 3000);
-
-        this.setState({
-            alert: nextProps.alert
-        });
+            setTimeout(() => {
+                this.setState({
+                    showAlert: false
+                });
+            }, 3000);
+        }
     }
 
     public render() {
-        if (this.state.alert) {
+        if (this.props.alert) {
             return (
-                <div className={"alert " + this.state.alert.className + " fixed-top"} role="alert">{this.state.alert.msg}</div>
+                <div className={(this.state.showAlert ? "visible" : "invisible") + " alert " + this.props.alert.className + " fixed-top"} role="alert">{this.props.alert.msg}</div>
             );
         } else {
             return null;

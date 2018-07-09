@@ -11,7 +11,7 @@ import SearchForm from "./SearchForm";
 export interface IState {
     enteredCode: string | null;
     passcode: string | null;
-    responseMsg: IAlert | null;
+    responseMsg: IAlert;
     joinError: string | null;
     currentTrack: IQueuedItem | null;
     isPlaying: boolean;
@@ -28,7 +28,7 @@ export class App extends React.Component<{}, IState> {
         this.state = {
             enteredCode: null,
             passcode: null,
-            responseMsg: null,
+            responseMsg: { msg: "", className: "alert-info"},
             joinError: null,
             currentTrack: null,
             isPlaying: false,
@@ -48,8 +48,10 @@ export class App extends React.Component<{}, IState> {
 
     public componentDidMount() {
         this.isAuthorized();
-        this.getCurrentTrack();
-        this.getQueue();
+        if (this.state.passcode) {
+            this.getCurrentTrack();
+            this.getQueue();
+        }
     }
 
     protected joinQueue(e: React.MouseEvent<HTMLElement>) {
@@ -61,6 +63,8 @@ export class App extends React.Component<{}, IState> {
                     this.setState({
                         passcode: response.data.passcode
                     });
+                    this.getCurrentTrack();
+                    this.getQueue();
                 }
             }).catch(error => {
                 this.setState({

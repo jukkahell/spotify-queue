@@ -88,11 +88,45 @@ app.get("/callback", (req, res) => {
 });
 
 app.put("/join", (req, res) => {
-    queueService.getQueue(req.body.passcode)
+    const passcode = req.body.code;
+    queueService.getQueue(passcode, true)
     .then(result => {
+        if (result.rowCount === 1) {
+            let userId = req.cookies.get("user");
+            if (!userId) {
+                userId = randomstring.generate();
+            }
 
+            const queue: Queue = result.rows[0].data;
+            const user = {
+                id: userId,
+                spotifyUserId: null,
+                points: 0
+            };
+
+            if (!queue.users.find( user => user.id === userId)) {
+                queue.users.push(user);
+                queueService.updateQueue(queue, passcode)
+                .then(result => {
+                    req.cookies.set("passcode", passcode, config.passcodeCookieOptions);
+                    req.cookies.set("user", userId, config.userCookieOptions);
+                    res.status(200).json({msg: "OK", passcode});
+                }).catch(err => {
+                    console.log("Error when inserting user into queue", err);
+                    res.status(500).json({msg: "Error while adding user into database. Please try again later."});
+                });
+            } else {
+                req.cookies.set("passcode", passcode, config.passcodeCookieOptions);
+                if (!req.cookies.get("user")) {
+                    req.cookies.set("user", userId, config.userCookieOptions);
+                }
+                res.status(200).json({msg: "OK", passcode});
+            }
+        } else {
+            res.status(404).json({msg: "Queue not found"});
+        }
     }).catch(err => {
-
+        res.status(500).json({msg: "Queue not found"});
     });
 });
 
@@ -194,7 +228,7 @@ app.get("/device", (req, res) => {
 app.get("/queue", (req, res) => {
     const id = req.cookies.get("passcode");
     queueService.getQueue(id).then(result => {
-        if (result.rowCount == 0) {
+        if (result.rowCount === 0) {
             res.status(400).json({msg: "Invalid passcode"});
             return;
         }
