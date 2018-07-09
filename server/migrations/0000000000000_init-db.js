@@ -8,5 +8,5 @@ exports.up = (pgm) => {
             data: { type: "json", notNull: true }
         }
     );
-    pgm.createIndex("posts", "owner");
+    pgm.createIndex("queues", "owner");
 };
