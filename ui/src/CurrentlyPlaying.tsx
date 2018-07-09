@@ -77,7 +77,7 @@ export class CurrentlyPlaying extends React.Component<ICurrentlyPlayingProps, IC
             }));
 
             const progress = (this.state.progress / this.props.currentTrack!.track.duration) * 100;
-            if (progress > 100) {
+            if (progress >= 100) {
                 clearInterval(this.progressInterval);
                 this.props.onSongEnd();
             }

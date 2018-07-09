@@ -50,7 +50,7 @@ export class App extends React.Component<{}, IState> {
         this.isAuthorized();
     }
 
-    protected joinQueue(e: React.MouseEvent<HTMLElement>) {
+    protected joinQueue() {
         const code = this.state.enteredCode;
 
         axios.put(config.backend.url + "/join", { code })
@@ -62,7 +62,7 @@ export class App extends React.Component<{}, IState> {
                     this.getCurrentTrack();
                     this.getQueue();
                 }
-            }).catch(error => {
+            }).catch(() => {
                 this.setState({
                     joinError: "Unable to join the given queue."
                 });
@@ -87,7 +87,7 @@ export class App extends React.Component<{}, IState> {
             });
     }
 
-    protected createQueue(e: React.MouseEvent<HTMLElement>) {
+    protected createQueue() {
         const client_id = "da6ea27d63384e858d12bcce0fac006d";
         const redirect_uri = config.backend.url + "/callback";
         const url = "https://accounts.spotify.com/authorize" +

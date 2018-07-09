@@ -25,7 +25,7 @@ export class Track extends React.Component<ITrackProps> {
     protected addToQueue(event: React.MouseEvent<HTMLElement>) {
         event.preventDefault();
         axios.post(config.backend.url + "/track", { spotifyUri: event.currentTarget.id })
-            .then(response => {
+            .then(() => {
                 this.props.onQueued();
             }).catch(err => {
                 this.props.onError(err.response.data.msg);
