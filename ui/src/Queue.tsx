@@ -1,54 +1,59 @@
-import axios from "axios";
 import * as React from "react";
-import config from "./config";
 import Track, { ITrackProps } from "./Track";
+
+export interface IQueuedItem {
+    track: ITrackProps;
+    userId: string;
+}
 
 interface IQueueProps {
     onQueued: () => void;
+    onError: (msg: string) => void;
+    queue: IQueuedItem[] | null;
+    currentTrack: IQueuedItem | null;
 }
 
-interface IQueueState {
-    q: string;
-    tracks: ITrackProps[];
-}
-
-export class Queue extends React.Component<IQueueProps, IQueueState> {
+export class Queue extends React.Component<IQueueProps> {
 
     public constructor(props: IQueueProps) {
         super(props);
-        this.state = {
-            q: "",
-            tracks: []
-        };
-
-        this.getQueue();
     }
 
-    public componentWillReceiveProps(nextProps: IQueueProps) {
-        this.getQueue();
-    }
-
-    public getQueue() {
-        axios.get(config.backend.url + "/queue")
-            .then(response => {
-                this.setState({
-                    tracks: response.data.tracks
-                });
-            }).catch(error => {
-                console.log(error);
-            }
+    protected renderCurrentTrack() {
+        if (!this.props.currentTrack) {
+            return null;
+        }
+        return (
+            <li key="currentTrack">
+                <Track
+                    name={this.props.currentTrack.track.name}
+                    artist={this.props.currentTrack.track.artist}
+                    id={this.props.currentTrack.track.id}
+                    duration={this.props.currentTrack.track.duration}
+                    key={"current-" + this.props.currentTrack.track.id}
+                    isPlaying={true}
+                    onQueued={this.props.onQueued}
+                    onError={this.props.onError} />
+            </li>
         );
     }
 
     protected renderTracks() {
-        return this.state.tracks.map((track, i) => (
+        if (!this.props.queue) {
+            return null;
+        }
+
+        return this.props.queue.map((queuedItem, i) => (
             <li key={"queue-" + i}>
                 <Track
-                    name={track.name}
-                    artist={track.artist}
-                    id={track.id}
-                    key={i + "-" + track.id}
-                    onQueued={this.props.onQueued} />
+                    name={queuedItem.track.name}
+                    artist={queuedItem.track.artist}
+                    id={queuedItem.track.id}
+                    duration={queuedItem.track.duration}
+                    key={i + "-" + queuedItem.track.id}
+                    isPlaying={false}
+                    onQueued={this.props.onQueued}
+                    onError={this.props.onError} />
             </li>
         ));
     }
@@ -56,8 +61,8 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
     public render() {
         return (
             <div className="queue col-md-12">
-                {this.state.tracks.length > 0 ? <h4>Queue</h4> : null}
                 <ol className="queuedTracks">
+                    {this.renderCurrentTrack()}
                     {this.renderTracks()}
                 </ol>
             </div>

@@ -3,15 +3,24 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@types/cors": "^2.8.4",
+    "@types/cookies": "^0.7.1",
+    "@types/cors": "2.8.4",
+    "@types/keygrip": "^1.0.1",
+    "@types/pg": "^7.4.10",
+    "@types/randomstring": "^1.1.6",
     "axios": "0.18.0",
-    "cors": "^2.8.4",
-    "express": "4.16.3"
+    "cookies": "^0.7.1",
+    "cors": "2.8.4",
+    "express": "4.16.3",
+    "keygrip": "^1.0.2",
+    "node-pg-migrate": "^3.6.0",
+    "pg": "7.4.3",
+    "randomstring": "^1.1.5"
   },
   "scripts": {
     "build": "tsc -p ./",
-    "start": "npm run build && node build/dist/app.js",
-    "start:dev": "nodemon ./src/app.ts --watch \"src/**/*.ts\" --exec \"ts-node --inspect=0.0.0.0:9229\""
+    "start": "npm run build && node build/dist/src/app.js",
+    "migrate": "node-pg-migrate"
   },
   "devDependencies": {
     "@types/jest": "22.2.3",

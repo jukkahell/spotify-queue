@@ -8,6 +8,7 @@ import Track, { ITrackProps } from "./Track";
 
 interface ISearchFormProps {
     onQueued: () => void;
+    onError: (msg: string) => void;
 }
 
 interface ISearchFormState {
@@ -64,7 +65,8 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
         if (!hash) {
             return;
         } else if (hash.indexOf(":") < 0) {
-            this.search(hash);
+            const searchQuery = decodeURIComponent(hash.replace(/\+/g, " "));
+            this.search(searchQuery);
         } else if (hash.indexOf("album") >= 0) {
             const id = window.location.hash.split(":")[1];
             this.selectAlbum(id);
@@ -86,8 +88,7 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
             <Artist
                 name={artist.name}
                 id={artist.id}
-                key={i + "-" + artist.id}
-                onArtistSelected={this.selectArtist} />
+                key={i + "-" + artist.id} />
         )));
     }
 
@@ -100,7 +101,7 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
                     artists: []
                 });
             }).catch(err => {
-                console.log(err);
+                this.props.onError(err.response.data.msg);
             }
         );
     }
@@ -118,8 +119,7 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
                 name={album.name}
                 artist={album.artist}
                 id={album.id}
-                key={i + "-" + album.id}
-                onAlbumSelected={this.selectAlbum} />
+                key={i + "-" + album.id} />
         )));
     }
 
@@ -132,7 +132,7 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
                     artists: []
                 });
             }).catch(err => {
-                console.log(err);
+                this.props.onError(err.response.data.msg);
             }
         );
     }
@@ -150,19 +150,20 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
                 name={track.name}
                 artist={track.artist}
                 id={track.id}
+                duration={track.duration}
                 key={i + "-" + track.id}
-                onQueued={this.props.onQueued} />
+                isPlaying={false}
+                onQueued={this.props.onQueued}
+                onError={this.props.onError} />
         )));
     }
 
     public searchClicked(e: React.MouseEvent<HTMLElement>) {
         e.preventDefault();
-        this.search(this.state.q);
+        window.location.hash = "#" + this.state.q;
     }
 
     public search(q: string) {
-        window.location.hash = "#" + q;
-
         const params = {
             q,
             type: this.state.type,
@@ -175,8 +176,8 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
                     albums: response.data.albums,
                     artists: response.data.artists
                 });
-            }).catch(error => {
-                console.log(error);
+            }).catch(err => {
+                this.props.onError(err.response.data.msg);
             }
         );
     }

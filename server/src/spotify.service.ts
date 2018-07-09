@@ -1,156 +1,119 @@
 import axios from "axios";
 import * as Querystring from "querystring";
 import { getCurrentSeconds } from "./util";
-import { SpotifySearchQuery, SpotifyTrack } from "./spotify";
+import { SpotifySearchQuery } from "./spotify";
 
 class SpotifyService {
-    private accessToken: string;
     private readonly redirectUri: string;
     private readonly authHeader:string;
-    private deviceId:string;
-    private refreshToken: string;
-    private tokenExpires: number;
-    private tokenAcquired: number;
-    private currentTrack: SpotifyTrack | null;
 
     constructor(clientId: string, secret: string, redirectUri: string) {
         this.redirectUri = redirectUri;
         this.authHeader = "Basic " + Buffer.from(clientId + ":" + secret).toString('base64');
     }
 
-    public getCurrentTrack() {
-        return this.currentTrack;
-    }
-
-    public clearCurrentTrack() {
-        this.currentTrack = null;
-    }
-
-    public setCurrentTrack(data: any): SpotifyTrack {
-        this.currentTrack = {
-            name: data.item.name,
-            artist: data.item.artists[0].name,
-            duration: data.item.duration_ms,
-            progress: data.progress_ms,
-            cover: data.item.album.images[1].url,
-            isPlaying: data.item.is_playing
-        };
-
-        return this.currentTrack;
-    }
-
-    public saveToken = (data: any) => {
-        this.accessToken = data.access_token;
-        this.tokenExpires = data.expires_in;
-
-        if (data.refresh_token) {
-            this.refreshToken = data.refresh_token;
-        }
-
-        this.tokenAcquired = getCurrentSeconds();
+    public getUser = (accessToken: string) => {
+        return axios.get("https://api.spotify.com/v1/me", {
+            headers: {
+                "Content-Type": "text/plain",
+                "Authorization": "Bearer " + accessToken
+            }
+        });
     };
 
-    public isAuthorized = (callback: () => void) => {
-        if (this.tokenAcquired && getCurrentSeconds() - this.tokenAcquired >= this.tokenExpires) {
-            console.log("Getting refresh token...");
-            this.refreshAccessToken()
-                .then(response => {
-                    this.saveToken(response.data);
-                    callback();
-                }).catch(err => {
-                    console.log("Failed to refresh token...", err);
-                });
-            
-            return false;
-        }
-    
-        return this.accessToken != null;
+    public isAuthorized = (tokenAcquired: number, expiresIn: number, refreshToken: string) => {
+        return new Promise((resolve, reject) => {
+            if (getCurrentSeconds() - tokenAcquired >= expiresIn) {
+                console.log("Getting refresh token...");
+                this.refreshAccessToken(refreshToken)
+                    .then(response => {
+                        return resolve(response.data);
+                    }).catch(err => {
+                        console.log("Failed to refresh token...", err);
+                        return reject("Unable to refresh expired access token");
+                    });
+            } else {
+                return resolve(undefined);
+            }
+        });  
     };
 
-    public getDevices = () => {
+    public getDevices = (accessToken: string) => {
         return axios.get("https://api.spotify.com/v1/me/player/devices", {
             headers: {
                 "Content-Type": "text/plain",
-                "Authorization": "Bearer " + this.accessToken
+                "Authorization": "Bearer " + accessToken
             }
         });
-    };
-
-    public getDevice = () => {
-        return this.deviceId;
-    };
-
-    public setDevice = (deviceId:string) => {
-        this.deviceId = deviceId;
     };
     
-    public getTracks = (ids: string) => {
-        return axios.get("https://api.spotify.com/v1/tracks?ids=" + ids, {
+    public getTrack = (accessToken: string, id: string) => {
+        return axios.get("https://api.spotify.com/v1/tracks/" + id, {
             headers: {
                 "Content-Type": "text/plain",
-                "Authorization": "Bearer " + this.accessToken
+                "Authorization": "Bearer " + accessToken
             }
         });
     };
 
-    public currentlyPlaying = () => {
+    public currentlyPlaying = (accessToken: string) => {
         return axios.get(
             "https://api.spotify.com/v1/me/player",
             {
                 headers: {
-                    "Authorization": "Bearer " + this.accessToken
+                    "Authorization": "Bearer " + accessToken
                 }
             }
         )
     };
 
-    public startSong = (id: string) => {
+    public startSong = (accessToken: string, id: string, deviceId: string) => {
         return axios.put(
-            "https://api.spotify.com/v1/me/player/play?device_id=" + this.deviceId,
+            "https://api.spotify.com/v1/me/player/play?device_id=" + deviceId,
             {
                 uris: [id]
             },
             {
                 headers: {
                     "Content-Type": "text/plain",
-                    "Authorization": "Bearer " + this.accessToken
+                    "Authorization": "Bearer " + accessToken
                 }
             }
         );
     };
 
-    public getArtistTopTracks = (id: string) => {
+    public getArtistTopTracks = (accessToken: string, id: string) => {
         return axios.get("https://api.spotify.com/v1/artists/" + id + "/top-tracks?country=FI", {
             headers: {
                 "Content-Type": "text/plain",
-                "Authorization": "Bearer " + this.accessToken
+                "Authorization": "Bearer " + accessToken
             }
         });
     };
 
-    public getArtistAlbums = (id: string) => {
+    public getArtistAlbums = (accessToken: string, id: string) => {
         return axios.get("https://api.spotify.com/v1/artists/" + id + "/albums", {
             headers: {
                 "Content-Type": "text/plain",
-                "Authorization": "Bearer " + this.accessToken
+                "Authorization": "Bearer " + accessToken
             }
         });
     };
 
-    public getAlbum = (id: string) => {
+    public getAlbum = (accessToken: string, id: string) => {
         return axios.get("https://api.spotify.com/v1/albums/" + id, {
             headers: {
                 "Content-Type": "text/plain",
-                "Authorization": "Bearer " + this.accessToken
+                "Authorization": "Bearer " + accessToken
             }
         });
     };
 
-    public search = (query: SpotifySearchQuery) => {
+    public search = (accessToken: string, query: SpotifySearchQuery) => {
         return axios.get("https://api.spotify.com/v1/search?" + Querystring.stringify(query), {
             headers: {
                 "Content-Type": "text/plain",
-                "Authorization": "Bearer " + this.accessToken
+                "Authorization": "Bearer " + accessToken
             }
         });
     };
@@ -170,10 +133,10 @@ class SpotifyService {
         });
     };
 
-    private refreshAccessToken = () => {
+    private refreshAccessToken = (refreshToken: string) => {
         const data = {
             grant_type: "refresh_token",
-            refresh_token: this.refreshToken
+            refresh_token: refreshToken
         };
     
         return axios.post("https://accounts.spotify.com/api/token", Querystring.stringify(data), {

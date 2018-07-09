@@ -1,3 +1,4 @@
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import axios from "axios";
 import * as React from "react";
 import config from "./config";
@@ -6,7 +7,12 @@ export interface ITrackProps {
     name: string;
     artist: string;
     id: string;
+    duration: number;
+    progress?: number;
+    cover?: string;
+    isPlaying: boolean;
     onQueued: () => void;
+    onError: (msg: string) => void;
 }
 
 export class Track extends React.Component<ITrackProps> {
@@ -18,11 +24,11 @@ export class Track extends React.Component<ITrackProps> {
 
     protected addToQueue(event: React.MouseEvent<HTMLElement>) {
         event.preventDefault();
-        axios.get(config.backend.url + "/addSong?id=" + event.currentTarget.id)
+        axios.post(config.backend.url + "/track", { spotifyUri: event.currentTarget.id })
             .then(response => {
                 this.props.onQueued();
             }).catch(err => {
-                console.log(err);
+                this.props.onError(err.response.data.msg);
             }
         );
     }
@@ -31,12 +37,14 @@ export class Track extends React.Component<ITrackProps> {
         const {
             name,
             artist,
-            id
+            id,
+            isPlaying
         } = this.props;
 
         return (
             <div>
-                <a onClick={this.addToQueue} href="#" id={id}>{artist} - {name}</a>
+                <a className={(isPlaying ? "currentTrack" : "")} onClick={this.addToQueue} href="#" id={id}>{artist} - {name}</a>
+                {isPlaying ? <FontAwesomeIcon icon="volume-up" /> : null}
             </div>
         );
     }

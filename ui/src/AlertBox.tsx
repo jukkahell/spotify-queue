@@ -23,7 +23,11 @@ export class AlertBox extends React.Component<IAlertBoxProps, IAlertBoxState> {
         };
     }
 
-    public componentWillReceiveProps(nextProps: IAlertBoxProps) {
+    public componentDidUpdate(nextProps: IAlertBoxProps) {
+        if (this.props.alert === nextProps.alert) {
+            return;
+        }
+
         setTimeout(() => {
             this.setState({
                 alert: null

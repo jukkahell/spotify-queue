@@ -8,10 +8,11 @@ export interface IDevice {
     id: string;
     name: string;
     type: string;
+    isActive: boolean;
 }
 
 export interface IDeviceSelectProps {
-    setDevice: (deviceId: string) => void;
+    onError: (msg: string) => void;
 }
 
 export interface IDeviceSelectState {
@@ -54,19 +55,21 @@ export class DeviceSelect extends React.Component<IDeviceSelectProps, IDeviceSel
             selectedDeviceName: e.currentTarget.innerText,
             dropdownVisible: false
         });
+
+        this.setDevice();
     }
 
     public dropdownClicked(e: React.MouseEvent<HTMLElement>) {
         e.preventDefault();
 
-        this.setState({
-            dropdownVisible: !this.state.dropdownVisible
-        });
+        this.setState((prevState) => ({
+            dropdownVisible: !prevState.dropdownVisible
+        }));
     }
 
     public renderDeviceOptions() {
         return this.state.devices.map((device: IDevice, i: number) => (
-            <a className="dropdown-item" key={"device-" + i} href="#" id={device.id} onClick={this.selectDevice}>
+            <a className={"dropdown-item" + (device.isActive ? " active" : "")} key={"device-" + i} href="#" id={device.id} onClick={this.selectDevice}>
                 <FontAwesomeIcon icon={this.deviceTypeToIcon(device.type)} /> {device.name}
             </a>
         ));
@@ -74,38 +77,28 @@ export class DeviceSelect extends React.Component<IDeviceSelectProps, IDeviceSel
 
     public setDevice() {
         if (this.state.selectedDeviceId) {
-            axios.post(config.backend.url + "/setDevice", { deviceId: this.state.selectedDeviceId })
-            .then(response => {
-                this.props.setDevice(this.state.selectedDeviceId!);
-            }).catch(error => {
-                console.log(error);
-            }
-        );
+            axios.put(config.backend.url + "/device", { deviceId: this.state.selectedDeviceId })
+            .catch(err => {
+                this.props.onError(err.response.data.msg);
+            });
         }
     }
 
     public render() {
         return (
-            <div className="container h-100">
-                <div className="row h-100 justify-content-center align-items-center">
-                    <div className="row h-20 w-100 justify-content-center">
-                        <div className="dropdown col-md-2">
-                            <button className="btn btn-secondary dropdown-toggle w-100"
-                                    onClick={this.dropdownClicked}
-                                    type="button"
-                                    id="deviceMenuButton"
-                                    data-toggle="dropdown"
-                                    aria-haspopup="true"
-                                    aria-expanded="false">
-                                {this.state.selectedDeviceName}
-                            </button>
-                            <div className={"dropdown-menu col-md-12 " + (this.state.dropdownVisible ? "show" : "hide")} aria-labelledby="deviceMenuButton">
-                                {this.renderDeviceOptions()}
-                            </div>
-                        </div>
-                        <div className="col-md-2">
-                            <button type="submit" className="btn btn-primary search w-100" onClick={this.setDevice}>OK</button>
-                        </div>
+            <div>
+                <div className="dropup col-md-2">
+                    <button className="btn btn-secondary dropdown-toggle deviceSelect"
+                            onClick={this.dropdownClicked}
+                            type="button"
+                            id="deviceMenuButton"
+                            data-toggle="dropdown"
+                            aria-haspopup="true"
+                            aria-expanded="false">
+                        <FontAwesomeIcon icon="volume-off" />
+                    </button>
+                    <div className={"dropdown-menu col-md-12 " + (this.state.dropdownVisible ? "show" : "hide")} aria-labelledby="deviceMenuButton">
+                        {this.renderDeviceOptions()}
                     </div>
                 </div>
             </div>

@@ -1,10 +1,10 @@
 export interface SpotifyTrack {
+    id: string;
     name: string;
     duration: number;
     progress: number;
     artist: string;
     cover: string;
-    isPlaying: boolean;
 }
 
 export interface SpotifySearchQuery {
