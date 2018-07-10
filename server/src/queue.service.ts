@@ -4,6 +4,7 @@ import { SpotifyTrack } from "./spotify";
 import { AxiosPromise } from "../node_modules/axios";
 import SpotifyService from "./spotify.service";
 import { getCurrentSeconds } from "./util";
+import * as randomstring from "randomstring";
 
 export interface QueueTimeout {
     [accessToken: string]: NodeJS.Timer;
@@ -29,6 +30,7 @@ class QueueService {
         console.log(`Creating new queue for userId ${userId}`);
 
         const queue: Queue = {
+            owner: userId,
             accessToken,
             refreshToken,
             expiresIn,
@@ -55,6 +57,37 @@ class QueueService {
         };
         
         return db.query("INSERT INTO queues (id, owner, data) VALUES ($1, $2, $3)", [passcode, spotifyUserId, queue]);
+    }
+
+    public async generatePasscode(): Promise<string|null> {
+        let loops = 10;
+        let passcode = null;
+
+        do {
+            passcode = randomstring.generate({ readable: true, length: 8, charset: "alphanumeric" });
+            const results = await db.query("SELECT 1 FROM queues WHERE id = $1", [passcode]);
+            console.log(`Test passcode ${passcode}`);
+            if (results.rowCount === 0) {
+                return passcode;
+            }
+            loops--;
+        } while (loops > 0);
+        
+        return null;
+    }
+
+    public isOwner(passcode: string, userId: string) {
+        return new Promise((resolve, reject) => {
+            this.getQueue(passcode).then(result => {
+                if (result.rowCount === 1 && result.rows[0].data.owner === userId) {
+                    resolve();
+                } else {
+                    reject("Owner permission required for this action.");
+                }
+            }).catch(err => {
+                reject("Unable to find queue with given passcode.");
+            })
+        });
     }
 
     public activateQueue(queue: Queue, accessToken: string, passcode: string) {
@@ -132,15 +165,24 @@ class QueueService {
     }
 
     public setDevice(passcode: string, deviceId: string) {
-        this.getQueue(passcode, true).then(result => {
-            if (result.rowCount === 1) {
-                const queue: Queue = result.rows[0].data;
-                queue.deviceId = deviceId;
-                db.query("UPDATE queues SET data = $1 WHERE id = $2", [queue, passcode]);
-            }
-        }).catch(err => {
-            console.log(err);
-        })
+        return new Promise((resolve, reject) => {
+            this.getQueue(passcode, true).then(result => {
+                if (result.rowCount === 1) {
+                    const queue: Queue = result.rows[0].data;
+                    queue.deviceId = deviceId;
+                    db.query("UPDATE queues SET data = $1 WHERE id = $2", [queue, passcode]).then(() => {
+                        resolve({ accessToken: queue.accessToken!, isPlaying: queue.isPlaying });
+                    }).catch(err => {
+                        reject("Unable to update new deviced to database. Please try again later.");
+                    });
+                } else {
+                    reject("Queue not found with given passcode.");
+                }
+            }).catch(err => {
+                console.log(`Unable to get queue with ${passcode}`, err);
+                reject("Unable to get queue with given passcode. Please try again later.");
+            })
+        });
     }
 
     public startPlaying(accessToken: string, 

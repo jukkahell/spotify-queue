@@ -19,6 +19,7 @@ export interface CurrentTrack {
 
 export interface Queue {
     name: string;
+    owner: string,
     accessToken: string | null;
     accessTokenAcquired: number;
     refreshToken: string;

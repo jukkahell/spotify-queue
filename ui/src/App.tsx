@@ -7,6 +7,7 @@ import CurrentlyPlaying from "./CurrentlyPlaying";
 import { DeviceSelect } from "./DeviceSelect";
 import { IQueuedItem, Queue } from "./Queue";
 import SearchForm from "./SearchForm";
+import Share from "./Share";
 
 export interface IState {
     enteredCode: string | null;
@@ -16,6 +17,7 @@ export interface IState {
     currentTrack: IQueuedItem | null;
     isPlaying: boolean;
     queuedItems: IQueuedItem[] | null;
+    isOwner: boolean;
 }
 
 export class App extends React.Component<{}, IState> {
@@ -32,7 +34,8 @@ export class App extends React.Component<{}, IState> {
             joinError: null,
             currentTrack: null,
             isPlaying: false,
-            queuedItems: null
+            queuedItems: null,
+            isOwner: false
         };
 
         this.createQueue = this.createQueue.bind(this);
@@ -47,7 +50,9 @@ export class App extends React.Component<{}, IState> {
     }
 
     public componentDidMount() {
-        this.isAuthorized();
+        if (!this.state.passcode) {
+            this.isAuthorized();
+        }
     }
 
     protected joinQueue() {
@@ -79,11 +84,16 @@ export class App extends React.Component<{}, IState> {
 
                     clearInterval(this.authInterval);
                     this.setState({
-                        passcode: response.data.passcode
+                        passcode: response.data.passcode,
+                        isOwner: response.data.isOwner
                     });
+                } else if (!window.location.hash) {
+                    this.setState({
+                        enteredCode: window.location.pathname.substr(1)
+                    }, this.joinQueue);
                 }
             }).catch(error => {
-                console.log(error);
+                this.onError(error.response.data.msg);
             });
     }
 
@@ -151,8 +161,9 @@ export class App extends React.Component<{}, IState> {
                             <SearchForm onQueued={this.onQueued} onError={this.onError} />
                         </div>
                     </div>
-                    <div className="footer fixed-bottom">
-                        <DeviceSelect onError={this.onError} />
+                    <div className="footer fixed-bottom d-flex">
+                        {this.state.isOwner ? <DeviceSelect onError={this.onError} /> : null}
+                        <Share passcode={this.state.passcode} onError={this.onError} />
                     </div>
                 </div>
             );

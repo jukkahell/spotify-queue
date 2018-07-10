@@ -157,7 +157,7 @@ a.currentTrack {
   margin-right: 10px;
 }
 
-button.deviceSelect {
+button.footerMenu {
   background-color: transparent;
   border: none;
   padding: 0;
@@ -165,7 +165,7 @@ button.deviceSelect {
   height: 1.5em;
   color: #B3B3B3;
 }
-button.deviceSelect:active, button.deviceSelect:hover, button.deviceSelect:focus {
+button.footerMenu:active, button.footerMenu:hover, button.footerMenu:focus {
   background-color: transparent!important;
   border: none;
   color: #FEFEFE;

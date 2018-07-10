@@ -82,6 +82,22 @@ class SpotifyService {
         );
     };
 
+    public setDevice = (accessToken: string, isPlaying: boolean, deviceId: string) => {
+        return axios.put(
+            "https://api.spotify.com/v1/me/player/",
+            {
+                device_ids: [deviceId],
+                play: isPlaying
+            },
+            {
+                headers: {
+                    "Content-Type": "text/plain",
+                    "Authorization": "Bearer " + accessToken
+                }
+            }
+        );
+    };
+
     public getArtistTopTracks = (accessToken: string, id: string) => {
         return axios.get("https://api.spotify.com/v1/artists/" + id + "/top-tracks?country=FI", {
             headers: {

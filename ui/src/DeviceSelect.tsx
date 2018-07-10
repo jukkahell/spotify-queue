@@ -34,13 +34,13 @@ export class DeviceSelect extends React.Component<IDeviceSelectProps, IDeviceSel
             dropdownVisible: false
         };
 
-        axios.get(config.backend.url + "/getDevices")
+        axios.get(config.backend.url + "/devices")
             .then(response => {
                 this.setState({
                     devices: response.data
                 });
             }).catch(error => {
-                console.log(error);
+                this.props.onError(error);
             }
         );
 
@@ -54,9 +54,7 @@ export class DeviceSelect extends React.Component<IDeviceSelectProps, IDeviceSel
             selectedDeviceId: e.currentTarget.id,
             selectedDeviceName: e.currentTarget.innerText,
             dropdownVisible: false
-        });
-
-        this.setDevice();
+        }, this.setDevice);
     }
 
     public dropdownClicked(e: React.MouseEvent<HTMLElement>) {
@@ -78,7 +76,17 @@ export class DeviceSelect extends React.Component<IDeviceSelectProps, IDeviceSel
     public setDevice() {
         if (this.state.selectedDeviceId) {
             axios.put(config.backend.url + "/device", { deviceId: this.state.selectedDeviceId })
-            .catch(err => {
+            .then(resp => {
+                const devices = this.state.devices.map(device => {
+                    if (device.id === this.state.selectedDeviceId) {
+                       return { id: device.id, isActive: true, name: device.name, type: device.type };
+                    }
+                    return { id: device.id, isActive: false, name: device.name, type: device.type };
+                });
+                this.setState({
+                    devices
+                });
+            }).catch(err => {
                 this.props.onError(err.response.data.msg);
             });
         }
@@ -88,7 +96,7 @@ export class DeviceSelect extends React.Component<IDeviceSelectProps, IDeviceSel
         return (
             <div>
                 <div className="dropup col-md-2">
-                    <button className="btn btn-secondary dropdown-toggle deviceSelect"
+                    <button className="btn btn-secondary dropdown-toggle footerMenu"
                             onClick={this.dropdownClicked}
                             type="button"
                             id="deviceMenuButton"

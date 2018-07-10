@@ -25,7 +25,6 @@ export class AlertBox extends React.Component<IAlertBoxProps, IAlertBoxState> {
 
     public componentDidUpdate(prevProps: IAlertBoxProps) {
         if (this.props.alert.msg !== prevProps.alert.msg) {
-            console.log("JOOJOO");
             this.setState({
                 showAlert: true
             });

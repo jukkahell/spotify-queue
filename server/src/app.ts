@@ -19,11 +19,35 @@ import {getCurrentSeconds} from "./util";
 const keys = Array.from({length: 10}, () => randomstring.generate(15));
 const keygrip = new Keygrip(keys, "sha256");
 
+const excludeEndpointsFromAuth = ["/join", "/callback", "/isAuthorized"];
+const endpointsRequireOwnerPerm = ["/device"];
 const app = express();
 app.use(cors(config.app.cors));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(Cookies.express(keygrip));
+app.use((req, res, next) => {
+    if (excludeEndpointsFromAuth.includes(req.path)) {
+        return next();
+    } else {
+        isAuthorized(req.cookies.get("passcode"), req.cookies.get("user")).then(resp => {
+            return next();
+        }).catch(err => {
+            return res.status(403).json({ msg: err });
+        });
+    }
+});
+app.use((req, res, next) => {
+    if (endpointsRequireOwnerPerm.includes(req.path)) {
+        queueService.isOwner(req.cookies.get("passcode"), req.cookies.get("user")).then(resp => {
+            return next();
+        }).catch(err => {
+            return res.status(403).json({ msg: err });
+        });
+    } else {
+        return next();
+    }
+});
 
 const options = env.NODE_ENV === "production" ? {
     key: fs.readFileSync(secrets.certPath + "privkey.pem"),
@@ -55,10 +79,16 @@ app.get("/callback", (req, res) => {
         let passcode: string;
         let userId: string;
 
+        const setCookies = (req: express.Request, res: express.Response, passcode: string, userId: string) => {
+            req.cookies.set("user", userId, config.userCookieOptions);
+            req.cookies.set("passcode", passcode, config.passcodeCookieOptions);
+            res.status(200).send("<script>window.close();</script>");
+        };
+
         // Check if this user already has a queue
         queueService.getQueueBySpotifyId(spotifyUserId)
         .then(result => {
-            if (result.rowCount > 0) {
+            if (result.rowCount === 1) {
                 const queue: QueueDao = result.rows[0];
                 queue.data.refreshToken = refreshToken;
                 queue.data.expiresIn = expiresIn;
@@ -66,19 +96,27 @@ app.get("/callback", (req, res) => {
                 passcode = queue.id;
                 userId = (queue.data.users.find(user => user.spotifyUserId === spotifyUserId))!.id;
                 console.log(`Found existing queue for user ${userId} and passcode ${passcode}`);
-                return queueService.activateQueue(queue.data, accessToken, passcode);
+                queueService.activateQueue(queue.data, accessToken, passcode).then(() => {
+                    setCookies(req, res, passcode, userId);
+                });
             } else {
-                passcode = randomstring.generate({ readable: true, length: 8, charset: "alphanumeric" });
-                userId = randomstring.generate();
-                return queueService.createQueue(spotifyUserId, accessToken, passcode, userId, refreshToken, expiresIn);
+                queueService.generatePasscode().then(passcode => {
+                    console.log(`Generated passcode ${passcode}`);
+                    if (passcode) {
+                        userId = randomstring.generate();
+                        queueService.createQueue(spotifyUserId, accessToken, passcode, userId, refreshToken, expiresIn)
+                        .then(() => {
+                            setCookies(req, res, passcode, userId);
+                        });
+                    } else {
+                        throw new Error("Unable to generate unique passcode. Please try again later");
+                    }
+                }).catch(err => {
+                    console.log(err);
+                    res.status(500).send(err.message);
+                });
             }
-        })
-        .then(() => {
-            req.cookies.set("user", userId, config.userCookieOptions);
-            req.cookies.set("passcode", passcode, config.passcodeCookieOptions);
-            res.status(200).send("<script>window.close();</script>");
-        })
-        .catch(err => {
+        }).catch(err => {
             console.log(err);
             res.status(500).send("Unable to create queue. Please try again in a moment.");
         });
@@ -132,38 +170,19 @@ app.put("/join", (req, res) => {
 });
 
 app.get("/isAuthorized", (req, res) => {
-    const id = req.cookies.get("passcode");
+    if (!req.cookies.get("passcode")) {
+        res.status(204).json({ msg: "No passcode" });
+        return;
+    }
 
-    queueService.getQueue(id)
-    .then(response => {
-        if (response.rowCount === 1) {
-            const queue: Queue = response.rows[0].data;
-            spotify.isAuthorized(queue.accessTokenAcquired, queue.expiresIn, queue.refreshToken).then((response: any) => {
-                if (response) {
-                    queue.accessToken = response.access_token;
-                    queue.expiresIn = response.expires_in;
-                    queue.accessTokenAcquired = getCurrentSeconds();
-                    if (response.refresh_token) {
-                        queue.refreshToken = response.refresh_token;
-                    }
-                    queueService.updateQueue(queue, id).catch(err => {
-                        console.log("Failed to update queue refresh token.", err);
-                    });
-                }
-                res.status(200).json({isAuthorized: true, passcode: id});
-            }).catch(err => {
-                res.status(500).json({isAuthorized: false, msg: err});
-            });
-        } else {
-            res.status(204).json({isAuthorized: false});
-        }
+    isAuthorized(req.cookies.get("passcode"), req.cookies.get("user")).then(authResult => {
+        res.status(200).json(authResult);
     }).catch(err => {
-        console.log(err);
-        res.status(500).json({isAuthorized: false});
-    });
+        res.status(403).json({ isAuthorized: false, msg: err });
+    })
 });
 
-app.get("/getDevices", (req, res) => {
+app.get("/devices", (req, res) => {
     const callback = (accessToken: string) => {
         spotify.getDevices(accessToken)
         .then((response: any) => {
@@ -180,6 +199,15 @@ app.get("/getDevices", (req, res) => {
                 };
             });
 
+            // If no device was active just pick the first
+            if (!activeDeviceId && devices.length > 0) {
+                activeDeviceId = devices[0].id;
+                devices[0].isActive = true;
+            } else if (!activeDeviceId && devices.length === 0) {
+                res.status(404).json({ msg: "No available devices found. Please start Spotify and then refresh the page."});
+                return;
+            }
+
             res.status(200).json(devices);
 
             // If there was active device set it as device id for this queue
@@ -188,7 +216,7 @@ app.get("/getDevices", (req, res) => {
                 queueService.getQueue(passcode, true).then(resp => {
                     if (resp.rowCount === 1) {
                         const queue: Queue = resp.rows[0].data;
-                        if (!queue.deviceId) {
+                        if (queue.deviceId !== activeDeviceId) {
                             queue.deviceId = activeDeviceId!;
                             queueService.updateQueue(queue, passcode).catch(err => {
                                 console.log("Unable to set device id", err);
@@ -212,20 +240,21 @@ app.get("/getDevices", (req, res) => {
 
 app.put("/device", (req, res) => {
     console.log("Set device " + req.body.deviceId);
-    queueService.setDevice(req.cookies.get("passcode"), req.body.deviceId);
-    res.status(200).json({msg: "OK"});
-});
-
-app.get("/device", (req, res) => {
-    queueService.getQueue(req.cookies.get("passcode")).then(result => {
-        if (result.rowCount === 1) {
-            res.status(200).json({deviceId: result.rows[0].data.deviceId});
-        } else {
-            res.status(400).json({msg: "Unable to get device with provided passcode"});
-        }
-    }).catch(() => {
-        res.status(500).json({msg: "Unable to get playback device from database"});
-    });
+    if (req.body.deviceId) {
+        queueService.setDevice(req.cookies.get("passcode"), req.body.deviceId)
+        .then(resp => {
+            spotify.setDevice(resp["accessToken"], resp["isPlaying"], req.body.deviceId).then(() => {
+                res.status(200).json({msg: "OK"});
+            }).catch(err => {
+                console.log("Unable to update device to spotify.", err);
+            });
+        }).catch(err => {
+            console.log(err);
+            res.status(500).json({msg: err});
+        });
+    } else {
+        res.status(400).json({msg: "Invalid device id"});
+    }
 });
 
 app.get("/queue", (req, res) => {
@@ -392,6 +421,39 @@ app.get("/search", (req, res) => {
         res.status(500).json({msg: "Error when searching for a song"});
     });
 });
+
+const isAuthorized = (passcode: string, userId: string) => {
+    return new Promise((resolve, reject) => {
+        queueService.getQueue(passcode)
+        .then(response => {
+            if (response.rowCount === 1) {
+                const queue: Queue = response.rows[0].data;
+                spotify.isAuthorized(queue.accessTokenAcquired, queue.expiresIn, queue.refreshToken).then((response: any) => {
+                    if (response) {
+                        queue.accessToken = response.access_token;
+                        queue.expiresIn = response.expires_in;
+                        queue.accessTokenAcquired = getCurrentSeconds();
+                        if (response.refresh_token) {
+                            queue.refreshToken = response.refresh_token;
+                        }
+                        queueService.updateQueue(queue, passcode).catch(err => {
+                            console.log("Failed to update queue refresh token.", err);
+                        });
+                    }
+                    const isOwner = queue.owner === userId;
+                    resolve({ isAuthorized: true, passcode, isOwner });
+                }).catch(err => {
+                    reject(err);
+                });
+            } else {
+                reject("Unable to find queues with given passcode");
+            }
+        }).catch(err => {
+            console.log(err);
+            reject("Unable to get queue with given passcode");
+        });
+    });
+}
 
 const getCurrentTrack = (passcode: string) => {
     return new Promise((resolve, reject) => {
