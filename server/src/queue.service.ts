@@ -1,5 +1,5 @@
 import * as db from "./db";
-import { Queue, QueueItem, CurrentTrack, QueueDao } from "./queue";
+import { Queue, QueueItem, QueueDao } from "./queue";
 import { SpotifyTrack } from "./spotify";
 import { AxiosPromise } from "../node_modules/axios";
 import SpotifyService from "./spotify.service";
@@ -320,16 +320,51 @@ class QueueService {
         return this.updateLoginState(queue, null, passcode);
     }
 
-    public getCurrentTrack(passcode: string, user: string, onSuccess: (accessToken: string, currentTrack: CurrentTrack, isPlaying: boolean) => void, onError: () => void) {
-        this.getQueue(passcode).then(queueDao => {
-            const queue: Queue = queueDao.data;
-            if (queue.currentTrack) {
-                onSuccess(queue.accessToken!, queue.currentTrack, queue.isPlaying);
-            } else {
-                onError();
-            }
-        }).catch(err => {
-            onError();
+    public getCurrentTrack(passcode: string, user: string, spotify: SpotifyService) {
+        return new Promise((resolve, reject) => {
+            this.getQueue(passcode).then(queueDao => {
+                const queue: Queue = queueDao.data;
+
+                if (queue.currentTrack && queue.accessToken) {
+                    this.logger.debug(`Getting currently playing track ${queue.currentTrack.track.id} from spotify...`, { user, passcode });
+
+                    spotify.currentlyPlaying(queue.accessToken).then(response => {
+                        queue.currentTrack!.track.progress = response.data.progress_ms;
+
+                        this.logger.debug(`Found track. isPlaying: ${response.data.is_playing}, progress: ${response.data.progress_ms}ms`, { user, passcode });
+                        
+                        // If is_playing info is out of sync with Spotify
+                        if (queue.isPlaying !== response.data.is_playing) {
+                            this.logger.debug(`isPlaying state was out of sync...updating`, { user, passcode });
+                            queue.isPlaying = response.data.is_playing;
+                            this.getQueue(passcode, true).then(queueDao => {
+                                const q: Queue = queueDao.data;
+                                q.isPlaying = response.data.is_playing;
+                                this.updateQueue(q, passcode)
+                                .then(() => {
+                                    this.logger.debug(`isPlaying state updated`, { user, passcode });
+                                }).catch(err => {
+                                    this.logger.error("Failed to update isPlaying state.", { user, passcode });
+                                    this.logger.error(err, { user, passcode });
+                                });
+                            }).catch(err => {
+                                this.logger.error("Failed to get queue when saving playing state", { user, passcode });
+                            });
+                        }
+
+                        resolve({ currentTrack: queue.currentTrack, isPlaying: queue.isPlaying });
+                    }).catch(() => {
+                        this.logger.warn("Unable to get track progress from Spotify...resolve anyway.", { user, passcode });
+                        resolve({ currentTrack: queue.currentTrack, isPlaying: queue.isPlaying });
+                    });
+                } else if (!queue.currentTrack) {
+                    reject({ status: 204, message: "Current track not found"});
+                } else {
+                    reject({ status: 403, message: "Queue inactive. Owner should reactivate it." });
+                }
+            }).catch(() => {
+                reject({ status: 500, message: "Queue not found with the given passcode." });
+            });
         });
     }
 
@@ -373,12 +408,14 @@ class QueueService {
         });
     }
 
-    public getAccessToken(id: string, callback: (accessToken?: string) => void, onError: (err: any) => void) {
-        this.getQueue(id).then(queueDao => {
-            callback(queueDao.data.accessToken!);
-        }).catch(err => {
-            onError(err);
-        })
+    public getAccessToken(id: string) {
+        return new Promise<string>((resolve, reject) => {
+            this.getQueue(id).then(queueDao => {
+                resolve(queueDao.data.accessToken!);
+            }).catch(err => {
+                reject({ status: 500, message: err });
+            })
+        });
     }
 
     public setDevice(passcode: string, user: string, deviceId: string) {

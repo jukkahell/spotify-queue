@@ -138,23 +138,86 @@ class SpotifyService {
                 "Authorization": "Bearer " + accessToken
             }
         });
-    };
+    }
 
-    public getAlbum = (accessToken: string, id: string) => {
-        return axios.get("https://api.spotify.com/v1/albums/" + id, {
-            headers: {
-                "Content-Type": "text/plain",
-                "Authorization": "Bearer " + accessToken
-            }
+    public getAlbum = (accessToken: string, id: string, user: string, passcode: string) => {
+        return new Promise((resolve, reject) => {
+            axios.get("https://api.spotify.com/v1/albums/" + id, {
+                headers: {
+                    "Content-Type": "text/plain",
+                    "Authorization": "Bearer " + accessToken
+                }
+            }).then(response => {
+                const albums = response.data.tracks.items.map((i: any) => {
+                    return {
+                        artist: i.artists[0].name,
+                        name: i.name,
+                        id: i.uri
+                    };
+                });
+                resolve(albums);
+            }).catch(err => {
+                if (err.response) {
+                    this.logger.error(`Unable to fetch albums from Spotify with id ${id}`, { user, passcode });
+                } else {
+                    this.logger.error(err);
+                }
+                reject({ status: 500, message: "Unable to fetch albums from Spotify. Please try again later." });
+            });
         });
-    };
+    }
 
-    public search = (accessToken: string, query: SpotifySearchQuery) => {
-        return axios.get("https://api.spotify.com/v1/search?" + Querystring.stringify(query), {
-            headers: {
-                "Content-Type": "text/plain",
-                "Authorization": "Bearer " + accessToken
-            }
+    public search = (user: string, passcode: string, accessToken: string, query: SpotifySearchQuery) => {
+        return new Promise((resolve, reject) => {
+            axios.get("https://api.spotify.com/v1/search?" + Querystring.stringify(query), {
+                headers: {
+                    "Content-Type": "text/plain",
+                    "Authorization": "Bearer " + accessToken
+                }
+            }).then(response => {
+                const results = new SearchResults();
+                if (query.type.indexOf("track") >= 0) {
+                    results.tracks = response.data.tracks.items.map((i: any) => {
+                        return {
+                            artist: i.artists[0].name,
+                            name: i.name,
+                            id: i.uri
+                        };
+                    });
+                } else {
+                    results.tracks = [];
+                }
+                if (query.type.indexOf("album") >= 0) {
+                    results.albums = response.data.albums.items.map((album: any) => {
+                        return {
+                            artist: album.artists[0].name,
+                            name: album.name,
+                            id: album.id
+                        };
+                    });
+                } else {
+                    results.albums = [];
+                }
+                if (query.type.indexOf("artist") >= 0) {
+                    results.artists = response.data.artists.items.map((artist: any) => {
+                        return {
+                            name: artist.name,
+                            id: artist.id
+                        };
+                    });
+                } else {
+                    results.artists = [];
+                }
+                resolve(results);
+            }).catch(err => {
+                if (err.response) {
+                    this.logger.error(`Error with search query ${query.q}`, { user, passcode });
+                    this.logger.error(err.response.data.error.message, { user, passcode });
+                } else {
+                    this.logger.error(err, { user, passcode });
+                }
+                reject({ status: err.response.status, message: "Unable to get search results from Spotify."})
+            });
         });
     };
 

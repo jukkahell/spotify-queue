@@ -15,6 +15,13 @@ html, body {
   margin-bottom: 40px;
 }
 
+.loginContainer {
+  position: absolute;
+  width: 100%;
+  left: 0;
+  max-width: 100%;
+}
+
 .App {
   text-align: center;
 }

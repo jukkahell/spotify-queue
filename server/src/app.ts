@@ -9,11 +9,11 @@ import * as Keygrip from "keygrip";
 import { env } from "process";
 import * as randomstring from "randomstring";
 import config from "./config";
-import { CurrentTrack, Queue } from "./queue";
+import { Queue } from "./queue";
 import QueueService from "./queue.service";
 import secrets from "./secrets";
 import {SpotifySearchQuery} from "./spotify";
-import Spotify, { SearchResults } from "./spotify.service";
+import Spotify from "./spotify.service";
 import * as winston from "winston";
 import Acl, { AuthResult } from "./acl";
 import { format } from "winston";
@@ -166,7 +166,7 @@ app.get("/devices", (req, res) => {
     const passcode = req.cookies.get("passcode");
     const user = req.cookies.get("user");
 
-    const callback = (accessToken: string) => {
+    queueService.getAccessToken(req.cookies.get("passcode")).then(accessToken => {
         spotify.getDevices(accessToken)
         .then((response: any) => {
             let activeDeviceId: string | undefined;
@@ -191,7 +191,7 @@ app.get("/devices", (req, res) => {
                 devices[0].isActive = true;
             } else if (!activeDeviceId && devices.length === 0) {
                 logger.debug(`No available devices found...giving info for user`, { user, passcode });
-                res.status(404).json({ message: "No available devices found. Please start Spotify and then refresh the page." });
+                res.status(404).json({ message: "No available devices found. Please start a song in Spotify and then refresh the page." });
                 return;
             }
 
@@ -214,13 +214,11 @@ app.get("/devices", (req, res) => {
                     res.status(500).json({ message: err.message });
                 });
             }
-        }).catch((err: any) => {
+        }).catch(err => {
             logger.error(err.response.data.error.message, { user, passcode });
             res.status(500).json({ message: "Error getting available devices" });
         });
-    };
-
-    queueService.getAccessToken(req.cookies.get("passcode"), callback, (err) => {
+    }).catch(err => {
         res.status(500).json({ message: err });
     });
 });
@@ -271,12 +269,17 @@ app.get("/currentlyPlaying", (req, res) => {
     const user = req.cookies.get("user");
 
     logger.debug(`Fetching currently playing song...`, { user, passcode });
-    getCurrentTrack(user, passcode)
-        .then((result) => {
-            res.status(200).json(result);
-        }).catch(() => {
-            res.status(204).json({});
-        });
+    queueService.getCurrentTrack(passcode, user, spotify).then(result => {
+        res.status(200).json(result);
+    }).catch(() => {
+        // Wait a bit so that spotify catches up
+        setTimeout(() => {
+            queueService.getCurrentTrack(passcode, user, spotify).then(result => {
+            }).catch(() => {
+                res.status(204).json({});
+            });
+        }, 3000);
+    });
 });
 
 app.post("/track", (req, res) => {
@@ -306,26 +309,12 @@ app.get("/selectAlbum", (req, res) => {
     const user = req.cookies.get("user");
     const passcode = req.cookies.get("passcode");
 
-    const callback = (accessToken: string) => {
-        spotify.getAlbum(accessToken, req.query.id)
-        .then((response: any) => {
-            res.status(200).json(
-                response.data.tracks.items.map((i: any) => {
-                    return {
-                        artist: i.artists[0].name,
-                        name: i.name,
-                        id: i.uri
-                    };
-                })
-            );
-        }).catch((error: any) => {
-            logger.error(error.response.data, { user, passcode });
-            res.status(500).json({ message: "Unable to get requested album" });
+    queueService.getAccessToken(req.cookies.get("passcode")).then(accessToken => {
+        spotify.getAlbum(accessToken, req.query.id, user, passcode).then(albums => {
+            res.status(200).json(albums);
         });
-    };
-
-    queueService.getAccessToken(req.cookies.get("passcode"), callback, err => {
-        res.status(500).json({ message: err });
+    }).catch(err => {
+        res.status(err.status).json({ message: err.message });
     });
 });
 
@@ -333,7 +322,7 @@ app.get("/selectArtist", (req, res) => {
     const user = req.cookies.get("user");
     const passcode = req.cookies.get("passcode");
     
-    const callback = (accessToken: string) => {
+    queueService.getAccessToken(req.cookies.get("passcode")).then(accessToken => {
         spotify.getArtistTopTracks(accessToken, req.query.id)
         .then((topTracks: any) => {
 
@@ -363,9 +352,7 @@ app.get("/selectArtist", (req, res) => {
             logger.error(error.response.data, { user, passcode });
             res.status(500).json({ message: "Unable to get requested artist's top tracks" });
         });
-    };
-
-    queueService.getAccessToken(req.cookies.get("passcode"), callback, err => {
+    }).catch(err => {
         res.status(500).json({ message: err });
     });
 });
@@ -381,108 +368,16 @@ app.get("/search", (req, res) => {
         limit: req.query.limit
     };
 
-    const callback = (accessToken: string) => {
-        spotify.search(accessToken, query).then((response: any) => {
-            const results = new SearchResults();
-            if (query.type.indexOf("track") >= 0) {
-                results.tracks = response.data.tracks.items.map((i: any) => {
-                    return {
-                        artist: i.artists[0].name,
-                        name: i.name,
-                        id: i.uri
-                    };
-                });
-            } else {
-                results.tracks = [];
-            }
-            if (query.type.indexOf("album") >= 0) {
-                results.albums = response.data.albums.items.map((album: any) => {
-                    return {
-                        artist: album.artists[0].name,
-                        name: album.name,
-                        id: album.id
-                    };
-                });
-            } else {
-                results.albums = [];
-            }
-            if (query.type.indexOf("artist") >= 0) {
-                results.artists = response.data.artists.items.map((artist: any) => {
-                    return {
-                        name: artist.name,
-                        id: artist.id
-                    };
-                });
-            } else {
-                results.artists = [];
-            }
+    queueService.getAccessToken(passcode).then(accessToken => {
+        spotify.search(user, passcode, accessToken, query).then(results => {
             res.status(200).json(results);
         }).catch(err => {
-            if (err.response) {
-                logger.error(`Error with search query ${req.query.q}`, { user, passcode });
-                logger.error(err.response.data.error.message, { user, passcode });
-            } else {
-                logger.error(err, { user, passcode });
-            }
-            res.status(500).json({ message: "Error when searching for a song" });
+            res.status(err.status).json({ message: err.message });
         });
-    };
-
-    queueService.getAccessToken(passcode, callback, err => {
+    }).catch(err => {
         res.status(500).json({ message: err });
     });
 });
-
-const getCurrentTrack = (user: string, passcode: string) => {
-    return new Promise((resolve, reject) => {
-        const onSuccess = (accessToken: string, currentTrack: CurrentTrack, isPlaying: boolean) => {
-            if (currentTrack) {
-                logger.debug(`Getting currently playing track ${currentTrack.track.id} from spotify...`, { user, passcode });
-                spotify.currentlyPlaying(accessToken).then(response => {
-                    currentTrack.track.progress = response.data.progress_ms;
-
-                    logger.debug(`Found track. isPlaying: ${response.data.is_playing}, progress: ${response.data.progress_ms}ms`, { user, passcode });
-                    // If is playing info is out of sync with Spotify
-                    if (isPlaying !== response.data.is_playing) {
-                        logger.debug(`isPlaying state was out of sync...updating`, { user, passcode });
-                        isPlaying = response.data.is_playing;
-                        queueService.getQueue(passcode, true).then(queueDao => {
-                            const queue: Queue = queueDao.data;
-                            queue.isPlaying = isPlaying;
-                            queueService.updateQueue(queue, passcode)
-                            .then(() => {
-                                logger.debug(`isPlaying state updated`, { user, passcode });
-                            }).catch(err => {
-                                logger.error("Failed to update isPlaying state.", { user, passcode });
-                                logger.error(err, { user, passcode });
-                            });
-                        }).catch(err => {
-                            logger.error("Failed to get queue when saving playing state", { user, passcode });
-                        });
-                    }
-
-                    return resolve({currentTrack, isPlaying});
-                }).catch(() => {
-                    logger.warn("Unable to get track progress from Spotify...resolve anyway.", { user, passcode });
-                    return resolve({currentTrack, isPlaying});
-                });
-            } else {
-                return reject();
-            }
-        };
-
-        const onError = () => {
-            // Wait a bit so that spotify catches up
-            setTimeout(() => {
-                queueService.getCurrentTrack(passcode, user, onSuccess, () => {
-                    return reject();
-                });
-            }, 4000);
-        };
-
-        queueService.getCurrentTrack(passcode, user, onSuccess, onError);
-    });
-};
 
 const startPlaying = (queue: Queue, passcode: string, user: string) => {
     return new Promise((resolve, reject) => {

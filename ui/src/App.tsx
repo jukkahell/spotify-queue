@@ -186,7 +186,7 @@ export class App extends React.Component<{}, IState> {
             );
         } else {
             return (
-                <div className="container h-100">
+                <div className="container loginContainer h-100">
                 <div className="row h-100 justify-content-center align-items-center">
                     <div className="row h-20 w-100 justify-content-center">
                         <div className="row h-20 w-100 justify-content-center">

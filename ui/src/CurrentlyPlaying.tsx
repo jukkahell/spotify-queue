@@ -46,6 +46,8 @@ export class CurrentlyPlaying extends React.Component<ICurrentlyPlayingProps, IC
             });
 
             this.startProgress();
+        } else {
+            clearInterval(this.progressInterval);
         }
     }
 
