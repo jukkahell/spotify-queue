@@ -40,7 +40,7 @@ export class DeviceSelect extends React.Component<IDeviceSelectProps, IDeviceSel
                     devices: response.data
                 });
             }).catch(error => {
-                this.props.onError(error);
+                this.props.onError(error.response.data.message);
             }
         );
 
@@ -50,11 +50,13 @@ export class DeviceSelect extends React.Component<IDeviceSelectProps, IDeviceSel
     }
 
     public selectDevice(e: React.MouseEvent<HTMLElement>) {
-        this.setState({
-            selectedDeviceId: e.currentTarget.id,
-            selectedDeviceName: e.currentTarget.innerText,
-            dropdownVisible: false
-        }, this.setDevice);
+        if (this.state.devices.some((device: IDevice) => !device.isActive && device.id === e.currentTarget.id)) {
+            this.setState({
+                selectedDeviceId: e.currentTarget.id,
+                selectedDeviceName: e.currentTarget.innerText,
+                dropdownVisible: false
+            }, this.setDevice);
+        }
     }
 
     public dropdownClicked(e: React.MouseEvent<HTMLElement>) {
@@ -87,27 +89,25 @@ export class DeviceSelect extends React.Component<IDeviceSelectProps, IDeviceSel
                     devices
                 });
             }).catch(err => {
-                this.props.onError(err.response.data.msg);
+                this.props.onError(err.response.data.message);
             });
         }
     }
 
     public render() {
         return (
-            <div>
-                <div className="dropup col-md-2">
-                    <button className="btn btn-secondary dropdown-toggle footerMenu"
-                            onClick={this.dropdownClicked}
-                            type="button"
-                            id="deviceMenuButton"
-                            data-toggle="dropdown"
-                            aria-haspopup="true"
-                            aria-expanded="false">
-                        <FontAwesomeIcon icon="volume-off" />
-                    </button>
-                    <div className={"dropdown-menu col-md-12 " + (this.state.dropdownVisible ? "show" : "hide")} aria-labelledby="deviceMenuButton">
-                        {this.renderDeviceOptions()}
-                    </div>
+            <div className="dropup">
+                <button className="btn btn-secondary footerMenu"
+                        onClick={this.dropdownClicked}
+                        type="button"
+                        id="deviceMenuButton"
+                        data-toggle="dropdown"
+                        aria-haspopup="true"
+                        aria-expanded="false">
+                    <FontAwesomeIcon icon="volume-off" />
+                </button>
+                <div className={"dropdown-menu " + (this.state.dropdownVisible ? "show" : "hide")} aria-labelledby="deviceMenuButton">
+                    {this.renderDeviceOptions()}
                 </div>
             </div>
         );

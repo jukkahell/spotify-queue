@@ -8,6 +8,7 @@
     "@types/keygrip": "^1.0.1",
     "@types/pg": "^7.4.10",
     "@types/randomstring": "^1.1.6",
+    "@types/winston": "^2.3.9",
     "axios": "0.18.0",
     "cookies": "^0.7.1",
     "cors": "2.8.4",
@@ -15,7 +16,9 @@
     "keygrip": "^1.0.2",
     "node-pg-migrate": "^3.6.0",
     "pg": "7.4.3",
-    "randomstring": "^1.1.5"
+    "randomstring": "^1.1.5",
+    "winston": "^3.0.0",
+    "winston-daily-rotate-file": "^3.2.3"
   },
   "scripts": {
     "build": "tsc -p ./",

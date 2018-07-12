@@ -1,5 +1,9 @@
 import { library } from "@fortawesome/fontawesome-svg-core";
-import { faDesktop, faLink, faMobile, faPlayCircle, faShareAlt, faVolumeOff, faVolumeUp } from "@fortawesome/free-solid-svg-icons";
+import {
+    faBars, faDesktop, faExchangeAlt, faLink, faMobile, faPlayCircle,
+    faShareAlt, faSignOutAlt, faSlidersH, faUnlock,
+    faVolumeOff, faVolumeUp
+} from "@fortawesome/free-solid-svg-icons";
 import "bootstrap/dist/css/bootstrap.min.css";
 import * as React from "react";
 import * as ReactDOM from "react-dom";
@@ -8,7 +12,11 @@ import App from "./App";
 import "./index.css";
 import registerServiceWorker from "./registerServiceWorker";
 
-library.add(faDesktop, faMobile, faVolumeOff, faPlayCircle, faVolumeUp, faShareAlt, faLink);
+library.add(
+    faDesktop, faMobile, faVolumeOff, faPlayCircle, faVolumeUp,
+    faShareAlt, faLink, faBars, faSlidersH, faSignOutAlt, faUnlock,
+    faExchangeAlt
+);
 axios.defaults.withCredentials = true;
 
 ReactDOM.render(

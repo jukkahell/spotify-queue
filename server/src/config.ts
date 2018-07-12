@@ -7,14 +7,17 @@ const host = prod ? "spotiqu.eu" : "spotique.fi";
 const port = 8001;
 const uiPort = prod ? 80 : 3000;
 
-var whitelist = [scheme + host + ":" + port, scheme + host + ":" + uiPort, scheme + host]
+const whitelist = [scheme + host + ":" + port, scheme + host + ":" + uiPort, scheme + host]
 
 export interface IConfig {
     app: {
         scheme: string;
         host: string;
         port: number;
-        cors: CorsOptions
+        cors: CorsOptions;
+        logger: {
+            level: string;
+        }
     },
     userCookieOptions: {
         domain: string;
@@ -55,6 +58,9 @@ const config: IConfig = {
                 }
           },
           credentials: true
+        },
+        logger: {
+            level: prod ? "info" : "debug"
         }
     },
     userCookieOptions: {
@@ -73,7 +79,7 @@ const config: IConfig = {
     },
     spotify: {
         clientId: "da6ea27d63384e858d12bcce0fac006d",
-        redirectUri: scheme + host + ":" + port + "/callback",
+        redirectUri: scheme + host + ":" + port + "/",
     }
 };
 

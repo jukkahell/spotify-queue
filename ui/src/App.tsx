@@ -8,6 +8,7 @@ import { DeviceSelect } from "./DeviceSelect";
 import { IQueuedItem, Queue } from "./Queue";
 import SearchForm from "./SearchForm";
 import Share from "./Share";
+import { UserMenu } from "./UserMenu";
 
 export interface IState {
     enteredCode: string | null;
@@ -18,6 +19,7 @@ export interface IState {
     isPlaying: boolean;
     queuedItems: IQueuedItem[] | null;
     isOwner: boolean;
+    reactivate: boolean;
 }
 
 export class App extends React.Component<{}, IState> {
@@ -35,7 +37,8 @@ export class App extends React.Component<{}, IState> {
             currentTrack: null,
             isPlaying: false,
             queuedItems: null,
-            isOwner: false
+            isOwner: false,
+            reactivate: false
         };
 
         this.createQueue = this.createQueue.bind(this);
@@ -47,6 +50,8 @@ export class App extends React.Component<{}, IState> {
         this.onError = this.onError.bind(this);
         this.getCurrentTrack = this.getCurrentTrack.bind(this);
         this.getQueue = this.getQueue.bind(this);
+        this.reactivate = this.reactivate.bind(this);
+        this.authorize = this.authorize.bind(this);
     }
 
     public componentDidMount() {
@@ -62,14 +67,16 @@ export class App extends React.Component<{}, IState> {
             .then(response => {
                 if (response.data.passcode) {
                     this.setState({
-                        passcode: response.data.passcode
+                        passcode: response.data.passcode,
+                        isOwner: response.data.isOwner
                     });
                     this.getCurrentTrack();
                     this.getQueue();
                 }
-            }).catch(() => {
+            }).catch((err) => {
                 this.setState({
-                    joinError: "Unable to join the given queue."
+                    joinError: "Unable to join the given queue: " + err.response.data.message,
+                    reactivate: true
                 });
             }
         );
@@ -87,19 +94,18 @@ export class App extends React.Component<{}, IState> {
                         passcode: response.data.passcode,
                         isOwner: response.data.isOwner
                     });
-                } else if (!window.location.hash) {
+                } else if (!window.location.hash && window.location.pathname.length > 1) {
                     this.setState({
                         enteredCode: window.location.pathname.substr(1)
                     }, this.joinQueue);
                 }
             }).catch(error => {
-                this.onError(error.response.data.msg);
+                this.onError(error.response.data.message);
             });
     }
 
-    protected createQueue() {
+    protected authorize(redirect_uri: string) {
         const client_id = "da6ea27d63384e858d12bcce0fac006d";
-        const redirect_uri = config.backend.url + "/callback";
         const url = "https://accounts.spotify.com/authorize" +
             "?client_id=" + client_id +
             "&response_type=code" +
@@ -109,6 +115,14 @@ export class App extends React.Component<{}, IState> {
         window.open(url, "SpotiQue", "WIDTH=400,HEIGHT=500");
 
         this.authInterval = setInterval(this.isAuthorized, 2000);
+    }
+
+    protected createQueue() {
+        this.authorize(config.backend.url + "/create");
+    }
+
+    protected reactivate() {
+        this.authorize(config.backend.url + "/reactivate");
     }
 
     protected handleChangeEvent(e: React.ChangeEvent<HTMLInputElement>) {
@@ -130,12 +144,14 @@ export class App extends React.Component<{}, IState> {
     protected onQueued() {
         this.getQueue();
         if (!this.state.isPlaying) {
-            this.getCurrentTrack();
+            // Give some time for spotify to catch up
+            setTimeout(this.getCurrentTrack, 500);
         }
     }
 
     protected onError(msg: string) {
         if (typeof msg !== "string") {
+            console.log(msg);
             msg = "Unexpected error occurred.";
         }
         this.setState({
@@ -146,7 +162,7 @@ export class App extends React.Component<{}, IState> {
     public render() {
         if (this.state.passcode) {
             return (
-                <div className="container">
+                <div className="container mainContent">
                     <AlertBox alert={this.state.responseMsg} />
                     <div className="row">
                         <div className="col-md-4">
@@ -162,6 +178,7 @@ export class App extends React.Component<{}, IState> {
                         </div>
                     </div>
                     <div className="footer fixed-bottom d-flex">
+                        <UserMenu passcode={this.state.passcode} onError={this.onError} />
                         {this.state.isOwner ? <DeviceSelect onError={this.onError} /> : null}
                         <Share passcode={this.state.passcode} onError={this.onError} />
                     </div>
@@ -187,6 +204,7 @@ export class App extends React.Component<{}, IState> {
                                 <input className="form-control w-100 passcode" type="text" placeholder="Passcode" onChange={this.handleChangeEvent} />
                                 <button type="submit" className="btn btn-primary w-100" onClick={this.joinQueue}>Join</button>
                                 <p className="error">{this.state.joinError}</p>
+                                {this.state.reactivate ? <button type="submit" className="btn btn-primary w-100" onClick={this.reactivate}>Reactivate</button> : null}
                             </div>
                         </div>
                     </div>
@@ -206,7 +224,7 @@ export class App extends React.Component<{}, IState> {
                     });
                 }
             }).catch(err => {
-                this.onError(err.response.data.msg);
+                this.onError(err.response.data.message);
             }
         );
     }
@@ -224,7 +242,7 @@ export class App extends React.Component<{}, IState> {
                     });
                 }
             }).catch(err => {
-                this.onError(err.response.data.msg);
+                this.onError(err.response.data.message);
             }
         );
     }

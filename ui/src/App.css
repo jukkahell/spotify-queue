@@ -9,7 +9,10 @@ html, body {
 
 #root {
   height: 100%;
-  margin-top: 1em;
+}
+
+.mainContent {
+  margin-bottom: 40px;
 }
 
 .App {
@@ -49,12 +52,33 @@ a:hover {
   color: #F2F2F2;
   text-decoration: none;
 }
-
+a.showMore {
+  color: #A0A0A0;
+  font-size: 0.8em;
+  text-transform: uppercase;
+}
+a.showMore:hover {
+  color: #F2F2F2;
+  text-decoration: underline !important;
+}
 .btn {
   font-size: 0.8em;
   text-transform: uppercase;
   border-radius: 2em;
   height: 3em;
+}
+.btn:focus {
+  outline: none;
+  box-shadow: none;
+  border: none;
+  background-color: #1ED760;
+}
+.btn:active {
+  color: #BAC5BE !important;
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  background-color: #14833B !important;
 }
 
 .btn-primary {
@@ -133,15 +157,22 @@ input.passcode {
   background-color: #5f5f5f;
 }
 
+.dropup {
+  padding: 0 0.5em;
+}
+
 .dropdown-menu {
   background-color: #282828;
+  padding: 0;
 }
 .dropdown-item {
   color: white;
+  padding: 0.65rem 1.5rem;
 }
 .dropdown-item.active {
   background-color: #282828;
   color: #1DB954;
+  cursor: default;
 }
 .dropdown-item:hover {
   background-color: #333333;
@@ -170,4 +201,8 @@ button.footerMenu:active, button.footerMenu:hover, button.footerMenu:focus {
   border: none;
   color: #FEFEFE;
   box-shadow: none !important;
+}
+
+.footer {
+  background-color: #282828;
 }

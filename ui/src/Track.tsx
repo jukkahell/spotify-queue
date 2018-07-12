@@ -28,7 +28,7 @@ export class Track extends React.Component<ITrackProps> {
             .then(() => {
                 this.props.onQueued();
             }).catch(err => {
-                this.props.onError(err.response.data.msg);
+                this.props.onError(err.response.data.message);
             }
         );
     }

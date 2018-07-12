@@ -22,12 +22,14 @@ interface ISearchFormState {
 
 export class SearchForm extends React.Component<ISearchFormProps, ISearchFormState> {
 
+    private readonly defaultLimit = 5;
+
     public constructor(props: ISearchFormProps) {
         super(props);
         this.state = {
             q: "",
             type: "track,album,artist",
-            limit: 5,
+            limit: this.defaultLimit,
             tracks: [],
             albums: [],
             artists: []
@@ -39,6 +41,9 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
         this.selectAlbum = this.selectAlbum.bind(this);
         this.selectArtist = this.selectArtist.bind(this);
         this.hashSearch = this.hashSearch.bind(this);
+        this.showMoreTracks = this.showMoreTracks.bind(this);
+        this.showMoreArtists = this.showMoreArtists.bind(this);
+        this.showMoreAlbums = this.showMoreAlbums.bind(this);
 
         this.hashSearch();
     }
@@ -160,6 +165,10 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
 
     public searchClicked(e: React.MouseEvent<HTMLElement>) {
         e.preventDefault();
+        this.setState({
+            type: "track,album,artist",
+            limit: this.defaultLimit
+        });
         window.location.hash = "#" + this.state.q;
     }
 
@@ -172,14 +181,39 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
         axios.get(config.backend.url + "/search?" + Querystring.stringify(params))
             .then(response => {
                 this.setState({
+                    q,
                     tracks: response.data.tracks,
                     albums: response.data.albums,
                     artists: response.data.artists
                 });
             }).catch(err => {
-                this.props.onError(err.response.data.msg);
+                this.props.onError(err.response.data.message);
             }
         );
+    }
+
+    public showMoreTracks(e: React.MouseEvent<HTMLElement>) {
+        e.preventDefault();
+        this.setState({
+            type: "track",
+            limit: 50
+        }, () => this.search(this.state.q));
+    }
+
+    public showMoreArtists(e: React.MouseEvent<HTMLElement>) {
+        e.preventDefault();
+        this.setState({
+            type: "artist",
+            limit: 50
+        }, () => this.search(this.state.q));
+    }
+
+    public showMoreAlbums(e: React.MouseEvent<HTMLElement>) {
+        e.preventDefault();
+        this.setState({
+            type: "album",
+            limit: 50
+        }, () => this.search(this.state.q));
     }
 
     public render() {
@@ -191,8 +225,11 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
                 </form>
                 <div className="searchResults">
                     {this.renderArtists()}
+                    {this.state.artists.length > 4 ? <a href="#" className="showMore" onClick={this.showMoreArtists}>Show more</a> : null}
                     {this.renderAlbums()}
+                    {this.state.albums.length > 4 ? <a href="#" className="showMore" onClick={this.showMoreAlbums}>Show more</a> : null}
                     {this.renderTracks()}
+                    {this.state.tracks.length > 4 ? <a href="#" className="showMore" onClick={this.showMoreTracks}>Show more</a> : null}
                 </div>
             </div>
         );

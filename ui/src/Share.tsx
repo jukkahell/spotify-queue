@@ -57,20 +57,18 @@ export class Share extends React.Component<IShareProps, IShareState> {
 
     public render() {
         return (
-            <div>
-                <div className="dropup col-md-2">
-                    <button className="btn btn-secondary dropdown-toggle footerMenu"
-                            onClick={this.dropdownClicked}
-                            type="button"
-                            id="shareMenuButton"
-                            data-toggle="dropdown"
-                            aria-haspopup="true"
-                            aria-expanded="false">
-                        <FontAwesomeIcon icon="share-alt" />
-                    </button>
-                    <div className={"dropdown-menu col-md-12 " + (this.state.dropdownVisible ? "show" : "hide")} aria-labelledby="shareMenuButton">
-                        {this.renderShareOptions()}
-                    </div>
+            <div className="dropup">
+                <button className="btn btn-secondary footerMenu"
+                        onClick={this.dropdownClicked}
+                        type="button"
+                        id="shareMenuButton"
+                        data-toggle="dropdown"
+                        aria-haspopup="true"
+                        aria-expanded="false">
+                    <FontAwesomeIcon icon="share-alt" />
+                </button>
+                <div className={"dropdown-menu " + (this.state.dropdownVisible ? "show" : "hide")} aria-labelledby="shareMenuButton">
+                    {this.renderShareOptions()}
                 </div>
             </div>
         );
