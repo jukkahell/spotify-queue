@@ -1,8 +1,11 @@
-html, body {
+html {
+  min-height: 100%;
+}
+
+body {
   height: 100%;
-  background: linear-gradient(#393939, #181818);
-  background-repeat: no-repeat;
-  background-attachment: fixed;
+  background: linear-gradient(#393939, #181818) no-repeat fixed;
+  background-size: cover;
   color: white;
   font-family: "Montserrat","Helvetica Neue",Helvetica,Arial,sans-serif !important;
 }

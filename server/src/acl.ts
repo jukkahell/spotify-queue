@@ -14,7 +14,7 @@ class Acl {
     private spotify: Spotify;
     private queueService: QueueService;
     private logger: winston.Logger;
-    
+
     constructor(logger: winston.Logger, spotify: Spotify, queueService: QueueService) {
         this.spotify = spotify;
         this.queueService = queueService;
@@ -48,9 +48,12 @@ class Acl {
                 if (!queue.accessToken && !queue.refreshToken) {
                     reject({ status: 403, message: "Queue inactive. Owner should reactivate it." });
                 } else {
-                    this.spotify.isAuthorized(passcode, userId, queue.accessTokenAcquired, queue.expiresIn, queue.refreshToken).then((response: any) => {
+                    this.spotify.isAuthorized(passcode, userId, queue.accessTokenAcquired, queue.expiresIn, queue.refreshToken)
+                        .then((response: any) => {
                         if (response) {
-                            this.saveAccessToken(queue, passcode, userId, response.access_token, response.expires_in, response.refresh_token);
+                            this.logger.info(`Got refresh token. Saving it...`, { userId, passcode });
+                            this.saveAccessToken(queue, passcode, userId, response.access_token,
+                                response.expires_in, response.refresh_token);
                         }
                         const isOwner = queue.owner === userId;
                         resolve({ isAuthorized: true, passcode, isOwner });

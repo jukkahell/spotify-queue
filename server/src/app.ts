@@ -8,25 +8,24 @@ import * as https from "https";
 import * as Keygrip from "keygrip";
 import { env } from "process";
 import * as randomstring from "randomstring";
+import { format } from "winston";
+import * as winston from "winston";
+import Acl, { AuthResult } from "./acl";
 import config from "./config";
 import { Queue } from "./queue";
 import QueueService from "./queue.service";
 import secrets from "./secrets";
 import {SpotifySearchQuery} from "./spotify";
 import Spotify from "./spotify.service";
-import * as winston from "winston";
-import Acl, { AuthResult } from "./acl";
-import { format } from "winston";
-import { TransformableInfo } from "../node_modules/logform";
 const DailyRotateFile = require("winston-daily-rotate-file");
 
 const keys = Array.from({length: 10}, () => randomstring.generate(15));
 const keygrip = new Keygrip(keys, "sha256");
 
-const logFormat = format.printf((info: TransformableInfo) => {
-    const p = info.passcode ? info.passcode : '';
-    const u = info.user ? info.user : '';
-    const i = info.id ? info.id : '';
+const logFormat = format.printf(info => {
+    const p = info.passcode ? info.passcode : "";
+    const u = info.user ? info.user : "";
+    const i = info.id ? info.id : "";
     const level = info.level.padEnd(15); // 15 because of the color bytes
 
     if (p || u) {
@@ -59,7 +58,7 @@ const spotify = new Spotify(logger, config.spotify.clientId, secrets.spotify.sec
 const queueService = new QueueService(logger);
 const acl = new Acl(logger, spotify, queueService);
 
-const excludeEndpointsFromAuth = ["/join", "/create", "/reactivate", "/isAuthorized"];
+const excludeEndpointsFromAuth = ["/join", "/create", "/reactivate", "/isAuthorized", "/queue"];
 const endpointsRequireOwnerPerm = ["/device"];
 
 const app = express();
@@ -71,7 +70,7 @@ app.use((req: express.Request, res: express.Response, next: () => any) => {
     if (excludeEndpointsFromAuth.includes(req.path)) {
         return next();
     } else {
-        acl.isAuthorized(req.cookies.get("passcode"), req.cookies.get("user")).then(resp => {
+        acl.isAuthorized(req.cookies.get("passcode"), req.cookies.get("user")).then(() => {
             return next();
         }).catch(err => {
             return res.status(err.status).json({ message: err.message });
@@ -80,7 +79,7 @@ app.use((req: express.Request, res: express.Response, next: () => any) => {
 });
 app.use((req: express.Request, res: express.Response, next: () => any) => {
     if (endpointsRequireOwnerPerm.includes(req.path)) {
-        queueService.isOwner(req.cookies.get("passcode"), req.cookies.get("user")).then(resp => {
+        queueService.isOwner(req.cookies.get("passcode"), req.cookies.get("user")).then(() => {
             return next();
         }).catch(err => {
             return res.status(err.status).json({ message: err.message });
@@ -125,7 +124,7 @@ app.get("/logout", (req, res) => {
     const user = req.cookies.get("user");
     logger.debug(`Logging out user...`, { user, passcode });
 
-    queueService.logout(passcode, user).then(result => {
+    queueService.logout(passcode, user).then(() => {
         req.cookies.set("passcode", "", config.passcodeCookieOptions);
         res.status(200).json({ message: "OK" });
     }).catch(err => {
@@ -159,7 +158,7 @@ app.get("/isAuthorized", (req, res) => {
         res.status(200).json(authResult);
     }).catch(err => {
         res.status(err.status).json({ isAuthorized: false, message: err.message });
-    })
+    });
 });
 
 app.get("/devices", (req, res) => {
@@ -440,7 +439,7 @@ const startNextTrack = (passcode: string, user: string, accessToken: string) => 
                 if (response) {
                     acl.saveAccessToken(queue, passcode, user, response.access_token, response.expires_in, response.refresh_token);
                     accessToken = response.access_token;
-                }                
+                }
                 spotify.startSong(accessToken, queuedItem.track.id, queue.deviceId!).then(() => {
                     queueService.startPlaying(accessToken, passcode, user, queuedItem.track, spotify, startNextTrack);
                     logger.info(`Track ${queuedItem.track.id} successfully started.`, { user, passcode });
@@ -454,7 +453,7 @@ const startNextTrack = (passcode: string, user: string, accessToken: string) => 
             logger.error("Unable to update queue", { user, passcode });
             logger.error(err, { user, passcode });
         });
-    }).catch(err => {
+    }).catch(() => {
         logger.error("Unable to get queue when starting next track", { user, passcode });
     });
 };
