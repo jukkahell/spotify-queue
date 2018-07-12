@@ -43,10 +43,8 @@ export class CurrentlyPlaying extends React.Component<ICurrentlyPlayingProps, IC
                 trackId: this.props.currentTrack.track.id,
                 progress: this.props.currentTrack.track.progress!,
                 progressUpdated: (new Date).getTime()
-            });
-
-            this.startProgress();
-        } else {
+            }, this.startProgress);
+        } else if (!this.props.isPlaying) {
             clearInterval(this.progressInterval);
         }
     }
@@ -70,7 +68,6 @@ export class CurrentlyPlaying extends React.Component<ICurrentlyPlayingProps, IC
 
     private startProgress() {
         clearInterval(this.progressInterval);
-
         this.progressInterval = setInterval(() => {
             const elapsed = (new Date).getTime() - this.state.progressUpdated;
             this.setState((prevState) => ({

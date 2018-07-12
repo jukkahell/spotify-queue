@@ -1,7 +1,7 @@
 import axios from "axios";
 import * as Querystring from "querystring";
 import { getCurrentSeconds } from "./util";
-import { SpotifySearchQuery } from "./spotify";
+import { SpotifySearchQuery, SpotifyCurrentTrack } from "./spotify";
 import * as winston from "winston";
 
 export interface SearchTrack {
@@ -80,15 +80,44 @@ class SpotifyService {
         });
     }
 
-    public currentlyPlaying = (accessToken: string) => {
-        return axios.get(
-            "https://api.spotify.com/v1/me/player",
-            {
-                headers: {
-                    "Authorization": "Bearer " + accessToken
+    public currentlyPlaying = (accessToken: string, user: string, passcode: string) => {
+        return new Promise<SpotifyCurrentTrack>((resolve, reject) => {
+            axios.get(
+                "https://api.spotify.com/v1/me/player",
+                {
+                    headers: {
+                        "Authorization": "Bearer " + accessToken
+                    }
                 }
-            }
-        );
+            ).then(response => {
+                if (response.data) {
+                    const track: SpotifyCurrentTrack = {
+                        device: response.data.device,
+                        is_playing: response.data.is_playing,
+                        progress_ms: response.data.progress_ms,
+                        item: {
+                            artist: response.data.item.artists[0].name,
+                            cover: response.data.item.album.images[1].url,
+                            duration: response.data.item.duration_ms,
+                            id: response.data.item.uri,
+                            name: response.data.item.name,
+                            progress: response.data.progress_ms
+                        }
+                    }
+                    resolve(track);
+                } else {
+                    reject({ status: 404, message: "No song playing currently." });
+                }
+            }).catch(err => {
+                if (err.response) {
+                    this.logger.error(`Error when getting currently playing song`, { user, passcode });
+                    this.logger.error(err.response.data.error.message, { user, passcode });
+                } else {
+                    this.logger.error(err, { user, passcode });
+                }
+                reject({ status: 500, message: "Unable to get currently playing song from Spotify."})
+            });
+        });
     }
 
     public startSong = (accessToken: string, id: string, deviceId: string) => {
@@ -122,21 +151,57 @@ class SpotifyService {
         );
     }
 
-    public getArtistTopTracks = (accessToken: string, id: string) => {
-        return axios.get("https://api.spotify.com/v1/artists/" + id + "/top-tracks?country=FI", {
-            headers: {
-                "Content-Type": "text/plain",
-                "Authorization": "Bearer " + accessToken
-            }
+    public getArtistTopTracks = (accessToken: string, id: string, user: string, passcode: string) => {
+        return new Promise((resolve, reject) => {
+            axios.get("https://api.spotify.com/v1/artists/" + id + "/top-tracks?country=FI", {
+                headers: {
+                    "Content-Type": "text/plain",
+                    "Authorization": "Bearer " + accessToken
+                }
+            }).then(response => {
+                const topTracks = response.data.tracks.map((i: any) => {
+                    return {
+                        artist: i.artists[0].name,
+                        name: i.name,
+                        id: i.uri
+                    };
+                });
+                resolve(topTracks);
+            }).catch(err => {
+                if (err.response) {
+                    this.logger.error(`Unable to fetch top tracks from Spotify with id ${id}`, { user, passcode });
+                } else {
+                    this.logger.error(err);
+                }
+                reject({ status: 500, message: "Unable to fetch top tracks from Spotify. Please try again later." });
+            });
         });
     }
 
-    public getArtistAlbums = (accessToken: string, id: string) => {
-        return axios.get("https://api.spotify.com/v1/artists/" + id + "/albums", {
-            headers: {
-                "Content-Type": "text/plain",
-                "Authorization": "Bearer " + accessToken
-            }
+    public getArtistAlbums = (accessToken: string, id: string, user: string, passcode: string) => {
+        return new Promise((resolve, reject) => {
+            axios.get("https://api.spotify.com/v1/artists/" + id + "/albums", {
+                headers: {
+                    "Content-Type": "text/plain",
+                    "Authorization": "Bearer " + accessToken
+                }
+            }).then(response => {
+                const albums = response.data.items.map((album: any) => {
+                    return {
+                        artist: album.artists[0].name,
+                        name: album.name,
+                        id: album.id
+                    };
+                });
+                resolve(albums);
+            }).catch(err => {
+                if (err.response) {
+                    this.logger.error(`Unable to fetch artist's albums from Spotify with id ${id}`, { user, passcode });
+                } else {
+                    this.logger.error(err);
+                }
+                reject({ status: 500, message: "Unable to fetch artist's albums from Spotify. Please try again later." });
+            });
         });
     }
 

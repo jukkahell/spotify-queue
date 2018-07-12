@@ -4,6 +4,7 @@ export interface QueueDao {
     id: string;
     owner: string;
     data: Queue;
+    isPlaying: boolean;
 }
 
 export interface CurrentTrack {
@@ -25,7 +26,6 @@ export interface Queue {
     refreshToken: string;
     expiresIn: number;
     deviceId: string | null;
-    isPlaying: boolean;
     settings: {
         gamify: boolean;
         alwaysPlay: {

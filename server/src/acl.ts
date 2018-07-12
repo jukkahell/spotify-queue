@@ -28,7 +28,7 @@ class Acl {
         if (refreshToken) {
             queue.refreshToken = refreshToken;
         }
-        this.queueService.updateQueue(queue, passcode).catch(err => {
+        this.queueService.updateQueueData(queue, passcode).catch(err => {
             this.logger.error("Failed to update queue refresh token.", { id: userId });
             this.logger.error(err);
         });

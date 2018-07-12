@@ -12,7 +12,7 @@ import { format } from "winston";
 import * as winston from "winston";
 import Acl, { AuthResult } from "./acl";
 import config from "./config";
-import { Queue } from "./queue";
+import { Queue, QueueDao } from "./queue";
 import QueueService from "./queue.service";
 import secrets from "./secrets";
 import {SpotifySearchQuery} from "./spotify";
@@ -203,7 +203,7 @@ app.get("/devices", (req, res) => {
                     if (queue.deviceId !== activeDeviceId) {
                         logger.debug(`Different device in db...updating`, { user, passcode });
                         queue.deviceId = activeDeviceId!;
-                        queueService.updateQueue(queue, passcode).catch(err => {
+                        queueService.updateQueueData(queue, passcode).catch(err => {
                             logger.error("Unable to set device id", { user, passcode });
                             logger.error(err, { user, passcode });
                         });
@@ -268,12 +268,12 @@ app.get("/currentlyPlaying", (req, res) => {
     const user = req.cookies.get("user");
 
     logger.debug(`Fetching currently playing song...`, { user, passcode });
-    queueService.getCurrentTrack(passcode, user, spotify).then(result => {
+    queueService.getCurrentTrack(passcode, user, spotify, acl).then(result => {
         res.status(200).json(result);
     }).catch(() => {
         // Wait a bit so that spotify catches up
         setTimeout(() => {
-            queueService.getCurrentTrack(passcode, user, spotify).then(result => {
+            queueService.getCurrentTrack(passcode, user, spotify, acl).then(result => {
             }).catch(() => {
                 res.status(204).json({});
             });
@@ -286,12 +286,12 @@ app.post("/track", (req, res) => {
     const passcode = req.cookies.get("passcode");
     const user = req.cookies.get("user");
 
-    queueService.addToQueue(user, passcode, spotifyUri, spotify.getTrack)
-    .then((queue: Queue) => {
+    queueService.addToQueue(user, passcode, spotifyUri, spotify.getTrack).then((queue: QueueDao) => {
+        // Check playback status from spotify
         // If no song is playing
         if (!queue.isPlaying) {
             logger.info(`Queue ${passcode} is not playing...start it`, { user, passcode });
-            startPlaying(queue, passcode, user).then(() => {
+            startPlaying(queue.data, passcode, user).then(() => {
                 res.status(200).json({ message: "OK" });
             }).catch(err => {
                 res.status(err.status).json({ message: err.message });
@@ -322,34 +322,12 @@ app.get("/selectArtist", (req, res) => {
     const passcode = req.cookies.get("passcode");
     
     queueService.getAccessToken(req.cookies.get("passcode")).then(accessToken => {
-        spotify.getArtistTopTracks(accessToken, req.query.id)
-        .then((topTracks: any) => {
-
-            spotify.getArtistAlbums(accessToken, req.query.id)
-            .then((albums: any) => {
-                res.status(200).json({
-                    tracks: topTracks.data.tracks.map((i: any) => {
-                        return {
-                            artist: i.artists[0].name,
-                            name: i.name,
-                            id: i.uri
-                        };
-                    }),
-                    albums: albums.data.items.map((album: any) => {
-                        return {
-                            artist: album.artists[0].name,
-                            name: album.name,
-                            id: album.id
-                        };
-                        })
-                });
-            }).catch((error: any) => {
-                logger.error(error.response.data, { user, passcode });
-                res.status(500).json({ message: "Unable to get requested artist's albums" });
+        spotify.getArtistTopTracks(accessToken, req.query.id, user, passcode).then((tracks: any) => {
+            spotify.getArtistAlbums(accessToken, req.query.id, user, passcode).then((albums: any) => {
+                res.status(200).json({ tracks, albums });
             });
-        }).catch((error: any) => {
-            logger.error(error.response.data, { user, passcode });
-            res.status(500).json({ message: "Unable to get requested artist's top tracks" });
+        }).catch(err => {
+            res.status(err.status).json({ message: err.message });
         });
     }).catch(err => {
         res.status(500).json({ message: err });
@@ -393,12 +371,11 @@ const startPlaying = (queue: Queue, passcode: string, user: string) => {
             owner: queuedItem.userId,
             votes: []
         };
-        queue.isPlaying = true;
 
-        queueService.updateQueue(queue, passcode).then(() => {
+        queueService.updateQueue(queue, true, passcode).then(() => {
             logger.debug(`Current track set to ${queuedItem.track.id}`, { user, passcode });
             spotify.startSong(accessToken, queuedItem.track.id, deviceId!).then(() => {
-                queueService.startPlaying(accessToken, passcode, user, queuedItem.track, spotify, startNextTrack);
+                queueService.startPlaying(accessToken, passcode, user, queuedItem.track, spotify, acl);
                 logger.info(`Song successfully started.`, { user, passcode });
                 return resolve();
             }).catch((err: any) => {
@@ -416,47 +393,7 @@ const startPlaying = (queue: Queue, passcode: string, user: string) => {
     });
 };
 
-const startNextTrack = (passcode: string, user: string, accessToken: string) => {
-    logger.info(`Starting next track`, { user, passcode });
-    queueService.getQueue(passcode, true).then(queueDao => {
-        if (queueDao.data.queue.length === 0) {
-            logger.info("No more songs in queue. Stop playing.", { user, passcode });
-            queueService.stopPlaying(queueDao.data, accessToken, passcode);
-            return;
-        }
-        const queue: Queue = queueDao.data;
-        const queuedItem = queue.queue.shift()!;
-        queue.currentTrack = {
-            track: queuedItem.track,
-            owner: queuedItem.userId,
-            votes: []
-        };
-
-        logger.info(`Next track is ${queuedItem.track.id}`, { user, passcode });
-        queueService.updateQueue(queue, passcode).then(() => {
-            // Check that access token is still valid
-            spotify.isAuthorized(passcode, user, queue.accessTokenAcquired, queue.expiresIn, queue.refreshToken).then((response: any) => {
-                if (response) {
-                    acl.saveAccessToken(queue, passcode, user, response.access_token, response.expires_in, response.refresh_token);
-                    accessToken = response.access_token;
-                }
-                spotify.startSong(accessToken, queuedItem.track.id, queue.deviceId!).then(() => {
-                    queueService.startPlaying(accessToken, passcode, user, queuedItem.track, spotify, startNextTrack);
-                    logger.info(`Track ${queuedItem.track.id} successfully started.`, { user, passcode });
-                }).catch((err: any) => {
-                    logger.info(err.response.data.error.message, { user, passcode });
-                });
-            }).catch(err => {
-                logger.error(err, { user, passcode });
-            });
-        }).catch(err => {
-            logger.error("Unable to update queue", { user, passcode });
-            logger.error(err, { user, passcode });
-        });
-    }).catch(() => {
-        logger.error("Unable to get queue when starting next track", { user, passcode });
-    });
-};
+queueService.startOngoingTimers(spotify, acl);
 
 app.use((error: any, request: express.Request, response: express.Response, next: (error: any) => any) => {
     if (response.headersSent) {

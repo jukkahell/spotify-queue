@@ -4,9 +4,10 @@ import { QueryResult } from "../node_modules/@types/pg";
 import { AxiosPromise } from "../node_modules/axios";
 import * as db from "./db";
 import { Queue, QueueItem, QueueDao } from "./queue";
-import { SpotifyTrack } from "./spotify";
+import { SpotifyTrack, SpotifyCurrentTrack } from "./spotify";
 import SpotifyService from "./spotify.service";
 import { getCurrentSeconds } from "./util";
+import Acl from "./acl";
 
 export interface QueueTimeout {
     [accessToken: string]: NodeJS.Timer;
@@ -15,7 +16,7 @@ export interface QueueTimeout {
 class QueueService {
 
     private static timeouts: QueueTimeout = {};
-    private logger: winston.Logger;
+    public logger: winston.Logger;
 
     constructor (logger: winston.Logger) {
         this.logger = logger;
@@ -30,7 +31,13 @@ class QueueService {
         try {
             const result: QueryResult = await db.query(query, [passcode]);
             if (result.rowCount === 1) {
-                return result.rows[0];
+                const queueDao: QueueDao = {
+                    data: result.rows[0].data,
+                    id: result.rows[0].id,
+                    isPlaying: result.rows[0].is_playing,
+                    owner: result.rows[0].owner
+                }
+                return queueDao;
             } else {
                 throw Error("Unable to find queue with given passcode.");
             }
@@ -89,10 +96,10 @@ class QueueService {
                             userId = randomstring.generate();
                             this.logger.info(`Generated passcode`, { user: userId, passcode });
                             if (passcode) {
-                                const queue: Queue = this.createQueueObject(spotifyUserId, accessToken, passcode,
+                                const queue: Queue = this.createQueueObject(spotifyUserId, accessToken,
                                     userId, refreshToken, expiresIn);
                                 this.createQueue(passcode, spotifyUserId, queue).then(() => {
-                                    resolve({ id: passcode, data: queue, owner: spotifyUserId });
+                                    resolve({ id: passcode, data: queue, isPlaying: false, owner: spotifyUserId });
                                 }).catch(err => {
                                     this.logger.error(`Unable to insert queue into database`, { user: userId, passcode });
                                     this.logger.error(err, { user: userId, passcode });
@@ -161,7 +168,7 @@ class QueueService {
                             queueDao.data.users[i] = ownerUser;
                         }
 
-                        this.updateQueue(queueDao.data, passcode).then(() => {
+                        this.updateQueue(queueDao.data, queueDao.isPlaying, passcode).then(() => {
                             this.logger.debug(`Successfully reactivated`, { user: userId, passcode });
                             resolve(queueDao.data);
                         }).catch(err => {
@@ -182,7 +189,7 @@ class QueueService {
         });
     }
 
-    public createQueueObject(spotifyUserId: string, accessToken: string, passcode: string,
+    public createQueueObject(spotifyUserId: string, accessToken: string,
                              userId: string, refreshToken: string, expiresIn: number): Queue {
         return {
             owner: userId,
@@ -193,7 +200,6 @@ class QueueService {
             currentTrack: null,
             name: "Queue 1",
             deviceId: null,
-            isPlaying: false,
             queue: [],
             settings: {
                 alwaysPlay: {
@@ -259,7 +265,7 @@ class QueueService {
                 if (!queue.users.find( user => user.id === userId)) {
                     this.logger.info(`User not yet part of queue...adding`, { user: userId, passcode });
                     queue.users.push(user);
-                    this.updateQueue(queue, passcode)
+                    this.updateQueue(queue, queueDao.isPlaying, passcode)
                     .then(() => {
                         resolve(false);
                     }).catch(err => {
@@ -283,11 +289,10 @@ class QueueService {
                 // Inactivate queue if logged out user is the owner
                 const queue: Queue = queueDao.data;
                 if (user === queue.owner) {
-                    queue.isPlaying = false;
                     queue.currentTrack = null;
                     queue.accessToken = null;
                     queue.refreshToken = "";
-                    this.updateQueue(queue, passcode).then(result => {
+                    this.updateQueue(queue, false, passcode).then(result => {
                         resolve();
                     }).catch(err => {
                         this.logger.error(err, { user, passcode });
@@ -323,48 +328,44 @@ class QueueService {
         return this.updateLoginState(queue, null, passcode);
     }
 
-    public getCurrentTrack(passcode: string, user: string, spotify: SpotifyService) {
+    public getCurrentTrack(passcode: string, user: string, spotify: SpotifyService, acl: Acl) {
         return new Promise((resolve, reject) => {
-            this.getQueue(passcode).then(queueDao => {
+            this.getQueue(passcode, true).then(queueDao => {
                 const queue: Queue = queueDao.data;
 
-                if (queue.currentTrack && queue.accessToken) {
-                    this.logger.debug(`Getting currently playing track ${queue.currentTrack.track.id} from spotify...`, { user, passcode });
+                // Get response if Spotify is playing
+                spotify.currentlyPlaying(queue.accessToken!, user, passcode).then((currentTrack: SpotifyCurrentTrack) => {
+                    // If our current track equals to spotify's current track
+                    const owner = (queue.currentTrack && queue.currentTrack.track.id === currentTrack.item.id) ? 
+                        queue.currentTrack.owner : user;
+                    const votes = (queue.currentTrack) ? queue.currentTrack.votes : [];
+                    queue.currentTrack = {
+                        owner,
+                        track: currentTrack.item,
+                        votes
+                    }
 
-                    spotify.currentlyPlaying(queue.accessToken).then(response => {
-                        queue.currentTrack!.track.progress = response.data.progress_ms;
+                    resolve({ currentTrack: queue.currentTrack, isPlaying: currentTrack.is_playing });
 
-                        this.logger.debug(`Found track. isPlaying: ${response.data.is_playing}, progress: ${response.data.progress_ms}ms`, { user, passcode });
-                        
-                        // If is_playing info is out of sync with Spotify
-                        if (queue.isPlaying !== response.data.is_playing) {
-                            this.logger.debug(`isPlaying state was out of sync...updating`, { user, passcode });
-                            queue.isPlaying = response.data.is_playing;
-                            this.getQueue(passcode, true).then(queueDao => {
-                                const q: Queue = queueDao.data;
-                                q.isPlaying = response.data.is_playing;
-                                this.updateQueue(q, passcode)
-                                .then(() => {
-                                    this.logger.debug(`isPlaying state updated`, { user, passcode });
-                                }).catch(err => {
-                                    this.logger.error("Failed to update isPlaying state.", { user, passcode });
-                                    this.logger.error(err, { user, passcode });
-                                });
-                            }).catch(err => {
-                                this.logger.error("Failed to get queue when saving playing state", { user, passcode });
-                            });
-                        }
+                    // Sync if we are not playing but spotify is
+                    if (!QueueService.timeouts[queue.accessToken!] && currentTrack.is_playing) {
+                        this.startPlaying(queue.accessToken!, passcode, user, currentTrack.item, spotify, acl);
+                    }
 
-                        resolve({ currentTrack: queue.currentTrack, isPlaying: queue.isPlaying });
-                    }).catch(() => {
-                        this.logger.warn("Unable to get track progress from Spotify...resolve anyway.", { user, passcode });
-                        resolve({ currentTrack: queue.currentTrack, isPlaying: queue.isPlaying });
+                    this.logger.debug(`Found track ${currentTrack.item.id}. isPlaying: ${currentTrack.is_playing}, progress: ${currentTrack.progress_ms}ms`, { user, passcode });
+                    
+                    // Sync with Spotify
+                    this.logger.debug(`Syncing currently playing track data with Spotify...`, { user, passcode });
+                    this.updateQueue(queue, currentTrack.is_playing, passcode).then(() => {
+                        this.logger.debug(`Current track state updated`, { user, passcode });
+                    }).catch(err => {
+                        this.logger.error("Failed to update current track state.", { user, passcode });
+                        this.logger.error(err, { user, passcode });
                     });
-                } else if (!queue.currentTrack) {
-                    reject({ status: 204, message: "Current track not found"});
-                } else {
-                    reject({ status: 403, message: "Queue inactive. Owner should reactivate it." });
-                }
+                }).catch(() => {
+                    this.logger.warn("Unable to get track progress from Spotify...resolve anyway.", { user, passcode });
+                    resolve({ currentTrack: queue.currentTrack, isPlaying: queueDao.isPlaying });
+                });
             }).catch(() => {
                 reject({ status: 500, message: "Queue not found with the given passcode." });
             });
@@ -397,7 +398,7 @@ class QueueService {
 
                     db.query("UPDATE queues SET data = $1 WHERE id = $2", [queue, passcode]).then(() => {
                         this.logger.debug(`Track ${track.id} queued successfully`, { user, passcode });
-                        resolve(queue);
+                        resolve(queueDao);
                     }).catch(err => {
                         this.logger.error(err, { user, passcode });
                         reject({ status: 500, message: "Error when adding song to queue" });
@@ -429,7 +430,7 @@ class QueueService {
                 queue.deviceId = deviceId;
                 db.query("UPDATE queues SET data = $1 WHERE id = $2", [queue, passcode]).then(() => {
                     this.logger.debug(`Device set successfully`, { user, passcode });
-                    resolve({ accessToken: queue.accessToken!, isPlaying: queue.isPlaying });
+                    resolve({ accessToken: queue.accessToken!, isPlaying: queueDao.isPlaying });
                 }).catch(err => {
                     reject({ status: 500, message: "Unable to update new device to database. Please try again later." });
                 });
@@ -444,35 +445,47 @@ class QueueService {
                         user: string,
                         currentTrack: SpotifyTrack,
                         spotify: SpotifyService,
-                        startNextTrack: (passcode: string, user: string, accessToken: string) => void) {
+                        acl: Acl) {
         if (QueueService.timeouts[accessToken]) {
             clearTimeout(QueueService.timeouts[accessToken]);
         }
 
-        const timeLeft = currentTrack.duration;
+        const timeLeft = currentTrack.duration - currentTrack.progress;
 
         this.logger.info(`Starting ${timeLeft} second timer for ${currentTrack.id}...`, { user, passcode });
         QueueService.timeouts[accessToken] = setTimeout(() =>
-            this.checkTrackStatus(accessToken, passcode, user, currentTrack, spotify, startNextTrack),
+            this.checkTrackStatus(accessToken, passcode, user, currentTrack, spotify, acl),
             timeLeft - 1000
         );
     }
 
-    public stopPlaying(queue: Queue, accessToken: string, passcode: string) {
+    public stopPlaying(queue: Queue, accessToken: string, passcode: string, user: string) {
         if (QueueService.timeouts[accessToken]) {
             clearInterval(QueueService.timeouts[accessToken]);
             delete QueueService.timeouts[accessToken];
         }
 
-        queue.isPlaying = false;
         queue.currentTrack = null;
 
-        db.query("UPDATE queues SET data = $1 WHERE id = $2", [queue, passcode])
+        db.query("UPDATE queues SET data = $1, is_playing=$2 WHERE id = $3", [queue, false, passcode])
         .then(() => {
-            this.logger.info(`Successfully stopped playing...`, { passcode });
+            this.logger.info(`Successfully stopped playing...`, { user, passcode });
         }).catch(err => {
-            this.logger.error(`Unable to update playback state`, { passcode });
+            this.logger.error(`Unable to update playback state`, { user, passcode });
             this.logger.error(err, { passcode });
+        });
+    }
+
+    public startOngoingTimers(spotify: SpotifyService, acl: Acl) {
+        db.query("SELECT * FROM queues WHERE is_playing=true", []).then(res => {
+            res.rows.forEach((row: QueueDao) => {
+                if (row.data.accessToken) {
+                    const track = row.data.currentTrack ? row.data.currentTrack.track : null;
+                    this.checkTrackStatus(row.data.accessToken!, row.id, row.data.owner, track, spotify, acl);
+                }
+            });
+        }).catch(err => {
+            this.logger.error(err);
         });
     }
 
@@ -481,42 +494,92 @@ class QueueService {
         return db.query("UPDATE queues SET data = $1 WHERE id = $2", [queue, passcode]);
     }
 
-    public updateQueue(queue: Queue, passcode: string) {
+    public updateQueue(queue: Queue, isPlaying: boolean, passcode: string) {
+        return db.query("UPDATE queues SET data = $1, is_playing=$2 WHERE id = $3", [queue, isPlaying, passcode]);
+    }
+    public updateQueueData(queue: Queue, passcode: string) {
         return db.query("UPDATE queues SET data = $1 WHERE id = $2", [queue, passcode]);
+    }
+
+    private startNextTrack(passcode: string, user: string, accessToken: string, spotify: SpotifyService, acl: Acl) {
+        this.logger.info(`Starting next track`, { user, passcode });
+        this.getQueue(passcode, true).then(queueDao => {
+            if (queueDao.data.queue.length === 0) {
+                this.logger.info("No more songs in queue. Stop playing.", { user, passcode });
+                this.stopPlaying(queueDao.data, accessToken, passcode, user);
+                return;
+            }
+            const queue: Queue = queueDao.data;
+            const queuedItem = queue.queue.shift()!;
+            queue.currentTrack = {
+                track: queuedItem.track,
+                owner: queuedItem.userId,
+                votes: []
+            };
+    
+            this.logger.info(`Next track is ${queuedItem.track.id}`, { user, passcode });
+            this.updateQueue(queue, true, passcode).then(() => {
+                // Check that access token is still valid
+                spotify.isAuthorized(passcode, user, queue.accessTokenAcquired, queue.expiresIn, queue.refreshToken).then((response: any) => {
+                    if (response) {
+                        acl.saveAccessToken(queue, passcode, user, response.access_token, response.expires_in, response.refresh_token);
+                        accessToken = response.access_token;
+                    }
+                    spotify.startSong(accessToken, queuedItem.track.id, queue.deviceId!).then(() => {
+                        this.startPlaying(accessToken, passcode, user, queuedItem.track, spotify, acl);
+                        this.logger.info(`Track ${queuedItem.track.id} successfully started.`, { user, passcode });
+                    }).catch((err: any) => {
+                        this.logger.info(err.response.data.error.message, { user, passcode });
+                    });
+                }).catch(err => {
+                    this.logger.error(err, { user, passcode });
+                });
+            }).catch(err => {
+                this.logger.error("Unable to update queue", { user, passcode });
+                this.logger.error(err, { user, passcode });
+            });
+        }).catch(() => {
+            this.logger.error("Unable to get queue when starting next track", { user, passcode });
+        });
     }
 
     private checkTrackStatus(accessToken: string,
                             passcode: string,
                             user: string,
-                            currentTrack: SpotifyTrack,
+                            currentTrack: SpotifyTrack | null,
                             spotify: SpotifyService,
-                            startNextTrack: (passcode: string, user: string, accessToken: string) => void) {
+                            acl: Acl) {
 
-        this.logger.info(`Checking playback state for track ${currentTrack.id}...`, { user, passcode });
-        spotify.currentlyPlaying(accessToken).then(resp => {
-            const timeLeft = resp.data.item.duration_ms - resp.data.progress_ms;
+        const currentTrackId = currentTrack ? currentTrack.id : "";
+        this.logger.info(`Checking playback state for currently playing track ${currentTrackId}...`, { user, passcode });
+        spotify.currentlyPlaying(accessToken, user, passcode).then((currentTrack: SpotifyCurrentTrack) => {
+            const timeLeft = currentTrack.item.duration - currentTrack.progress_ms;
 
             // If song is already over (for some reason)
-            if (!resp.data.is_playing) {
-                this.logger.info(`Track ${currentTrack.id} was already over...starting next`, { user, passcode });
-                startNextTrack(passcode, user, accessToken);
+            if (!currentTrack.is_playing) {
+                this.logger.info(`Track ${currentTrack.item.id} was already over...starting next`, { user, passcode });
+                this.startNextTrack(passcode, user, accessToken, spotify, acl);
             } else if (timeLeft < 5000) {
-                this.logger.info(`Less than 5 secs left on track ${currentTrack.id}...initiating timer to start the next song...`,
+                this.logger.info(`Less than 5 secs left on track ${currentTrack.item.id}...initiating timer to start the next song...`,
                     { user, passcode });
                 // Start new song after timeLeft and check for that song's duration
-                setTimeout(() => startNextTrack(passcode, user, accessToken), timeLeft - 1000);
+                setTimeout(() => this.startNextTrack(passcode, user, accessToken, spotify, acl), timeLeft - 1000);
             } else {
                 // If there's still time, check for progress again after a while
-                this.logger.info(`Track ${currentTrack.id} still playing for ${(timeLeft / 1000)} secs. Checking again after that.`,
+                this.logger.info(`Track ${currentTrack.item.id} still playing for ${(timeLeft / 1000)} secs. Checking again after that.`,
                     { user, passcode });
                 QueueService.timeouts[accessToken] = setTimeout(() =>
-                    this.checkTrackStatus(accessToken, passcode, user, currentTrack, spotify, startNextTrack),
+                    this.checkTrackStatus(accessToken, passcode, user, currentTrack.item, spotify, acl),
                     timeLeft - 1000
                 );
             }
         }).catch(err => {
-            this.logger.error("Unable to get currently playing track from spotify.", { user, passcode });
-            this.logger.error(err, { user, passcode });
+            if (err.status == 404) {
+                this.logger.info(err.message, { user, passcode });
+            } else {
+                this.logger.error("Unable to get currently playing track from spotify.", { user, passcode });
+                this.logger.error(err, { user, passcode });
+            }
         });
     }
 }
