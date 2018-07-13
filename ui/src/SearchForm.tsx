@@ -4,10 +4,13 @@ import * as React from "react";
 import Album, { IAlbumProps } from "./Album";
 import Artist, { IArtistProps } from "./Artist";
 import config from "./config";
+import Playlist, { IPlaylistProps } from "./Playlist";
 import Track, { ITrackProps } from "./Track";
 
 interface ISearchFormProps {
+    activePlaylistId: string | null;
     onQueued: () => void;
+    onPlaylistSelected: () => void;
     onError: (msg: string) => void;
 }
 
@@ -18,6 +21,7 @@ interface ISearchFormState {
     tracks: ITrackProps[];
     albums: IAlbumProps[];
     artists: IArtistProps[];
+    playlists: IPlaylistProps[];
 }
 
 export class SearchForm extends React.Component<ISearchFormProps, ISearchFormState> {
@@ -32,7 +36,8 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
             limit: this.defaultLimit,
             tracks: [],
             albums: [],
-            artists: []
+            artists: [],
+            playlists: []
         };
 
         this.search = this.search.bind(this);
@@ -44,6 +49,8 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
         this.showMoreTracks = this.showMoreTracks.bind(this);
         this.showMoreArtists = this.showMoreArtists.bind(this);
         this.showMoreAlbums = this.showMoreAlbums.bind(this);
+        this.getPlaylists = this.getPlaylists.bind(this);
+        this.selectPlaylist = this.selectPlaylist.bind(this);
 
         this.hashSearch();
     }
@@ -68,7 +75,7 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
         const hash = window.location.hash.substr(1);
 
         if (!hash) {
-            return;
+            this.getPlaylists();
         } else if (hash.indexOf(":") < 0) {
             const searchQuery = decodeURIComponent(hash.replace(/\+/g, " "));
             this.search(searchQuery);
@@ -78,7 +85,27 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
         } else if (hash.indexOf("artist") >= 0) {
             const id = window.location.hash.split(":")[1];
             this.selectArtist(id);
+        } else if (hash.indexOf("playlist") >= 0) {
+            const id = window.location.hash.split(":")[1];
+            this.selectPlaylist(id);
         }
+    }
+
+    protected renderPlaylists() {
+        if (this.state.playlists.length === 0) {
+            return null;
+       }
+
+        const playlists = [
+            (<h4 key="playlists">Playlists</h4>)
+        ];
+        return playlists.concat(this.state.playlists.map((playlist, i) => (
+            <Playlist
+                name={playlist.name}
+                id={playlist.id}
+                activeId={this.props.activePlaylistId!}
+                key={i + "-" + playlist.id} />
+        )));
     }
 
     protected renderArtists() {
@@ -97,13 +124,25 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
         )));
     }
 
+    protected selectPlaylist(id: string) {
+        axios.put(config.backend.url + "/selectPlaylist", { id })
+            .then(() => {
+                window.location.hash = "";
+                this.props.onPlaylistSelected();
+            }).catch(err => {
+                this.props.onError(err.response.data.msg);
+            }
+        );
+    }
+
     protected selectArtist(id: string) {
         axios.get(config.backend.url + "/selectArtist?id=" + id)
             .then(response => {
                 this.setState({
                     tracks: response.data.tracks,
                     albums: response.data.albums,
-                    artists: []
+                    artists: [],
+                    playlists: []
                 });
             }).catch(err => {
                 this.props.onError(err.response.data.msg);
@@ -134,7 +173,8 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
                 this.setState({
                     tracks: response.data,
                     albums: [],
-                    artists: []
+                    artists: [],
+                    playlists: []
                 });
             }).catch(err => {
                 this.props.onError(err.response.data.msg);
@@ -165,11 +205,16 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
 
     public searchClicked(e: React.MouseEvent<HTMLElement>) {
         e.preventDefault();
-        this.setState({
-            type: "track,album,artist",
-            limit: this.defaultLimit
-        });
-        window.location.hash = "#" + this.state.q;
+
+        if (this.state.q) {
+            this.setState({
+                type: "track,album,artist",
+                limit: this.defaultLimit
+            });
+            window.location.hash = "#" + this.state.q;
+        } else {
+            window.location.hash = "";
+        }
     }
 
     public search(q: string) {
@@ -184,7 +229,23 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
                     q,
                     tracks: response.data.tracks,
                     albums: response.data.albums,
-                    artists: response.data.artists
+                    artists: response.data.artists,
+                    playlists: []
+                });
+            }).catch(err => {
+                this.props.onError(err.response.data.message);
+            }
+        );
+    }
+
+    public getPlaylists() {
+        axios.get(config.backend.url + "/playlists")
+            .then(response => {
+                this.setState({
+                    tracks: [],
+                    albums: [],
+                    artists: [],
+                    playlists: response.data
                 });
             }).catch(err => {
                 this.props.onError(err.response.data.message);
@@ -196,7 +257,8 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
         e.preventDefault();
         this.setState({
             type: "track",
-            limit: 50
+            limit: 50,
+            playlists: []
         }, () => this.search(this.state.q));
     }
 
@@ -204,7 +266,8 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
         e.preventDefault();
         this.setState({
             type: "artist",
-            limit: 50
+            limit: 50,
+            playlists: []
         }, () => this.search(this.state.q));
     }
 
@@ -212,7 +275,8 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
         e.preventDefault();
         this.setState({
             type: "album",
-            limit: 50
+            limit: 50,
+            playlists: []
         }, () => this.search(this.state.q));
     }
 
@@ -220,10 +284,11 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
         return (
             <div className="searchContainer">
                 <form className="form-inline searchForm">
-                    <input className="form-control search col-md-9" type="text" name="q" onChange={this.handleChangeEvent} placeholder="🔍 Search" />
+                    <input className="form-control search col-md-9" type="text" name="q" value={this.state.q} onChange={this.handleChangeEvent} placeholder="🔍 Search" />
                     <button type="submit" className="btn btn-primary search col-md-2" onClick={this.searchClicked}>Search</button>
                 </form>
                 <div className="searchResults">
+                    {this.renderPlaylists()}
                     {this.renderArtists()}
                     {this.state.artists.length > 4 ? <a href="#" className="showMore" onClick={this.showMoreArtists}>Show more</a> : null}
                     {this.renderAlbums()}

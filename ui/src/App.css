@@ -6,6 +6,7 @@ body {
   height: 100%;
   background: linear-gradient(#393939, #181818) no-repeat fixed;
   background-size: cover;
+  font-size: 0.9em;
   color: white;
   font-family: "Montserrat","Helvetica Neue",Helvetica,Arial,sans-serif !important;
 }
@@ -138,8 +139,11 @@ input.search {
   padding-top: 1em;
 }
 
+.queue {
+  width: 100%;
+}
+
 ol.queuedTracks {
-  padding-left: 1em;
   margin-top: 0.5em;
 }
 
@@ -192,10 +196,15 @@ input.passcode {
   background-color: #333333;
   color: #1DB954;
 }
-
-a.currentTrack {
+.playlistItem.active {
   color: #1ED760;
-  margin-right: 10px;
+}
+.currentTrack a {
+  color: #1ED760;
+}
+.trackItem {
+  display: grid;
+  grid-template-columns: auto 3em;
 }
 
 button.footerMenu {
@@ -213,6 +222,45 @@ button.footerMenu:active, button.footerMenu:hover, button.footerMenu:focus {
   box-shadow: none !important;
 }
 
+button.iconButton {
+  background: none;
+  color: #B3B3B3;
+  border: none;
+  cursor: pointer;
+}
+button.iconButton:active, button.iconButton:hover, button.iconButton:focus {
+  background-color: transparent!important;
+  border: none;
+  color: #FEFEFE;
+  box-shadow: none !important;
+}
+
 .footer {
   background-color: #282828;
+}
+
+.speakerIcon {
+  display: inline;
+  margin-left: 8px;
+}
+
+.voteButtons {
+  width: 100%;
+  justify-content: space-between;
+  margin: 0;
+  display: flex;
+  padding: 5px 30px;
+}
+.voteButton {
+  width: 40%;
+  font-size: 1.0em;
+  color: #B3B3B3;
+}
+
+.voteButton.down {
+  background-color: #dd0d0d;
+  border-color: #dd0d0d;
+}
+.voteButton.down:active {
+  background: #b80f0f!important;
 }

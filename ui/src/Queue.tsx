@@ -1,4 +1,5 @@
 import * as React from "react";
+import { FontAwesomeIcon } from "../node_modules/@fortawesome/react-fontawesome";
 import Track, { ITrackProps } from "./Track";
 
 export interface IQueuedItem {
@@ -17,6 +18,10 @@ export class Queue extends React.Component<IQueueProps> {
 
     public constructor(props: IQueueProps) {
         super(props);
+
+        this.removeFromQueue = this.removeFromQueue.bind(this);
+        this.voteUp = this.voteUp.bind(this);
+        this.voteDown = this.voteDown.bind(this);
     }
 
     protected renderCurrentTrack() {
@@ -36,6 +41,18 @@ export class Queue extends React.Component<IQueueProps> {
                     onError={this.props.onError} />
             </li>
         );
+    }
+
+    protected removeFromQueue(e: React.MouseEvent<HTMLButtonElement>) {
+        console.log(e.currentTarget.id);
+    }
+
+    protected voteUp(e: React.MouseEvent<HTMLButtonElement>) {
+        console.log(e.currentTarget.id);
+    }
+
+    protected voteDown(e: React.MouseEvent<HTMLButtonElement>) {
+        console.log(e.currentTarget.id);
     }
 
     protected renderTracks() {
@@ -58,9 +75,27 @@ export class Queue extends React.Component<IQueueProps> {
         ));
     }
 
+    protected renderVoteButtons() {
+        if (!this.props.currentTrack) {
+            return null;
+        }
+
+        return (
+            <div className="voteButtons">
+                <button type="submit" className="btn btn-primary voteButton up" id={this.props.currentTrack.track.id} onClick={this.voteUp}>
+                    <FontAwesomeIcon icon="thumbs-up" />
+                </button>
+                <button type="submit" className="btn btn-primary voteButton down" id={this.props.currentTrack.track.id} onClick={this.voteDown}>
+                    <FontAwesomeIcon icon="thumbs-down" />
+                </button>
+            </div>
+        );
+    }
+
     public render() {
         return (
-            <div className="queue col-md-12">
+            <div className="queue">
+                {this.renderVoteButtons()}
                 <ol className="queuedTracks">
                     {this.renderCurrentTrack()}
                     {this.renderTracks()}

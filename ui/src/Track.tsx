@@ -2,8 +2,10 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import axios from "axios";
 import * as React from "react";
 import config from "./config";
+import Duration from "./Duration";
 
 export interface ITrackProps {
+    className?: string;
     name: string;
     artist: string;
     id: string;
@@ -38,13 +40,17 @@ export class Track extends React.Component<ITrackProps> {
             name,
             artist,
             id,
+            duration,
             isPlaying
         } = this.props;
 
         return (
-            <div>
-                <a className={(isPlaying ? "currentTrack" : "")} onClick={this.addToQueue} href="#" id={id}>{artist} - {name}</a>
-                {isPlaying ? <FontAwesomeIcon icon="volume-up" /> : null}
+            <div className={this.props.className + (isPlaying ? " currentTrack " : "") + " trackItem"} id={id} onClick={this.addToQueue}>
+                <a href="#" className="trackName">
+                    {artist} - {name}
+                    {isPlaying ? <div className="speakerIcon"><FontAwesomeIcon icon="volume-up" /></div> : null}
+                </a>
+                <a href="#" className="trackDuration"><Duration milliseconds={duration} /></a>
             </div>
         );
     }

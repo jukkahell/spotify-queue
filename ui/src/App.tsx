@@ -20,6 +20,7 @@ export interface IState {
     queuedItems: IQueuedItem[] | null;
     isOwner: boolean;
     reactivate: boolean;
+    playlistId: string | null;
 }
 
 export class App extends React.Component<{}, IState> {
@@ -38,7 +39,8 @@ export class App extends React.Component<{}, IState> {
             isPlaying: false,
             queuedItems: null,
             isOwner: false,
-            reactivate: false
+            reactivate: false,
+            playlistId: null
         };
 
         this.createQueue = this.createQueue.bind(this);
@@ -52,6 +54,7 @@ export class App extends React.Component<{}, IState> {
         this.getQueue = this.getQueue.bind(this);
         this.reactivate = this.reactivate.bind(this);
         this.authorize = this.authorize.bind(this);
+        this.onPlaylistSelected = this.onPlaylistSelected.bind(this);
     }
 
     public componentDidMount() {
@@ -149,6 +152,10 @@ export class App extends React.Component<{}, IState> {
         }
     }
 
+    protected onPlaylistSelected() {
+        this.getCurrentTrack();
+    }
+
     protected onError(msg: string) {
         if (typeof msg !== "string") {
             console.log(msg);
@@ -174,7 +181,7 @@ export class App extends React.Component<{}, IState> {
                             </div>
                         </div>
                         <div className="col-md-8">
-                            <SearchForm onQueued={this.onQueued} onError={this.onError} />
+                            <SearchForm activePlaylistId={this.state.playlistId} onQueued={this.onQueued} onPlaylistSelected={this.onPlaylistSelected} onError={this.onError} />
                         </div>
                     </div>
                     <div className="footer fixed-bottom d-flex">
@@ -220,7 +227,8 @@ export class App extends React.Component<{}, IState> {
                 if (response.status === 200) {
                     this.setState({
                         currentTrack: response.data.currentTrack,
-                        isPlaying: response.data.isPlaying
+                        isPlaying: response.data.isPlaying,
+                        playlistId: response.data.playlistId
                     });
                 }
             }).catch(err => {

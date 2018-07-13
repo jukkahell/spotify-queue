@@ -34,6 +34,8 @@ export interface Queue {
         }
     };
     queue: QueueItem[];
+    playlistId: string | null;
+    playlistTracks: QueueItem[];
     currentTrack: CurrentTrack | null;
     users: [
         {

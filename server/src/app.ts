@@ -304,6 +304,35 @@ app.post("/track", (req, res) => {
     });
 });
 
+app.get("/playlists", (req, res) => {
+    const user = req.cookies.get("user");
+    const passcode = req.cookies.get("passcode");
+    queueService.getQueue(req.cookies.get("passcode")).then(queueDao => {
+        spotify.getPlaylists(queueDao.data.accessToken!, user, passcode).then(playlists => {
+            res.status(200).json(playlists);
+        });
+    }).catch(err => {
+        res.status(err.status).json({ message: err.message });
+    });
+});
+
+app.put("/selectPlaylist", (req, res) => {
+    const user = req.cookies.get("user");
+    const passcode = req.cookies.get("passcode");
+    const playlistId = req.body.id;
+    queueService.getQueue(req.cookies.get("passcode")).then(queueDao => {
+        spotify.getPlaylistTracks(queueDao.data.accessToken!, queueDao.owner, playlistId, user, passcode).then(tracks => {
+            queueService.addToPlaylistQueue(user, passcode, tracks, playlistId).then(result => {
+                res.status(200).json({ message: "OK" });
+            }).catch(err => {
+                res.status(err.status).json({ message: err.message });
+            });
+        });
+    }).catch(err => {
+        res.status(err.status).json({ message: err.message });
+    });
+});
+
 app.get("/selectAlbum", (req, res) => {
     const user = req.cookies.get("user");
     const passcode = req.cookies.get("passcode");

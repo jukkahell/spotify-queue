@@ -1,8 +1,8 @@
 import { library } from "@fortawesome/fontawesome-svg-core";
 import {
     faBars, faDesktop, faExchangeAlt, faLink, faMobile, faPlayCircle,
-    faShareAlt, faSignOutAlt, faSlidersH, faUnlock,
-    faVolumeOff, faVolumeUp
+    faShareAlt, faSignOutAlt, faSlidersH, faThumbsDown, faThumbsUp,
+    faTrashAlt, faUnlock, faVolumeOff, faVolumeUp
 } from "@fortawesome/free-solid-svg-icons";
 import "bootstrap/dist/css/bootstrap.min.css";
 import * as React from "react";
@@ -15,7 +15,7 @@ import registerServiceWorker from "./registerServiceWorker";
 library.add(
     faDesktop, faMobile, faVolumeOff, faPlayCircle, faVolumeUp,
     faShareAlt, faLink, faBars, faSlidersH, faSignOutAlt, faUnlock,
-    faExchangeAlt
+    faExchangeAlt, faThumbsDown, faThumbsUp, faTrashAlt
 );
 axios.defaults.withCredentials = true;
 

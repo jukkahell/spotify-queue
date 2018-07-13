@@ -201,6 +201,8 @@ class QueueService {
             name: "Queue 1",
             deviceId: null,
             queue: [],
+            playlistId: null,
+            playlistTracks: [],
             settings: {
                 alwaysPlay: {
                     playlistId: null,
@@ -345,7 +347,7 @@ class QueueService {
                         votes
                     }
 
-                    resolve({ currentTrack: queue.currentTrack, isPlaying: currentTrack.is_playing });
+                    resolve({ currentTrack: queue.currentTrack, isPlaying: currentTrack.is_playing, playlistId: queue.playlistId });
 
                     // Sync if we are not playing but spotify is
                     if (!QueueService.timeouts[queue.accessToken!] && currentTrack.is_playing) {
@@ -364,10 +366,39 @@ class QueueService {
                     });
                 }).catch(() => {
                     this.logger.warn("Unable to get track progress from Spotify...resolve anyway.", { user, passcode });
-                    resolve({ currentTrack: queue.currentTrack, isPlaying: queueDao.isPlaying });
+                    resolve({ currentTrack: queue.currentTrack, isPlaying: queueDao.isPlaying, playlistId: queue.playlistId });
                 });
             }).catch(() => {
                 reject({ status: 500, message: "Queue not found with the given passcode." });
+            });
+        });
+    }
+
+    public addToPlaylistQueue(user: string, passcode: string, tracks: SpotifyTrack[], playlistId: string) {
+        return new Promise((resolve, reject) => {
+            this.getQueue(passcode, true).then(queueDao => {
+                const queue: Queue = queueDao.data;
+
+                this.logger.info(`Adding ${tracks.length} tracks to playlist queue...`, { user, passcode });
+                queue.playlistId = playlistId;
+                queue.playlistTracks = [];
+                tracks.forEach(track => {
+                    const item: QueueItem = {
+                        track,
+                        userId: user
+                    };
+                    queue.playlistTracks.push(item);
+                });
+
+                db.query("UPDATE queues SET data = $1 WHERE id = $2", [queue, passcode]).then(() => {
+                    this.logger.debug(`Tracks added to playlist queue successfully`, { user, passcode });
+                    resolve(queueDao);
+                }).catch(err => {
+                    this.logger.error(err, { user, passcode });
+                    reject({ status: 500, message: "Error when adding song to queue" });
+                });
+            }).catch(err => {
+                reject({ status: 500, message: err.message });
             });
         });
     }
@@ -504,13 +535,13 @@ class QueueService {
     private startNextTrack(passcode: string, user: string, accessToken: string, spotify: SpotifyService, acl: Acl) {
         this.logger.info(`Starting next track`, { user, passcode });
         this.getQueue(passcode, true).then(queueDao => {
-            if (queueDao.data.queue.length === 0) {
+            if (queueDao.data.queue.length === 0 && queueDao.data.playlistTracks.length === 0) {
                 this.logger.info("No more songs in queue. Stop playing.", { user, passcode });
                 this.stopPlaying(queueDao.data, accessToken, passcode, user);
                 return;
             }
             const queue: Queue = queueDao.data;
-            const queuedItem = queue.queue.shift()!;
+            const queuedItem = (queue.queue.length > 0) ? queue.queue.shift()! : queue.playlistTracks.shift()!;
             queue.currentTrack = {
                 track: queuedItem.track,
                 owner: queuedItem.userId,
