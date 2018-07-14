@@ -99,9 +99,9 @@ export class App extends React.Component<{}, IState> {
                         passcode: response.data.passcode,
                         isOwner: response.data.isOwner
                     });
-                } else if (!window.location.hash && window.location.pathname.length > 1) {
+                } else if (window.location.hash && window.location.hash.indexOf("join:") >= 0) {
                     this.setState({
-                        enteredCode: window.location.pathname.substr(1)
+                        enteredCode: window.location.hash.split("join:")[1]
                     }, this.joinQueue);
                 }
             }).catch(error => {

@@ -32,7 +32,7 @@ export class Share extends React.Component<IShareProps, IShareState> {
     public selectShare(e: React.MouseEvent<HTMLElement>) {
         switch (e.currentTarget.id) {
             case "Copy link":
-                this.copyText("https://spotiqu.eu/" + this.props.passcode);
+                this.copyText("https://spotiqu.eu/#join:" + this.props.passcode);
                 break;
         }
         this.setState({
