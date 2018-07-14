@@ -9,6 +9,7 @@ import Track, { ITrackProps } from "./Track";
 
 interface ISearchFormProps {
     activePlaylistId: string | null;
+    isOwner: boolean;
     onQueued: () => void;
     onPlaylistSelected: () => void;
     onError: (msg: string) => void;
@@ -51,7 +52,7 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
         this.showMoreAlbums = this.showMoreAlbums.bind(this);
         this.getPlaylists = this.getPlaylists.bind(this);
         this.selectPlaylist = this.selectPlaylist.bind(this);
-
+        this.addToQueue = this.addToQueue.bind(this);
         this.hashSearch();
     }
 
@@ -92,7 +93,7 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
     }
 
     protected renderPlaylists() {
-        if (this.state.playlists.length === 0) {
+        if (!this.props.isOwner || this.state.playlists.length === 0) {
             return null;
        }
 
@@ -130,7 +131,7 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
                 window.location.hash = "";
                 this.props.onPlaylistSelected();
             }).catch(err => {
-                this.props.onError(err.response.data.msg);
+                this.props.onError(err.response.data.message);
             }
         );
     }
@@ -145,7 +146,7 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
                     playlists: []
                 });
             }).catch(err => {
-                this.props.onError(err.response.data.msg);
+                this.props.onError(err.response.data.message);
             }
         );
     }
@@ -177,7 +178,17 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
                     playlists: []
                 });
             }).catch(err => {
-                this.props.onError(err.response.data.msg);
+                this.props.onError(err.response.data.message);
+            }
+        );
+    }
+
+    protected addToQueue(targetId: string, isPlaying: boolean) {
+        axios.post(config.backend.url + "/track", { spotifyUri: targetId })
+            .then(() => {
+                this.props.onQueued();
+            }).catch(err => {
+                this.props.onError(err.response.data.message);
             }
         );
     }
@@ -198,8 +209,7 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
                 duration={track.duration}
                 key={i + "-" + track.id}
                 isPlaying={false}
-                onQueued={this.props.onQueued}
-                onError={this.props.onError} />
+                onClick={this.addToQueue} />
         )));
     }
 

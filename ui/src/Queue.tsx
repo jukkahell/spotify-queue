@@ -1,27 +1,50 @@
 import * as React from "react";
 import { FontAwesomeIcon } from "../node_modules/@fortawesome/react-fontawesome";
+import axios from "../node_modules/axios";
+import config from "./config";
 import Track, { ITrackProps } from "./Track";
 
 export interface IQueuedItem {
     track: ITrackProps;
     userId: string;
+    votes: IVote[];
+}
+
+export interface IVote {
+    userId: string;
+    value: number;
 }
 
 interface IQueueProps {
     onQueued: () => void;
     onError: (msg: string) => void;
+    onSkip: () => void;
     queue: IQueuedItem[] | null;
     currentTrack: IQueuedItem | null;
 }
 
-export class Queue extends React.Component<IQueueProps> {
+interface IQueueState {
+    contextMenuVisible: boolean;
+    contextMenuTrackId: string | null;
+    contextMenuTargetPlaying: boolean;
+}
+
+export class Queue extends React.Component<IQueueProps, IQueueState> {
 
     public constructor(props: IQueueProps) {
         super(props);
 
+        this.state = {
+            contextMenuVisible: false,
+            contextMenuTrackId: null,
+            contextMenuTargetPlaying: false
+        };
+
         this.removeFromQueue = this.removeFromQueue.bind(this);
         this.voteUp = this.voteUp.bind(this);
         this.voteDown = this.voteDown.bind(this);
+        this.showContextMenu = this.showContextMenu.bind(this);
+        this.hideMenu = this.hideMenu.bind(this);
     }
 
     protected renderCurrentTrack() {
@@ -30,21 +53,44 @@ export class Queue extends React.Component<IQueueProps> {
         }
         return (
             <li key="currentTrack">
-                <Track
-                    name={this.props.currentTrack.track.name}
-                    artist={this.props.currentTrack.track.artist}
-                    id={this.props.currentTrack.track.id}
-                    duration={this.props.currentTrack.track.duration}
-                    key={"current-" + this.props.currentTrack.track.id}
-                    isPlaying={true}
-                    onQueued={this.props.onQueued}
-                    onError={this.props.onError} />
+                <div className="dropup">
+                    <Track
+                        name={this.props.currentTrack.track.name}
+                        artist={this.props.currentTrack.track.artist}
+                        id={this.props.currentTrack.track.id}
+                        duration={this.props.currentTrack.track.duration}
+                        key={"current-" + this.props.currentTrack.track.id}
+                        isPlaying={true}
+                        onClick={this.showContextMenu} />
+                    <div className={"dropdown-menu " + (this.state.contextMenuVisible ? "show" : "hide")} aria-labelledby="deviceMenuButton">
+                        {this.renderContextMenu()}
+                    </div>
+                </div>
             </li>
         );
     }
 
-    protected removeFromQueue(e: React.MouseEvent<HTMLButtonElement>) {
-        console.log(e.currentTarget.id);
+    protected removeFromQueue(e: React.MouseEvent<HTMLElement>) {
+        e.preventDefault();
+
+        axios.delete(config.backend.url + "/removeFromQueue", {
+            data: {
+                trackId: this.state.contextMenuTrackId,
+                isPlaying: this.state.contextMenuTargetPlaying
+            }
+        }).then(() => {
+            this.props.onQueued();
+            if (this.state.contextMenuTargetPlaying) {
+                this.props.onSkip();
+            }
+            this.setState({
+                contextMenuVisible: false,
+                contextMenuTrackId: null,
+                contextMenuTargetPlaying: false
+            });
+        }).catch(err => {
+            this.props.onError(err.response.data.message);
+        });
     }
 
     protected voteUp(e: React.MouseEvent<HTMLButtonElement>) {
@@ -55,6 +101,36 @@ export class Queue extends React.Component<IQueueProps> {
         console.log(e.currentTarget.id);
     }
 
+    protected renderContextMenu() {
+        if (!this.state.contextMenuTargetPlaying) {
+            return (
+                <a className={"dropdown-item"} key={"removeFromQueue"} href="#" onClick={this.removeFromQueue}>
+                    <FontAwesomeIcon icon="trash-alt" /> Remove from queue
+                </a>
+            );
+        } else {
+            return (
+                <a className={"dropdown-item"} key={"removeFromQueue"} href="#" onClick={this.removeFromQueue}>
+                    <FontAwesomeIcon icon="forward" /> Skip
+                </a>
+            );
+        }
+    }
+    protected showContextMenu(targetId: string, isPlaying: boolean) {
+        this.setState((prevState) => ({
+            contextMenuVisible: !prevState.contextMenuVisible,
+            contextMenuTrackId: targetId,
+            contextMenuTargetPlaying: isPlaying
+        }));
+    }
+    protected hideMenu() {
+        this.setState(() => ({
+            contextMenuVisible: false,
+            contextMenuTrackId: null,
+            contextMenuTargetPlaying: false
+        }));
+    }
+
     protected renderTracks() {
         if (!this.props.queue) {
             return null;
@@ -62,15 +138,16 @@ export class Queue extends React.Component<IQueueProps> {
 
         return this.props.queue.map((queuedItem, i) => (
             <li key={"queue-" + i}>
-                <Track
-                    name={queuedItem.track.name}
-                    artist={queuedItem.track.artist}
-                    id={queuedItem.track.id}
-                    duration={queuedItem.track.duration}
-                    key={i + "-" + queuedItem.track.id}
-                    isPlaying={false}
-                    onQueued={this.props.onQueued}
-                    onError={this.props.onError} />
+                <div className="dropup">
+                    <Track
+                        name={queuedItem.track.name}
+                        artist={queuedItem.track.artist}
+                        id={queuedItem.track.id}
+                        duration={queuedItem.track.duration}
+                        key={i + "-" + queuedItem.track.id}
+                        isPlaying={false}
+                        onClick={this.showContextMenu} />
+                </div>
             </li>
         ));
     }
@@ -79,12 +156,14 @@ export class Queue extends React.Component<IQueueProps> {
         if (!this.props.currentTrack) {
             return null;
         }
-
+        let voteCount = 0;
+        this.props.currentTrack.votes.forEach((v: IVote) => voteCount += v.value);
         return (
             <div className="voteButtons">
                 <button type="submit" className="btn btn-primary voteButton up" id={this.props.currentTrack.track.id} onClick={this.voteUp}>
                     <FontAwesomeIcon icon="thumbs-up" />
                 </button>
+                <div className="voteCount">{voteCount > 0 ? "+" : ""}{voteCount}</div>
                 <button type="submit" className="btn btn-primary voteButton down" id={this.props.currentTrack.track.id} onClick={this.voteDown}>
                     <FontAwesomeIcon icon="thumbs-down" />
                 </button>
@@ -100,6 +179,7 @@ export class Queue extends React.Component<IQueueProps> {
                     {this.renderCurrentTrack()}
                     {this.renderTracks()}
                 </ol>
+                <div className={"menuOverlay " + (this.state.contextMenuVisible ? "visible" : "hidden")} onClick={this.hideMenu}/>
             </div>
         );
     }

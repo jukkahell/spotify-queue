@@ -26,6 +26,7 @@ export class Share extends React.Component<IShareProps, IShareState> {
 
         this.selectShare = this.selectShare.bind(this);
         this.dropdownClicked = this.dropdownClicked.bind(this);
+        this.hideMenu = this.hideMenu.bind(this);
     }
 
     public selectShare(e: React.MouseEvent<HTMLElement>) {
@@ -55,6 +56,12 @@ export class Share extends React.Component<IShareProps, IShareState> {
         ));
     }
 
+    public hideMenu() {
+        this.setState((prevState) => ({
+            dropdownVisible: false
+        }));
+    }
+
     public render() {
         return (
             <div className="dropup">
@@ -70,6 +77,7 @@ export class Share extends React.Component<IShareProps, IShareState> {
                 <div className={"dropdown-menu " + (this.state.dropdownVisible ? "show" : "hide")} aria-labelledby="shareMenuButton">
                     {this.renderShareOptions()}
                 </div>
+                <div className={"menuOverlay " + (this.state.dropdownVisible ? "visible" : "hidden")} onClick={this.hideMenu}/>
             </div>
         );
     }

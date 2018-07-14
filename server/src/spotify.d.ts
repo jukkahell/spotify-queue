@@ -19,7 +19,7 @@ export interface SpotifyCurrentTrack {
     },
     progress_ms: number;
     is_playing: boolean;
-    item: SpotifyTrack;
+    item: SpotifyTrack | null;
     shuffle_state?: boolean;
     repeat_state?: "on"|"off";
     context?: {

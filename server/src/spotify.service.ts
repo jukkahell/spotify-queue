@@ -93,11 +93,9 @@ class SpotifyService {
                 }
             ).then(response => {
                 if (response.data) {
-                    const track: SpotifyCurrentTrack = {
-                        device: response.data.device,
-                        is_playing: response.data.is_playing,
-                        progress_ms: response.data.progress_ms,
-                        item: {
+                    let item = null;
+                    if (response.data.item) {
+                        item = {
                             artist: response.data.item.artists[0].name,
                             cover: response.data.item.album.images[1].url,
                             duration: response.data.item.duration_ms,
@@ -106,8 +104,15 @@ class SpotifyService {
                             progress: response.data.progress_ms
                         }
                     }
+                    const track: SpotifyCurrentTrack = {
+                        device: response.data.device,
+                        is_playing: response.data.is_playing,
+                        progress_ms: response.data.progress_ms,
+                        item
+                    }
                     resolve(track);
                 } else {
+                    this.logger.warn("No song playing currently", { user, passcode });
                     reject({ status: 404, message: "No song playing currently." });
                 }
             }).catch(err => {
@@ -180,13 +185,36 @@ class SpotifyService {
         });
     }
 
-    public startSong = (accessToken: string, id: string, deviceId: string) => {
+    public startSong = (accessToken: string, ids: string[], deviceId: string) => {
         return axios.put(
             "https://api.spotify.com/v1/me/player/play?device_id=" + deviceId,
             {
-                uris: [id]
+                uris: ids
             },
             {
+                headers: {
+                    "Content-Type": "text/plain",
+                    "Authorization": "Bearer " + accessToken
+                }
+            }
+        );
+    }
+
+    public pause = (accessToken: string) => {
+        return axios.put("https://api.spotify.com/v1/me/player/pause",
+            {},
+            {
+                headers: {
+                    "Content-Type": "text/plain",
+                    "Authorization": "Bearer " + accessToken
+                }
+            }
+        );
+    }
+    public resume = (accessToken: string) => {
+        return axios.put("https://api.spotify.com/v1/me/player/play",
+            {},
+            { 
                 headers: {
                     "Content-Type": "text/plain",
                     "Authorization": "Bearer " + accessToken

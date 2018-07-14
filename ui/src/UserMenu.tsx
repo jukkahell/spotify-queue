@@ -31,6 +31,7 @@ export class UserMenu extends React.Component<IUserMenuProps, IUserMenuState> {
         this.selectMenuItem = this.selectMenuItem.bind(this);
         this.dropdownClicked = this.dropdownClicked.bind(this);
         this.logout = this.logout.bind(this);
+        this.hideMenu = this.hideMenu.bind(this);
     }
 
     public selectMenuItem(e: React.MouseEvent<HTMLElement>) {
@@ -46,7 +47,6 @@ export class UserMenu extends React.Component<IUserMenuProps, IUserMenuState> {
 
     public dropdownClicked(e: React.MouseEvent<HTMLElement>) {
         e.preventDefault();
-
         this.setState((prevState) => ({
             dropdownVisible: !prevState.dropdownVisible
         }));
@@ -58,6 +58,12 @@ export class UserMenu extends React.Component<IUserMenuProps, IUserMenuState> {
                 <FontAwesomeIcon icon={this.optionToIcon(option)} /> {option}
             </a>
         ));
+    }
+
+    public hideMenu() {
+        this.setState((prevState) => ({
+            dropdownVisible: false
+        }));
     }
 
     public render() {
@@ -75,6 +81,7 @@ export class UserMenu extends React.Component<IUserMenuProps, IUserMenuState> {
                 <div className={"dropdown-menu " + (this.state.dropdownVisible ? "show" : "hide")} aria-labelledby="userMenuButton">
                     {this.renderUserMenuOptions()}
                 </div>
+                <div className={"menuOverlay " + (this.state.dropdownVisible ? "visible" : "hidden")} onClick={this.hideMenu}/>
             </div>
         );
     }

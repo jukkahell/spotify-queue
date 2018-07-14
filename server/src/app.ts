@@ -58,8 +58,8 @@ const spotify = new Spotify(logger, config.spotify.clientId, secrets.spotify.sec
 const queueService = new QueueService(logger);
 const acl = new Acl(logger, spotify, queueService);
 
-const excludeEndpointsFromAuth = ["/join", "/create", "/reactivate", "/isAuthorized", "/queue"];
-const endpointsRequireOwnerPerm = ["/device"];
+const excludeEndpointsFromAuth = ["/join", "/create", "/reactivate", "/isAuthorized", "/queue", "/currentlyPlaying"];
+const endpointsRequireOwnerPerm = ["/device", "/pauseResume", "/selectPlaylist"];
 
 const app = express();
 app.use(cors(config.app.cors));
@@ -271,14 +271,31 @@ app.get("/currentlyPlaying", (req, res) => {
     queueService.getCurrentTrack(passcode, user, spotify, acl).then(result => {
         res.status(200).json(result);
     }).catch(() => {
-        // Wait a bit so that spotify catches up
-        setTimeout(() => {
-            queueService.getCurrentTrack(passcode, user, spotify, acl).then(result => {
-            }).catch(() => {
-                res.status(204).json({});
-            });
-        }, 3000);
+        res.status(204).json({});
     });
+});
+
+app.delete("/removeFromQueue", (req, res) => {
+    const passcode = req.cookies.get("passcode");
+    const user = req.cookies.get("user");
+    const isPlaying = req.body.isPlaying;
+    const trackId = req.body.trackId;
+
+    if (isPlaying) {
+        logger.info(`Trying to skip ${trackId}`, { user, passcode });
+        queueService.skip(passcode, user, trackId, spotify, acl).then(() => {
+            res.status(200).json({ msg: "OK" });
+        }).catch(err => {
+            res.status(err.status).json({ message: err.message });
+        });
+    } else {
+        logger.info(`Trying to remove ${trackId} from queue`, { user, passcode });
+        queueService.removeFromQueue(passcode, user, trackId).then(() => {
+            res.status(200).json({ msg: "OK" });
+        }).catch(err => {
+            res.status(err.status).json({ message: err.message });
+        });
+    }
 });
 
 app.post("/track", (req, res) => {
@@ -301,6 +318,17 @@ app.post("/track", (req, res) => {
         }
     }).catch(err => {
         res.status(500).json({ message: err.message });
+    });
+});
+
+app.post("/pauseResume", (req, res) => {
+    const user = req.cookies.get("user");
+    const passcode = req.cookies.get("passcode");
+
+    queueService.pauseResume(user, passcode, spotify, acl).then(isPlaying => {
+        res.status(200).json({ isPlaying });
+    }).catch(err => {
+        res.status(err.status).json({ message: err.message });
     });
 });
 
@@ -403,7 +431,7 @@ const startPlaying = (queue: Queue, passcode: string, user: string) => {
 
         queueService.updateQueue(queue, true, passcode).then(() => {
             logger.debug(`Current track set to ${queuedItem.track.id}`, { user, passcode });
-            spotify.startSong(accessToken, queuedItem.track.id, deviceId!).then(() => {
+            spotify.startSong(accessToken, [queuedItem.track.id], deviceId!).then(() => {
                 queueService.startPlaying(accessToken, passcode, user, queuedItem.track, spotify, acl);
                 logger.info(`Song successfully started.`, { user, passcode });
                 return resolve();

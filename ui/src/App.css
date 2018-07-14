@@ -108,6 +108,7 @@ img.coverImage {
 
 .currentlyPlaying {
   text-align: center;
+  padding: 0;
 }
 
 input {
@@ -202,6 +203,9 @@ input.passcode {
 .currentTrack a {
   color: #1ED760;
 }
+.trackDuration {
+  text-align: right;
+}
 .trackItem {
   display: grid;
   grid-template-columns: auto 3em;
@@ -263,4 +267,39 @@ button.iconButton:active, button.iconButton:hover, button.iconButton:focus {
 }
 .voteButton.down:active {
   background: #b80f0f!important;
+}
+
+.voteCount {
+  display: flex;
+  align-items: center;
+  font-size: 2em;
+}
+
+.coverImageLayer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  text-align: center;
+  background-color: black;
+  opacity: 0.2;
+  font-size: 10em;
+  cursor: pointer;
+}
+.coverImageLayer:hover {
+  visibility: visible;
+  opacity: 0.6;
+}
+
+.menuOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 10;
+  visibility: hidden;
 }

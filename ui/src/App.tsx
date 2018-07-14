@@ -55,6 +55,8 @@ export class App extends React.Component<{}, IState> {
         this.reactivate = this.reactivate.bind(this);
         this.authorize = this.authorize.bind(this);
         this.onPlaylistSelected = this.onPlaylistSelected.bind(this);
+        this.onPauseResume = this.onPauseResume.bind(this);
+        this.refreshCurrentlyPlaying = this.refreshCurrentlyPlaying.bind(this);
     }
 
     public componentDidMount() {
@@ -152,6 +154,9 @@ export class App extends React.Component<{}, IState> {
         }
     }
 
+    protected refreshCurrentlyPlaying() {
+        setTimeout(this.getCurrentTrack, 500);
+    }
     protected onPlaylistSelected() {
         this.getCurrentTrack();
     }
@@ -166,6 +171,27 @@ export class App extends React.Component<{}, IState> {
         });
     }
 
+    protected onPauseResume() {
+        if (!this.state.isOwner) {
+            return;
+        }
+
+        axios.post(config.backend.url + "/pauseResume")
+            .then(response => {
+
+                this.setState({
+                    isPlaying: response.data.isPlaying
+                }, () =>
+                    setTimeout(this.getCurrentTrack, 1000)
+                );
+
+                this.getQueue();
+            }).catch((err) => {
+                this.onError(err.response.data.message);
+            }
+        );
+    }
+
     public render() {
         if (this.state.passcode) {
             return (
@@ -174,14 +200,27 @@ export class App extends React.Component<{}, IState> {
                     <div className="row">
                         <div className="col-md-4">
                             <div className="row">
-                                <CurrentlyPlaying isPlaying={this.state.isPlaying} currentTrack={this.state.currentTrack} onSongEnd={this.onSongEnd} onError={this.onError} />
+                                <CurrentlyPlaying isPlaying={this.state.isPlaying}
+                                    currentTrack={this.state.currentTrack}
+                                    isOwner={this.state.isOwner}
+                                    onPauseResume={this.onPauseResume}
+                                    onSongEnd={this.onSongEnd}
+                                    onError={this.onError} />
                             </div>
                             <div className="row">
-                                <Queue currentTrack={this.state.currentTrack} queue={this.state.queuedItems} onQueued={this.onQueued} onError={this.onError} />
+                                <Queue currentTrack={this.state.currentTrack}
+                                    queue={this.state.queuedItems}
+                                    onSkip={this.refreshCurrentlyPlaying}
+                                    onQueued={this.onQueued}
+                                    onError={this.onError} />
                             </div>
                         </div>
                         <div className="col-md-8">
-                            <SearchForm activePlaylistId={this.state.playlistId} onQueued={this.onQueued} onPlaylistSelected={this.onPlaylistSelected} onError={this.onError} />
+                            <SearchForm activePlaylistId={this.state.playlistId}
+                                isOwner={this.state.isOwner}
+                                onQueued={this.onQueued}
+                                onPlaylistSelected={this.onPlaylistSelected}
+                                onError={this.onError} />
                         </div>
                     </div>
                     <div className="footer fixed-bottom d-flex">
@@ -227,7 +266,7 @@ export class App extends React.Component<{}, IState> {
                 if (response.status === 200) {
                     this.setState({
                         currentTrack: response.data.currentTrack,
-                        isPlaying: response.data.isPlaying,
+                        isPlaying: response.data.isSpotiquPlaying,
                         playlistId: response.data.playlistId
                     });
                 }

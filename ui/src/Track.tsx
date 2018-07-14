@@ -1,7 +1,5 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import axios from "axios";
 import * as React from "react";
-import config from "./config";
 import Duration from "./Duration";
 
 export interface ITrackProps {
@@ -13,26 +11,20 @@ export interface ITrackProps {
     progress?: number;
     cover?: string;
     isPlaying: boolean;
-    onQueued: () => void;
-    onError: (msg: string) => void;
+    onClick: (targetId: string, isPlaying: boolean) => void;
 }
 
 export class Track extends React.Component<ITrackProps> {
 
     public constructor(props: ITrackProps) {
         super(props);
-        this.addToQueue = this.addToQueue.bind(this);
+
+        this.onClick = this.onClick.bind(this);
     }
 
-    protected addToQueue(event: React.MouseEvent<HTMLElement>) {
-        event.preventDefault();
-        axios.post(config.backend.url + "/track", { spotifyUri: event.currentTarget.id })
-            .then(() => {
-                this.props.onQueued();
-            }).catch(err => {
-                this.props.onError(err.response.data.message);
-            }
-        );
+    public onClick(e: React.MouseEvent<HTMLElement>) {
+        e.preventDefault();
+        this.props.onClick(e.currentTarget.id, this.props.isPlaying);
     }
 
     public render() {
@@ -45,7 +37,7 @@ export class Track extends React.Component<ITrackProps> {
         } = this.props;
 
         return (
-            <div className={this.props.className + (isPlaying ? " currentTrack " : "") + " trackItem"} id={id} onClick={this.addToQueue}>
+            <div className={this.props.className + (isPlaying ? " currentTrack " : "") + " trackItem"} id={id} onClick={this.onClick}>
                 <a href="#" className="trackName">
                     {artist} - {name}
                     {isPlaying ? <div className="speakerIcon"><FontAwesomeIcon icon="volume-up" /></div> : null}

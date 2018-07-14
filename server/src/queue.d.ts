@@ -10,12 +10,12 @@ export interface QueueDao {
 export interface CurrentTrack {
     track: SpotifyTrack;
     owner: string;
-    votes: [
-        {
-            userId: string;
-            vote: number;
-        }
-    ] | never[];
+    votes: Vote[];
+}
+
+export interface Vote {
+    userId: string;
+    value: number;
 }
 
 export interface Queue {

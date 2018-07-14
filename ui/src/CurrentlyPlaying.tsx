@@ -1,11 +1,14 @@
 import * as React from "react";
+import { FontAwesomeIcon } from "../node_modules/@fortawesome/react-fontawesome";
 import { IQueuedItem } from "./Queue";
 
 interface ICurrentlyPlayingProps {
     onSongEnd: () => void;
     onError: (msg: string) => void;
+    onPauseResume: () => void;
     currentTrack: IQueuedItem | null;
     isPlaying: boolean;
+    isOwner: boolean;
 }
 
 interface ICurrentlyPlayingState {
@@ -52,10 +55,19 @@ export class CurrentlyPlaying extends React.Component<ICurrentlyPlayingProps, IC
     public render() {
         if (this.props.currentTrack) {
             const progress = (this.state.progress / this.props.currentTrack.track.duration) * 100;
-
+            const pauseVisible = this.props.isOwner && this.props.isPlaying;
+            const resumeVisible = this.props.isOwner && !this.props.isPlaying;
             return (
                 <div className="currentlyPlaying col-md-12">
-                    <img className="coverImage" src={this.props.currentTrack.track.cover} />
+                    <div className="coverImageContainer" onClick={this.props.onPauseResume}>
+                        <img className="coverImage" src={this.props.currentTrack.track.cover} />
+                        <div className={"coverImageLayer " + (pauseVisible ? "visible" : "invisible")}>
+                            <div className="align-center w-100"><FontAwesomeIcon icon="pause-circle" /></div>
+                        </div>
+                        <div className={"coverImageLayer " + (resumeVisible ? "visible" : "invisible")}>
+                            <div className="align-center w-100"><FontAwesomeIcon icon="play-circle" /></div>
+                        </div>
+                    </div>
                     <div className="progress">
                         <div className="progress-bar" style={{width: progress + "%"}} role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100} />
                     </div>

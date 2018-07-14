@@ -47,6 +47,7 @@ export class DeviceSelect extends React.Component<IDeviceSelectProps, IDeviceSel
         this.selectDevice = this.selectDevice.bind(this);
         this.dropdownClicked = this.dropdownClicked.bind(this);
         this.setDevice = this.setDevice.bind(this);
+        this.hideMenu = this.hideMenu.bind(this);
     }
 
     public selectDevice(e: React.MouseEvent<HTMLElement>) {
@@ -64,6 +65,12 @@ export class DeviceSelect extends React.Component<IDeviceSelectProps, IDeviceSel
 
         this.setState((prevState) => ({
             dropdownVisible: !prevState.dropdownVisible
+        }));
+    }
+
+    public hideMenu() {
+        this.setState((prevState) => ({
+            dropdownVisible: false
         }));
     }
 
@@ -109,6 +116,7 @@ export class DeviceSelect extends React.Component<IDeviceSelectProps, IDeviceSel
                 <div className={"dropdown-menu " + (this.state.dropdownVisible ? "show" : "hide")} aria-labelledby="deviceMenuButton">
                     {this.renderDeviceOptions()}
                 </div>
+                <div className={"menuOverlay " + (this.state.dropdownVisible ? "visible" : "hidden")} onClick={this.hideMenu}/>
             </div>
         );
     }
