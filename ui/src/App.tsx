@@ -114,7 +114,7 @@ export class App extends React.Component<{}, IState> {
         const url = "https://accounts.spotify.com/authorize" +
             "?client_id=" + client_id +
             "&response_type=code" +
-            "&scope=user-modify-playback-state,user-read-currently-playing,user-read-playback-state,playlist-read-private" +
+            "&scope=user-modify-playback-state,user-read-currently-playing,user-read-playback-state,playlist-read-private,playlist-read-collaborative" +
             "&redirect_uri=" + encodeURIComponent(redirect_uri);
 
         window.open(url, "SpotiQue", "WIDTH=400,HEIGHT=500");
