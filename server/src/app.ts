@@ -377,7 +377,7 @@ app.get("/selectAlbum", (req, res) => {
 app.get("/selectArtist", (req, res) => {
     const user = req.cookies.get("user");
     const passcode = req.cookies.get("passcode");
-    
+
     queueService.getAccessToken(req.cookies.get("passcode")).then(accessToken => {
         spotify.getArtistTopTracks(accessToken, req.query.id, user, passcode).then((tracks: any) => {
             spotify.getArtistAlbums(accessToken, req.query.id, user, passcode).then((albums: any) => {

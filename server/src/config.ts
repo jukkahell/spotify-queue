@@ -1,5 +1,5 @@
+import { CorsOptions } from "cors";
 import { env } from "process";
-import { CorsOptions } from "../node_modules/@types/cors";
 
 const prod = env.NODE_ENV === "production";
 const scheme = prod ? "https://" : "http://";
@@ -7,7 +7,7 @@ const host = prod ? "spotiqu.eu" : "spotique.fi";
 const port = 8001;
 const uiPort = prod ? 80 : 3000;
 
-const whitelist = [scheme + host + ":" + port, scheme + host + ":" + uiPort, scheme + host]
+const whitelist = [scheme + host + ":" + port, scheme + host + ":" + uiPort, scheme + host];
 
 export interface IConfig {
     app: {
@@ -18,31 +18,37 @@ export interface IConfig {
         logger: {
             level: string;
         }
-    },
+    };
     userCookieOptions: {
         domain: string;
-        expires: Date;
+        expires: () => Date;
         secure: boolean;
         sameSite: boolean;
         signed: boolean;
-    },
+    };
     passcodeCookieOptions: {
         domain: string;
-        expires: Date;
+        expires: () => Date;
         secure: boolean;
         sameSite: boolean;
         signed: boolean;
-    },
+    };
     spotify: {
         clientId: string;
         redirectUri: string;
-    }
+    };
 }
 
-const userCookieExpire: Date = new Date();
-userCookieExpire.setTime((new Date()).getTime() + (10*365*24*60*60*1000));
-const passcodeCookieExpire: Date = new Date();
-passcodeCookieExpire.setTime((new Date()).getTime() + (24*60*60*1000));
+const userCookieExpire = () => {
+    const expireDate = new Date();
+    expireDate.setTime((new Date()).getTime() + (10 * 365 * 24 * 60 * 60 * 1000));
+    return expireDate;
+};
+const passcodeCookieExpire = () => {
+    const expireDate = new Date();
+    expireDate.setTime((new Date()).getTime() + (24 * 60 * 60 * 1000));
+    return expireDate;
+};
 
 const config: IConfig = {
     app: {
@@ -52,9 +58,9 @@ const config: IConfig = {
         cors: {
             origin: (origin: string, callback: (err: Error | null, allow?: boolean) => void) => {
                 if (!origin || whitelist.indexOf(origin) !== -1) {
-                    callback(null, true)
+                    callback(null, true);
                 } else {
-                    callback(new Error('Not allowed by CORS'))
+                    callback(new Error("Not allowed by CORS"));
                 }
           },
           credentials: true
@@ -66,14 +72,14 @@ const config: IConfig = {
     userCookieOptions: {
         domain: host,
         expires: userCookieExpire,
-        secure: prod ? true : false,
+        secure: prod,
         sameSite: true,
         signed: true
     },
     passcodeCookieOptions: {
         domain: host,
         expires: passcodeCookieExpire,
-        secure: prod ? true : false,
+        secure: prod,
         sameSite: true,
         signed: false
     },
