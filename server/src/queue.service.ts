@@ -645,8 +645,8 @@ class QueueService {
                 if (queueDao.isPlaying) {
                     this.logger.debug(`Pausing playback...`, { user, passcode });
                     spotify.pause(queueDao.data.accessToken!).then(() => {
-                        resolve(false);
                         this.stopPlaying(queueDao.data, queueDao.data.accessToken!, passcode, user);
+                        resolve(false);
                     }).catch(err => {
                         if (err.response) {
                             this.logger.error(err.response.data.error.message, { user, passcode });
@@ -729,6 +729,11 @@ class QueueService {
 
         this.logger.info(`Checking playback state for currently playing track...`, { user, passcode });
         this.getCurrentTrack(passcode, user, spotify, acl).then((currentState: CurrentState) => {
+            if (!currentState.isSpotiquPlaying) {
+                this.logger.info(`We are paused so no need to check for track status...`, { user, passcode });
+                return;
+            }
+
             const timeLeft = currentState.currentTrack ?
                 currentState.currentTrack.track.duration - currentState.currentTrack.track.progress : 0;
 

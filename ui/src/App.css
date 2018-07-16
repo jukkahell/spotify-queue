@@ -1,9 +1,9 @@
 html {
-    min-height: 100%;
+    min-height: 100vh;
 }
 
 body {
-    height: 100%;
+    height: 100vh;
     background: linear-gradient(#393939, #181818) no-repeat fixed;
     background-size: cover;
     font-size: 1em;
@@ -12,7 +12,7 @@ body {
 }
 
 #root {
-    height: 100%;
+    height: 100vh;
 }
 
 .mainContent {
