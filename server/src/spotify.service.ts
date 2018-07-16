@@ -142,7 +142,7 @@ class SpotifyService {
                         name: i.name
                     };
                 });
-                resolve(playlists); 
+                resolve(playlists);
             }).catch(err => {
                 if (err.response) {
                     this.logger.error(`Error when getting playlists`, { user, passcode });
