@@ -212,10 +212,13 @@ input.passcode {
 }
 .trackName {
     display: block;
-    height: 1em;
 }
 .trackArtist {
     font-size: 0.7em;
+}
+.trackInfo {
+    display: flex;
+    flex-direction: column;
 }
 
 button.footerMenu {
