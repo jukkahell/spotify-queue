@@ -15,7 +15,7 @@ library.add(
     faDesktop, faMobile, faVolumeOff, faPlayCircle, faVolumeUp,
     faShareAlt, faLink, faBars, faSlidersH, faSignOutAlt, faUnlock,
     faExchangeAlt, faThumbsDown, faThumbsUp, faTrashAlt, faPauseCircle,
-    faForward, faCog
+    faForward, faCog, faGamepad
 );
 axios.defaults.withCredentials = true;
 

@@ -173,6 +173,7 @@ app.get("/devices", (req, res) => {
         spotify.getDevices(accessToken)
         .then((response: any) => {
             let activeDeviceId: string | undefined;
+            let spotifyHasActiveDevice = true;
             const devices: any[] = response.data.devices.map((device: any) => {
                 if (device.is_active) {
                     activeDeviceId = device.id;
@@ -192,6 +193,7 @@ app.get("/devices", (req, res) => {
                 logger.debug(`None of the devices was active...activating`, { user, passcode });
                 activeDeviceId = devices[0].id;
                 devices[0].isActive = true;
+                spotifyHasActiveDevice = false;
             } else if (!activeDeviceId && devices.length === 0) {
                 logger.debug(`No available devices found...giving info for user`, { user, passcode });
                 res.status(404).json({ message: "No available devices found. Please start a song in Spotify and then refresh the page." });
@@ -212,13 +214,15 @@ app.get("/devices", (req, res) => {
                             logger.error(err, { user, passcode });
                         });
                     }
-                    // Set it to spotify as well
-                    spotify.setDevice(accessToken, queueDao.isPlaying, activeDeviceId!).catch(err => {
-                        logger.error("Unable to set device to spotify...", { user, passcode });
-                        if (err.response) {
-                            logger.error(err.response.data.error.message, {user, passcode});
-                        }
-                    });
+                    if (!spotifyHasActiveDevice) {
+                        // Set it to spotify as well
+                        spotify.setDevice(accessToken, queueDao.isPlaying, activeDeviceId!).catch(err => {
+                            logger.error("Unable to set device to spotify...", {user, passcode});
+                            if (err.response) {
+                                logger.error(err.response.data.error.message, {user, passcode});
+                            }
+                        });
+                    }
                 }).catch(err => {
                     logger.error(err, { user, passcode });
                     res.status(500).json({ message: err.message });
