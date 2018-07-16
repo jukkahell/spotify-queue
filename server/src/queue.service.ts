@@ -658,7 +658,7 @@ class QueueService {
                 } else {
                     this.logger.debug(`Resuming playback...`, { user, passcode });
                     if (queueDao.data.currentTrack) {
-                        spotify.resume(queueDao.data.accessToken!).then(() => {
+                        spotify.resume(queueDao.data.accessToken!, queueDao.data.deviceId!).then(() => {
                             this.startPlaying(queueDao.data.accessToken!, passcode, user, queueDao.data.currentTrack!.track, spotify, acl);
                             this.updateQueue(queueDao.data, true, passcode).then(() => {
                                 resolve(true);
@@ -667,7 +667,13 @@ class QueueService {
                             });
                         }).catch(err => {
                             if (err.response) {
-                                this.logger.error(err.response.data.error.message, { user, passcode });
+                                if (err.response.data.error.status === 404) {
+                                    this.logger.info("No device selected when trying to resume.", {user, passcode});
+                                    reject({ status: 404, message: "No device selected. Please select a device from bottom left corner." });
+                                    return;
+                                } else {
+                                    this.logger.error(err.response.data.error.message, {user, passcode});
+                                }
                             } else {
                                 this.logger.error(err);
                             }
@@ -730,7 +736,7 @@ class QueueService {
         this.logger.info(`Checking playback state for currently playing track...`, { user, passcode });
         this.getCurrentTrack(passcode, user, spotify, acl).then((currentState: CurrentState) => {
             if (!currentState.isSpotiquPlaying) {
-                this.logger.info(`We are paused so no need to check for track status...`, { user, passcode });
+                this.logger.info(`We are paused so no need to do it...`, { user, passcode });
                 return;
             }
 

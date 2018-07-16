@@ -212,6 +212,13 @@ app.get("/devices", (req, res) => {
                             logger.error(err, { user, passcode });
                         });
                     }
+                    // Set it to spotify as well
+                    spotify.setDevice(accessToken, queueDao.isPlaying, activeDeviceId!).catch(err => {
+                        logger.error("Unable to set device to spotify...", { user, passcode });
+                        if (err.response) {
+                            logger.error(err.response.data.error.message, {user, passcode});
+                        }
+                    });
                 }).catch(err => {
                     logger.error(err, { user, passcode });
                     res.status(500).json({ message: err.message });

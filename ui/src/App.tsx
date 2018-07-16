@@ -1,14 +1,15 @@
 import axios from "axios";
 import * as React from "react";
-import { AlertBox, IAlert } from "./AlertBox";
+import {AlertBox, IAlert} from "./AlertBox";
 import "./App.css";
 import config from "./config";
 import CurrentlyPlaying from "./CurrentlyPlaying";
-import { DeviceSelect } from "./DeviceSelect";
-import { IQueuedItem, Queue } from "./Queue";
+import {DeviceSelect} from "./DeviceSelect";
+import {IQueuedItem, Queue} from "./Queue";
 import SearchForm from "./SearchForm";
+import Settings from "./Settings";
 import Share from "./Share";
-import { UserMenu } from "./UserMenu";
+import {UserMenu} from "./UserMenu";
 
 export interface IState {
     enteredCode: string | null;
@@ -225,8 +226,9 @@ export class App extends React.Component<{}, IState> {
                     </div>
                     <div className="footer fixed-bottom d-flex">
                         <UserMenu passcode={this.state.passcode} onError={this.onError} />
-                        {this.state.isOwner ? <DeviceSelect onError={this.onError} /> : null}
                         <Share passcode={this.state.passcode} onError={this.onError} />
+                        {this.state.isOwner ? <DeviceSelect onError={this.onError} /> : null}
+                        {this.state.isOwner ? <Settings onError={this.onError} /> : null}
                     </div>
                 </div>
             );

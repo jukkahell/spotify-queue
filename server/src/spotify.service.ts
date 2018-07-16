@@ -209,8 +209,8 @@ class SpotifyService {
             }
         );
     }
-    public resume = (accessToken: string) => {
-        return axios.put("https://api.spotify.com/v1/me/player/play",
+    public resume = (accessToken: string, deviceId: string) => {
+        return axios.put("https://api.spotify.com/v1/me/player/play?device_id=" + deviceId,
             {},
             {
                 headers: {

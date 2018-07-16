@@ -4,7 +4,7 @@ html {
 
 body {
     height: 100vh;
-    background: linear-gradient(#393939, #181818) no-repeat fixed;
+    background: #181818 linear-gradient(#393939, #181818) no-repeat fixed;
     background-size: cover;
     font-size: 1em;
     color: white;
