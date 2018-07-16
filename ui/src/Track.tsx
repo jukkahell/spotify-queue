@@ -43,7 +43,7 @@ export class Track extends React.Component<ITrackProps> {
                         {name}
                         {isPlaying ? <div className="speakerIcon"><FontAwesomeIcon icon="volume-up" /></div> : null}
                     </a>
-                    <a href="#" className="artistName">
+                    <a href="#" className="trackArtist">
                         {artist}
                     </a>
                 </div>
