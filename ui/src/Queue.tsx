@@ -1,5 +1,5 @@
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import * as React from "react";
-import { FontAwesomeIcon } from "../node_modules/@fortawesome/react-fontawesome";
 import axios from "../node_modules/axios";
 import config from "./config";
 import Track, { ITrackProps } from "./Track";
@@ -58,10 +58,12 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
                         name={this.props.currentTrack.track.name}
                         artist={this.props.currentTrack.track.artist}
                         id={this.props.currentTrack.track.id}
+                        artistId={this.props.currentTrack.track.artistId}
                         duration={this.props.currentTrack.track.duration}
                         key={"current-" + this.props.currentTrack.track.id}
                         isPlaying={true}
-                        onClick={this.showContextMenu} />
+                        selectTrack={this.showContextMenu}
+                        selectArtist={this.showContextMenu}/>
                     <div className={"dropdown-menu " + (this.state.contextMenuVisible ? "show" : "hide")} aria-labelledby="deviceMenuButton">
                         {this.renderContextMenu()}
                     </div>
@@ -143,10 +145,12 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
                         name={queuedItem.track.name}
                         artist={queuedItem.track.artist}
                         id={queuedItem.track.id}
+                        artistId={queuedItem.track.artistId}
                         duration={queuedItem.track.duration}
                         key={i + "-" + queuedItem.track.id}
                         isPlaying={false}
-                        onClick={this.showContextMenu} />
+                        selectTrack={this.showContextMenu}
+                        selectArtist={this.showContextMenu}/>
                 </div>
             </li>
         ));

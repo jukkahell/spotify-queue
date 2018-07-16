@@ -4,6 +4,7 @@ export interface IAlbumProps {
     name: string;
     artist: string;
     id: string;
+    artistId: string;
 }
 
 export class Album extends React.Component<IAlbumProps> {
@@ -16,12 +17,14 @@ export class Album extends React.Component<IAlbumProps> {
         const {
             name,
             artist,
+            artistId,
             id
         } = this.props;
 
         return (
-            <div>
-                <a href={"#album:" + id} id={id}>{artist} - {name}</a>
+            <div className="albumInfo">
+                <a href={"#album:" + id} id={id}>{name}</a>
+                <a href={"#artist:" + artistId} className="trackArtist" id={artistId}>{artist}</a>
             </div>
         );
     }

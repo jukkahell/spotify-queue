@@ -1,217 +1,216 @@
 html {
-  min-height: 100%;
+    min-height: 100%;
 }
 
 body {
-  height: 100%;
-  background: linear-gradient(#393939, #181818) no-repeat fixed;
-  background-size: cover;
-  font-size: 1em;
-  color: white;
-  font-family: "Montserrat","Helvetica Neue",Helvetica,Arial,sans-serif !important;
+    height: 100%;
+    background: linear-gradient(#393939, #181818) no-repeat fixed;
+    background-size: cover;
+    font-size: 1em;
+    color: white;
+    font-family: "Montserrat","Helvetica Neue",Helvetica,Arial,sans-serif !important;
 }
 
 #root {
-  height: 100%;
+    height: 100%;
 }
 
 .mainContent {
-  margin-bottom: 40px;
+    margin-bottom: 40px;
 }
 
 .loginContainer {
-  position: absolute;
-  width: 100%;
-  left: 0;
-  max-width: 100%;
+    position: absolute;
+    width: 100%;
+    left: 0;
+    max-width: 100%;
 }
 
 .App {
-  text-align: center;
+    text-align: center;
 }
 
 .App-logo {
-  animation: App-logo-spin infinite 20s linear;
-  height: 80px;
+    animation: App-logo-spin infinite 20s linear;
+    height: 80px;
 }
 
 .App-header {
-  background-color: #222;
-  height: 150px;
-  padding: 20px;
-  color: white;
+    background-color: #222;
+    height: 150px;
+    padding: 20px;
+    color: white;
 }
 
 .App-title {
-  font-size: 1.5em;
+    font-size: 1.5em;
 }
 
 .App-intro {
-  font-size: large;
+    font-size: large;
 }
 
 @keyframes App-logo-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }
 
 a {
-  cursor: pointer;
-  color: #A0A0A0;
+    cursor: pointer;
+    color: #A0A0A0;
 }
 a:hover {
-  color: #F2F2F2;
-  text-decoration: none;
+    color: #F2F2F2;
+    text-decoration: none;
 }
 a.showMore {
-  color: #A0A0A0;
-  font-size: 0.8em;
-  text-transform: uppercase;
+    color: #A0A0A0;
+    font-size: 0.8em;
+    text-transform: uppercase;
 }
 a.showMore:hover {
-  color: #F2F2F2;
-  text-decoration: underline !important;
+    color: #F2F2F2;
+    text-decoration: underline !important;
 }
 .btn {
-  font-size: 0.8em;
-  text-transform: uppercase;
-  border-radius: 2em;
-  height: 3em;
+    font-size: 0.8em;
+    text-transform: uppercase;
+    border-radius: 2em;
+    height: 3em;
 }
 .btn:focus {
-  outline: none;
-  box-shadow: none;
-  border: none;
-  background-color: #1ED760;
+    outline: none;
+    box-shadow: none;
+    border: none;
+    background-color: #1ED760;
 }
 .btn:active {
-  color: #BAC5BE !important;
-  outline: none !important;
-  border: none !important;
-  box-shadow: none !important;
-  background-color: #14833B !important;
+    color: #BAC5BE !important;
+    outline: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    background-color: #14833B !important;
 }
 
 .btn-primary {
-  background-color: #1DB954;
-  border-color: #1DB954;
+    background-color: #1DB954;
+    border-color: #1DB954;
 }
 .btn-primary:hover {
-  background-color: #1ED760;
-  border-color: #1ED760;
-  font-weight: bold;
+    background-color: #1ED760;
+    border-color: #1ED760;
+    font-weight: bold;
 }
 
 img.coverImage {
-  width: 100%;
+    width: 100%;
 }
 
 .currentlyPlaying {
-  text-align: center;
-  padding: 0;
+    text-align: center;
+    padding: 0;
 }
 
 input {
-  border-radius: 2em !important;
+    border-radius: 2em !important;
 }
 
 button.search {
-  margin: 0 5px;
+    margin: 0 5px;
 }
 input.search {
-  margin: 0 5px;
+    margin: 0 5px;
 }
 
 .progress {
-  height: 4px;
+    height: 4px;
 }
 
 .progress-bar {
-  background-color: #1DB954;
+    background-color: #1DB954;
 }
 
 .searchResults {
-  margin-top: 0.5em;
+    margin-top: 0.5em;
 }
 
 .searchForm {
-  position: sticky;
-  top: 0;
-  padding-top: 1em;
+    position: sticky;
+    top: 0;
+    padding-top: 1em;
 }
 
 .queue {
-  width: 100%;
+    width: 100%;
 }
 
 ol.queuedTracks {
-  margin-top: 0.5em;
+    margin-top: 0.5em;
 }
 
 input.passcode {
-  margin-bottom: 2px;
+    margin-bottom: 2px;
 }
 
 .error {
-  color: red;
-  font-size: 0.8rem;
-  text-align: center;
+    color: red;
+    font-size: 0.8rem;
+    text-align: center;
 }
 
 .Divider {
-  width: 100%;
-  display: flex;
+    width: 100%;
+    display: flex;
 }
 .Divider > .Side {
-  width: 50%;
+    width: 50%;
 }
 .Divider > .Middle {
-  padding: 5px;
+    padding: 5px;
 }
 .Side > hr {
-  background-color: #5f5f5f;
+    background-color: #5f5f5f;
 }
 
 .dropup {
-  padding: 0 0.5em;
+    padding: 0 0.5em;
 }
 
 .dropdown-menu {
-  background-color: #282828;
-  padding: 0;
+    background-color: #282828;
+    padding: 0;
 }
 .dropdown-item {
-  color: white;
-  padding: 0.65rem 1.5rem;
+    color: white;
+    padding: 0.65rem 1.5rem;
 }
 .dropdown-item.active {
-  background-color: #282828;
-  color: #1DB954;
-  cursor: default;
+    background-color: #282828;
+    color: #1DB954;
+    cursor: default;
 }
 .dropdown-item:hover {
-  background-color: #333333;
-  color: white;
+    background-color: #333333;
+    color: white;
 }
 .dropdown-item.active:hover {
-  background-color: #333333;
-  color: #1DB954;
+    background-color: #333333;
+    color: #1DB954;
 }
 .playlistItem.active {
-  color: #1ED760;
+    color: #1ED760;
 }
 .currentTrack a {
-  color: #1ED760;
+    color: #1ED760;
 }
 .trackDuration {
-  text-align: right;
+    text-align: right;
+    color: #a0a0a0;
 }
 .trackItem {
-  display: grid;
-  grid-template-columns: auto 3em;
-}
-.trackName {
-    display: block;
+    display: grid;
+    grid-template-columns: auto 3em;
+    margin-bottom: 0.7em;
 }
 .trackArtist {
     font-size: 0.7em;
@@ -220,99 +219,104 @@ input.passcode {
     display: flex;
     flex-direction: column;
 }
+.albumInfo {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 0.7em;
+}
 
 button.footerMenu {
-  background-color: transparent;
-  border: none;
-  padding: 0;
-  font-size: 1.5em;
-  height: 1.5em;
-  color: #B3B3B3;
+    background-color: transparent;
+    border: none;
+    padding: 0;
+    font-size: 1.5em;
+    height: 1.5em;
+    color: #B3B3B3;
 }
 button.footerMenu:active, button.footerMenu:hover, button.footerMenu:focus {
-  background-color: transparent!important;
-  border: none;
-  color: #FEFEFE;
-  box-shadow: none !important;
+    background-color: transparent!important;
+    border: none;
+    color: #FEFEFE;
+    box-shadow: none !important;
 }
 
 button.iconButton {
-  background: none;
-  color: #B3B3B3;
-  border: none;
-  cursor: pointer;
+    background: none;
+    color: #B3B3B3;
+    border: none;
+    cursor: pointer;
 }
 button.iconButton:active, button.iconButton:hover, button.iconButton:focus {
-  background-color: transparent!important;
-  border: none;
-  color: #FEFEFE;
-  box-shadow: none !important;
+    background-color: transparent!important;
+    border: none;
+    color: #FEFEFE;
+    box-shadow: none !important;
 }
 
 .footer {
-  background-color: #282828;
+    background-color: #282828;
 }
 
 .speakerIcon {
-  display: inline;
-  margin-left: 8px;
+    display: inline;
+    margin-left: 8px;
 }
 
 .voteButtons {
-  width: 100%;
-  justify-content: space-between;
-  margin: 0;
-  display: flex;
-  padding: 5px 30px;
+    width: 100%;
+    justify-content: space-between;
+    margin: 0;
+    display: flex;
+    padding: 5px 30px;
 }
 .voteButton {
-  width: 40%;
-  font-size: 1.0em;
-  color: #B3B3B3;
+    width: 40%;
+    font-size: 1.0em;
+    color: #B3B3B3;
 }
 
 .voteButton.down {
-  background-color: #dd0d0d;
-  border-color: #dd0d0d;
+    background-color: #dd0d0d;
+    border-color: #dd0d0d;
 }
 .voteButton.down:hover {
     background-color: #ed0d0d!important;
 }
 .voteButton.down:active {
-  background: #b80f0f!important;
+    background: #b80f0f!important;
 }
 
 .voteCount {
-  display: flex;
-  align-items: center;
-  font-size: 2em;
+    display: flex;
+    align-items: center;
+    font-size: 2em;
 }
 
 .coverImageLayer {
-  position: absolute;
-  top: 0;
-  left: 0;
-  height: 100%;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  text-align: center;
-  background-color: black;
-  opacity: 0.2;
-  font-size: 10em;
-  cursor: pointer;
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    text-align: center;
+    background-color: black;
+    opacity: 0.2;
+    font-size: 10em;
+    cursor: pointer;
 }
 .coverImageLayer:hover {
-  visibility: visible;
-  opacity: 0.6;
+    visibility: visible;
+    opacity: 0.6;
 }
 
 .menuOverlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 10;
-  visibility: hidden;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10;
+    visibility: hidden;
 }

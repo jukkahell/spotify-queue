@@ -40,12 +40,13 @@ class QueueService {
         try {
             const result: QueryResult = await db.query(query, [passcode]);
             if (result.rowCount === 1) {
-                return {
+                const queueDao: QueueDao = {
                     data: result.rows[0].data,
                     id: result.rows[0].id,
                     isPlaying: result.rows[0].is_playing,
                     owner: result.rows[0].owner
-                };
+                }
+                return queueDao;
             } else {
                 throw Error("Unable to find queue with given passcode.");
             }
@@ -520,6 +521,7 @@ class QueueService {
                     const track: SpotifyTrack = {
                         artist: trackResponse.data.artists[0].name,
                         id: trackUri,
+                        artistId: trackResponse.data.artists[0].id,
                         duration: trackResponse.data.duration_ms,
                         cover: trackResponse.data.album.images[1].url,
                         name: trackResponse.data.name,
@@ -680,8 +682,8 @@ class QueueService {
                 }
             }).catch(err => {
                 reject({ status: 500, message: err.message });
-            })
-        })
+            });
+        });
     }
 
     private startNextTrack(passcode: string, user: string, accessToken: string, spotify: SpotifyService, acl: Acl) {
@@ -727,7 +729,8 @@ class QueueService {
 
         this.logger.info(`Checking playback state for currently playing track...`, { user, passcode });
         this.getCurrentTrack(passcode, user, spotify, acl).then((currentState: CurrentState) => {
-            const timeLeft = currentState.currentTrack ? currentState.currentTrack.track.duration - currentState.currentTrack.track.progress : 0;
+            const timeLeft = currentState.currentTrack ?
+                currentState.currentTrack.track.duration - currentState.currentTrack.track.progress : 0;
 
             // We can start next if spotify isn't playing anymore
             if (!currentState.isSpotifyPlaying) {
@@ -739,7 +742,9 @@ class QueueService {
                 setTimeout(() => this.startNextTrack(passcode, "", currentState.accessToken!, spotify, acl), timeLeft - 1000);
             } else {
                 // If there's still time, check for progress again after a while
-                this.logger.info(`Track ${currentState.currentTrack!.track.id} still playing for ${Math.round(timeLeft / 1000)} secs. Checking again after that.`,
+                const seconds = Math.round(timeLeft / 1000);
+                this.logger.info(
+                    `Track ${currentState.currentTrack!.track.id} still playing for ${seconds} secs. Checking again after that.`,
                     { user, passcode });
                 QueueService.timeouts[currentState.accessToken!] = setTimeout(() =>
                     this.checkTrackStatus(passcode, "", spotify, acl),

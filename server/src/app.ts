@@ -336,16 +336,16 @@ app.post("/pauseResume", (req, res) => {
     });
 });
 
-app.get("/playlists", (req, res) => {
+app.get("/playlists", async (req, res) => {
     const user = req.cookies.get("user");
     const passcode = req.cookies.get("passcode");
-    queueService.getQueue(req.cookies.get("passcode")).then(queueDao => {
-        spotify.getPlaylists(queueDao.data.accessToken!, user, passcode).then(playlists => {
-            res.status(200).json(playlists);
-        });
-    }).catch(err => {
+    try {
+        const queueDao = await queueService.getQueue(req.cookies.get("passcode"));
+        const playlists = await spotify.getPlaylists(queueDao.data.accessToken!, user, passcode);
+        res.status(200).json(playlists);
+    } catch (err) {
         res.status(err.status).json({ message: err.message });
-    });
+    }
 });
 
 app.put("/selectPlaylist", (req, res) => {
@@ -354,7 +354,7 @@ app.put("/selectPlaylist", (req, res) => {
     const playlistId = req.body.id;
     queueService.getQueue(req.cookies.get("passcode")).then(queueDao => {
         spotify.getPlaylistTracks(queueDao.data.accessToken!, queueDao.owner, playlistId, user, passcode).then(tracks => {
-            queueService.addToPlaylistQueue(user, passcode, tracks, playlistId).then(result => {
+            queueService.addToPlaylistQueue(user, passcode, tracks, playlistId).then(() => {
                 res.status(200).json({ message: "OK" });
             }).catch(err => {
                 res.status(err.status).json({ message: err.message });

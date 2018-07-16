@@ -7,11 +7,13 @@ export interface ITrackProps {
     name: string;
     artist: string;
     id: string;
+    artistId: string;
     duration: number;
     progress?: number;
     cover?: string;
     isPlaying: boolean;
-    onClick: (targetId: string, isPlaying: boolean) => void;
+    selectTrack: (targetId: string, isPlaying: boolean) => void;
+    selectArtist: (targetId: string,  isPlaying: boolean) => void;
 }
 
 export class Track extends React.Component<ITrackProps> {
@@ -19,31 +21,37 @@ export class Track extends React.Component<ITrackProps> {
     public constructor(props: ITrackProps) {
         super(props);
 
-        this.onClick = this.onClick.bind(this);
+        this.selectTrack = this.selectTrack.bind(this);
     }
 
-    public onClick(e: React.MouseEvent<HTMLElement>) {
+    public selectTrack(e: React.MouseEvent<HTMLElement>) {
         e.preventDefault();
-        this.props.onClick(e.currentTarget.id, this.props.isPlaying);
+        this.props.selectTrack(e.currentTarget.id, this.props.isPlaying);
+    }
+
+    public selectArtist(e: React.MouseEvent<HTMLElement>) {
+        e.preventDefault();
+        this.props.selectArtist(e.currentTarget.id, this.props.isPlaying);
     }
 
     public render() {
         const {
             name,
             artist,
+            artistId,
             id,
             duration,
             isPlaying
         } = this.props;
 
         return (
-            <div className={this.props.className + (isPlaying ? " currentTrack " : "") + " trackItem"} id={id} onClick={this.onClick}>
+            <div className={this.props.className + (isPlaying ? " currentTrack " : "") + " trackItem"}>
                 <div className="trackInfo">
-                    <a href="#" className="trackName">
+                    <a href="#" className="trackName" id={id} onClick={this.selectTrack}>
                         {name}
                         {isPlaying ? <div className="speakerIcon"><FontAwesomeIcon icon="volume-up" /></div> : null}
                     </a>
-                    <a href="#" className="trackArtist">
+                    <a href="#" className="trackArtist" id={artistId} onClick={this.selectArtist}>
                         {artist}
                     </a>
                 </div>

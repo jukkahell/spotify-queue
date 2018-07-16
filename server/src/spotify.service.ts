@@ -27,7 +27,7 @@ export class SearchResults {
 
 class SpotifyService {
     private readonly redirectUri: string;
-    private readonly authHeader:string;
+    private readonly authHeader: string;
     private logger: winston.Logger;
 
     constructor(logger: winston.Logger, clientId: string, secret: string, redirectUri: string) {
@@ -100,16 +100,17 @@ class SpotifyService {
                             cover: response.data.item.album.images[1].url,
                             duration: response.data.item.duration_ms,
                             id: response.data.item.uri,
+                            artistId: response.data.item.artists[0].id,
                             name: response.data.item.name,
                             progress: response.data.progress_ms
-                        }
+                        };
                     }
                     const track: SpotifyCurrentTrack = {
                         device: response.data.device,
                         is_playing: response.data.is_playing,
                         progress_ms: response.data.progress_ms,
                         item
-                    }
+                    };
                     resolve(track);
                 } else {
                     this.logger.warn("No song playing currently", { user, passcode });
@@ -122,27 +123,25 @@ class SpotifyService {
                 } else {
                     this.logger.error(err, { user, passcode });
                 }
-                reject({ status: 500, message: "Unable to get currently playing song from Spotify."})
+                reject({ status: 500, message: "Unable to get currently playing song from Spotify."});
             });
         });
     }
 
     public getPlaylists = (accessToken: string, user: string, passcode: string) => {
-        return new Promise((resolve, reject) => {
-            axios.get("https://api.spotify.com/v1/me/playlists?limit=50",
+            return axios.get("https://api.spotify.com/v1/me/playlists?limit=50",
             {
                 headers: {
                     "Content-Type": "text/plain",
                     "Authorization": "Bearer " + accessToken
                 }
             }).then(response => {
-                const playlists = response.data.items.map((i: any) => {
+                return response.data.items.map((i: any) => {
                     return {
                         id: i.id,
                         name: i.name
                     };
                 });
-                resolve(playlists);
             }).catch(err => {
                 if (err.response) {
                     this.logger.error(`Error when getting playlists`, { user, passcode });
@@ -150,9 +149,8 @@ class SpotifyService {
                 } else {
                     this.logger.error(err, { user, passcode });
                 }
-                reject({ status: 500, message: "Unable to get playlists from Spotify."})
+                throw { status: 500, message: "Unable to get playlists from Spotify."};
             });
-        });
     }
 
     public getPlaylistTracks = (accessToken: string, spotifyUserId: string, id: string, user: string, passcode: string) => {
@@ -214,7 +212,7 @@ class SpotifyService {
     public resume = (accessToken: string) => {
         return axios.put("https://api.spotify.com/v1/me/player/play",
             {},
-            { 
+            {
                 headers: {
                     "Content-Type": "text/plain",
                     "Authorization": "Bearer " + accessToken
@@ -335,6 +333,7 @@ class SpotifyService {
                     results.tracks = response.data.tracks.items.map((i: any) => {
                         return {
                             artist: i.artists[0].name,
+                            artistId: i.artists[0].id,
                             name: i.name,
                             id: i.uri,
                             duration: i.duration_ms
@@ -372,7 +371,7 @@ class SpotifyService {
                 } else {
                     this.logger.error(err, { user, passcode });
                 }
-                reject({ status: err.response.status, message: "Unable to get search results from Spotify."})
+                reject({ status: err.response.status, message: "Unable to get search results from Spotify."});
             });
         });
     }

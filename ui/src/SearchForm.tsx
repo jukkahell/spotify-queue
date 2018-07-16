@@ -136,7 +136,7 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
         );
     }
 
-    protected selectArtist(id: string) {
+    protected selectArtist(id: string, isPlaying?: boolean) {
         axios.get(config.backend.url + "/selectArtist?id=" + id)
             .then(response => {
                 this.setState({
@@ -164,6 +164,7 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
                 name={album.name}
                 artist={album.artist}
                 id={album.id}
+                artistId={album.artistId}
                 key={i + "-" + album.id} />
         )));
     }
@@ -206,10 +207,12 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
                 name={track.name}
                 artist={track.artist}
                 id={track.id}
+                artistId={track.artistId}
                 duration={track.duration}
                 key={i + "-" + track.id}
                 isPlaying={false}
-                onClick={this.addToQueue} />
+                selectTrack={this.addToQueue}
+                selectArtist={this.selectArtist} />
         )));
     }
 
