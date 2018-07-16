@@ -38,10 +38,15 @@ export class Track extends React.Component<ITrackProps> {
 
         return (
             <div className={this.props.className + (isPlaying ? " currentTrack " : "") + " trackItem"} id={id} onClick={this.onClick}>
-                <a href="#" className="trackName">
-                    {artist} - {name}
-                    {isPlaying ? <div className="speakerIcon"><FontAwesomeIcon icon="volume-up" /></div> : null}
-                </a>
+                <div className="trackInfo">
+                    <a href="#" className="trackName">
+                        {name}
+                        {isPlaying ? <div className="speakerIcon"><FontAwesomeIcon icon="volume-up" /></div> : null}
+                    </a>
+                    <a href="#" className="artistName">
+                        {artist}
+                    </a>
+                </div>
                 <a href="#" className="trackDuration"><Duration milliseconds={duration} /></a>
             </div>
         );

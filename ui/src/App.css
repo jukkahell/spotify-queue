@@ -6,7 +6,7 @@ body {
   height: 100%;
   background: linear-gradient(#393939, #181818) no-repeat fixed;
   background-size: cover;
-  font-size: 0.9em;
+  font-size: 1em;
   color: white;
   font-family: "Montserrat","Helvetica Neue",Helvetica,Arial,sans-serif !important;
 }
@@ -210,6 +210,13 @@ input.passcode {
   display: grid;
   grid-template-columns: auto 3em;
 }
+.trackName {
+    display: block;
+    height: 1em;
+}
+.trackArtist {
+    font-size: 0.7em;
+}
 
 button.footerMenu {
   background-color: transparent;
@@ -264,6 +271,9 @@ button.iconButton:active, button.iconButton:hover, button.iconButton:focus {
 .voteButton.down {
   background-color: #dd0d0d;
   border-color: #dd0d0d;
+}
+.voteButton.down:hover {
+    background-color: #ed0d0d!important;
 }
 .voteButton.down:active {
   background: #b80f0f!important;
