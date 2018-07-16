@@ -22,6 +22,7 @@ export class Track extends React.Component<ITrackProps> {
         super(props);
 
         this.selectTrack = this.selectTrack.bind(this);
+        this.selectArtist = this.selectArtist.bind(this);
     }
 
     public selectTrack(e: React.MouseEvent<HTMLElement>) {

@@ -277,7 +277,8 @@ class SpotifyService {
                     return {
                         artist: album.artists[0].name,
                         name: album.name,
-                        id: album.id
+                        id: album.id,
+                        artistId: album.artists[0].id
                     };
                 });
                 resolve(albums);
@@ -303,6 +304,7 @@ class SpotifyService {
                 const albums = response.data.tracks.items.map((i: any) => {
                     return {
                         artist: i.artists[0].name,
+                        artistId: i.artists[0].id,
                         name: i.name,
                         id: i.uri,
                         duration: i.duration_ms
@@ -346,6 +348,7 @@ class SpotifyService {
                     results.albums = response.data.albums.items.map((album: any) => {
                         return {
                             artist: album.artists[0].name,
+                            artistId: album.artists[0].id,
                             name: album.name,
                             id: album.id
                         };
