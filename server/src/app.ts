@@ -11,7 +11,7 @@ import * as randomstring from "randomstring";
 import { format } from "winston";
 import * as winston from "winston";
 import Acl, { AuthResult } from "./acl";
-import config from "./config";
+import config, { passcodeCookieExpire, userCookieExpire } from "./config";
 import { Queue, QueueDao } from "./queue";
 import QueueService from "./queue.service";
 import secrets from "./secrets";
@@ -110,6 +110,8 @@ app.get("/reactivate", (req, res) => {
     const passcode = req.cookies.get("reactivate");
     const user = req.cookies.get("user");
     queueService.reactivate(spotify, passcode, user, req.query.code).then(queue => {
+        config.passcodeCookieOptions.expires = passcodeCookieExpire();
+        config.userCookieOptions.expires = userCookieExpire();
         req.cookies.set("user", queue.owner, config.userCookieOptions);
         req.cookies.set("passcode", passcode, config.passcodeCookieOptions);
         req.cookies.set("reactivate", "", config.passcodeCookieOptions);

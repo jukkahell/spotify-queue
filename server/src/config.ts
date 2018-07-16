@@ -21,14 +21,14 @@ export interface IConfig {
     };
     userCookieOptions: {
         domain: string;
-        expires: () => Date;
+        expires: Date | null;
         secure: boolean;
         sameSite: boolean;
         signed: boolean;
     };
     passcodeCookieOptions: {
         domain: string;
-        expires: () => Date;
+        expires: Date | null;
         secure: boolean;
         sameSite: boolean;
         signed: boolean;
@@ -39,12 +39,12 @@ export interface IConfig {
     };
 }
 
-const userCookieExpire = () => {
+export const userCookieExpire = () => {
     const expireDate = new Date();
     expireDate.setTime((new Date()).getTime() + (10 * 365 * 24 * 60 * 60 * 1000));
     return expireDate;
 };
-const passcodeCookieExpire = () => {
+export const passcodeCookieExpire = () => {
     const expireDate = new Date();
     expireDate.setTime((new Date()).getTime() + (24 * 60 * 60 * 1000));
     return expireDate;
@@ -71,14 +71,14 @@ const config: IConfig = {
     },
     userCookieOptions: {
         domain: host,
-        expires: userCookieExpire,
+        expires: null,
         secure: prod,
         sameSite: true,
         signed: true
     },
     passcodeCookieOptions: {
         domain: host,
-        expires: passcodeCookieExpire,
+        expires: null,
         secure: prod,
         sameSite: true,
         signed: false
