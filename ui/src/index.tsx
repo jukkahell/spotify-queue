@@ -10,12 +10,6 @@ import * as ReactDOM from "react-dom";
 import axios from "../node_modules/axios";
 import App from "./App";
 import "./index.css";
-import registerServiceWorker from "./registerServiceWorker";
-import { unregister } from "./registerServiceWorker";
-
-if (process.env.NODE_ENV === "production") {
-    unregister();
-}
 
 library.add(
     faDesktop, faMobile, faVolumeOff, faPlayCircle, faVolumeUp,
@@ -29,4 +23,3 @@ ReactDOM.render(
     <App />,
     document.getElementById("root") as HTMLElement
 );
-registerServiceWorker();
