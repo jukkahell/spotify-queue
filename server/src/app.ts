@@ -98,6 +98,8 @@ const server = env.NODE_ENV === "production" ? https.createServer(options, app) 
 
 app.get("/create", (req, res) => {
     queueService.create(spotify, req.query.code).then(queue => {
+        config.passcodeCookieOptions.expires = passcodeCookieExpire();
+        config.userCookieOptions.expires = userCookieExpire();
         req.cookies.set("user", queue.data.owner, config.userCookieOptions);
         req.cookies.set("passcode", queue.id, config.passcodeCookieOptions);
         res.status(200).send("<script>window.close();</script>");
