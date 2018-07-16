@@ -320,3 +320,13 @@ button.iconButton:active, button.iconButton:hover, button.iconButton:focus {
     z-index: 10;
     visibility: hidden;
 }
+
+.settingOptionCheckmark {
+    float: right;
+}
+.settingOptionCheckmark.active {
+    color: green;
+}
+.settingOptionCheckmark.inactive {
+    color: grey;
+}

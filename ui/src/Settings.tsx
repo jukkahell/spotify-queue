@@ -1,7 +1,12 @@
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import * as React from "react";
 
+export interface ISettings {
+    gamify: boolean;
+}
+
 export interface IShareProps {
+    settings: ISettings;
     onError: (msg: string) => void;
 }
 
@@ -40,7 +45,7 @@ export class Settings extends React.Component<IShareProps, IShareState> {
     public renderSettingsOptions() {
         return ([
             <a className={"dropdown-item"} key="gamify" href="#" id="gamify" onClick={this.toggleGamify}>
-                <FontAwesomeIcon icon="gamepad" /> Gamify
+                <FontAwesomeIcon icon="gamepad" /> Gamify <FontAwesomeIcon className={"settingOptionCheckmark " + (this.props.settings.gamify ? "active" : "inactive")} icon="check-circle" />
             </a>
         ]);
     }

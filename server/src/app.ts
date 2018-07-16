@@ -12,7 +12,7 @@ import { format } from "winston";
 import * as winston from "winston";
 import Acl, { AuthResult } from "./acl";
 import config, { passcodeCookieExpire, userCookieExpire } from "./config";
-import { Queue, QueueDao } from "./queue";
+import {Queue, QueueDao, Settings} from "./queue";
 import QueueService from "./queue.service";
 import secrets from "./secrets";
 import {SpotifySearchQuery} from "./spotify";
@@ -59,7 +59,7 @@ const queueService = new QueueService(logger);
 const acl = new Acl(logger, spotify, queueService);
 
 const excludeEndpointsFromAuth = ["/join", "/create", "/reactivate", "/isAuthorized", "/queue", "/currentlyPlaying"];
-const endpointsRequireOwnerPerm = ["/device", "/pauseResume", "/selectPlaylist"];
+const endpointsRequireOwnerPerm = ["/device", "/pauseResume", "/selectPlaylist", "/updateSettings"];
 
 const app = express();
 app.use(cors(config.app.cors));
@@ -354,6 +354,27 @@ app.get("/playlists", async (req, res) => {
         const queueDao = await queueService.getQueue(req.cookies.get("passcode"));
         const playlists = await spotify.getPlaylists(queueDao.data.accessToken!, user, passcode);
         res.status(200).json(playlists);
+    } catch (err) {
+        res.status(err.status).json({ message: err.message });
+    }
+});
+
+app.get("/settings", async (req, res) => {
+    try {
+        const queueDao = await queueService.getQueue(req.cookies.get("passcode"));
+        res.status(200).json(queueDao.data.settings);
+    } catch (err) {
+        res.status(err.status).json({ message: err.message });
+    }
+});
+
+app.post("/updateSettings", async (req, res) => {
+    const passcode = req.cookies.get("passcode");
+    const user = req.cookies.get("user");
+    const settings: Settings = req.body.settings;
+    try {
+        const resp = await queueService.updateSettings(passcode, user, settings);
+        res.status(200).json(resp);
     } catch (err) {
         res.status(err.status).json({ message: err.message });
     }

@@ -3,7 +3,7 @@ import * as winston from "winston";
 import { QueryResult } from "../node_modules/@types/pg";
 import { AxiosPromise } from "../node_modules/axios";
 import * as db from "./db";
-import { Queue, QueueItem, QueueDao, CurrentTrack } from "./queue";
+import {Queue, QueueItem, QueueDao, CurrentTrack, Settings} from "./queue";
 import { SpotifyTrack, SpotifyCurrentTrack } from "./spotify";
 import SpotifyService from "./spotify.service";
 import { getCurrentSeconds } from "./util";
@@ -689,6 +689,17 @@ class QueueService {
             }).catch(err => {
                 reject({ status: 500, message: err.message });
             });
+        });
+    }
+
+    public async updateSettings(passcode: string, user: string, settings: Settings) {
+        const queueDao = await this.getQueue(passcode, true);
+        queueDao.data.settings = settings;
+        return this.updateQueueData(queueDao.data, passcode).then(() => {
+            return settings;
+        }).catch(err => {
+            this.logger.error(err, { user, passcode });
+            throw { status: 500, message: "Unable to save settings." };
         });
     }
 

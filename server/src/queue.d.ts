@@ -18,6 +18,14 @@ export interface Vote {
     value: number;
 }
 
+export interface Settings {
+    gamify: boolean;
+    alwaysPlay: {
+        playlistId: string | null;
+        random: boolean;
+    };
+}
+
 export interface Queue {
     name: string;
     owner: string,
@@ -26,13 +34,7 @@ export interface Queue {
     refreshToken: string;
     expiresIn: number;
     deviceId: string | null;
-    settings: {
-        gamify: boolean;
-        alwaysPlay: {
-            playlistId: string | null;
-            random: boolean;
-        }
-    };
+    settings: Settings;
     queue: QueueItem[];
     playlistId: string | null;
     playlistTracks: QueueItem[];
