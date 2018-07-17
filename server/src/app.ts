@@ -100,6 +100,8 @@ app.get("/isAuthorized", (req, res) => {
     }
 
     Acl.isAuthorized(req.cookies.get("passcode"), req.cookies.get("user")).then((authResult: AuthResult) => {
+        config.passcodeCookieOptions.expires = passcodeCookieExpire();
+        req.cookies.set("passcode", req.cookies.get("passcode"), config.passcodeCookieOptions);
         res.status(200).json(authResult);
     }).catch(err => {
         res.status(err.status).json({ isAuthorized: false, message: err.message });
