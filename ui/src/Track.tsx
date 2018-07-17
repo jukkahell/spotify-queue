@@ -56,7 +56,7 @@ export class Track extends React.Component<ITrackProps> {
                         {artist}
                     </a>
                 </div>
-                <a href="#" className="trackDuration"><Duration milliseconds={duration} /></a>
+                <p className="trackDuration"><Duration milliseconds={duration} /></p>
             </div>
         );
     }

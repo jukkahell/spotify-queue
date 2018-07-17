@@ -9,7 +9,7 @@ export interface QueueDao {
 
 export interface CurrentTrack {
     track: SpotifyTrack;
-    owner: string;
+    owner: string | null;
     votes: Vote[];
 }
 
@@ -20,10 +20,9 @@ export interface Vote {
 
 export interface Settings {
     gamify: boolean;
-    alwaysPlay: {
-        playlistId: string | null;
-        random: boolean;
-    };
+    maxDuplicateTracks: number;
+    numberOfTracksPerUser: number;
+    random: boolean;
 }
 
 export interface Queue {
@@ -39,16 +38,16 @@ export interface Queue {
     playlistId: string | null;
     playlistTracks: QueueItem[];
     currentTrack: CurrentTrack | null;
-    users: [
-        {
-            id: string;
-            spotifyUserId: string | null; // Ensure that the owner is always found even if cookie is deleted
-            points: number;
-        }
-    ];
+    users: User[];
+}
+
+export interface User {
+    id: string;
+    spotifyUserId: string | null; // Ensure that the owner is always found even if cookie is deleted
+    points: number;
 }
 
 export interface QueueItem {
-    userId: string;
+    userId: string | null;
     track: SpotifyTrack;
 }

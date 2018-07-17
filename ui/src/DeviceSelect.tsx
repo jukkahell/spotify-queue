@@ -20,6 +20,7 @@ export interface IDeviceSelectState {
     selectedDeviceName: string;
     selectedDeviceId: string | null;
     dropdownVisible: boolean;
+    loading: boolean;
 }
 
 export class DeviceSelect extends React.Component<IDeviceSelectProps, IDeviceSelectState> {
@@ -31,7 +32,8 @@ export class DeviceSelect extends React.Component<IDeviceSelectProps, IDeviceSel
             devices: [],
             selectedDeviceName: "Select device",
             selectedDeviceId: null,
-            dropdownVisible: false
+            dropdownVisible: false,
+            loading: false
         };
 
         axios.get(config.backend.url + "/devices")
@@ -64,8 +66,19 @@ export class DeviceSelect extends React.Component<IDeviceSelectProps, IDeviceSel
         e.preventDefault();
 
         this.setState((prevState) => ({
+            loading: true,
             dropdownVisible: !prevState.dropdownVisible
         }));
+        axios.get(config.backend.url + "/devices")
+            .then(response => {
+                this.setState({
+                    devices: response.data,
+                    loading: false
+                });
+            }).catch(error => {
+                this.props.onError(error.response.data.message);
+            }
+        );
     }
 
     public hideMenu() {

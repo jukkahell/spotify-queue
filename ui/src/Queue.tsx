@@ -41,8 +41,6 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
         };
 
         this.removeFromQueue = this.removeFromQueue.bind(this);
-        this.voteUp = this.voteUp.bind(this);
-        this.voteDown = this.voteDown.bind(this);
         this.showContextMenu = this.showContextMenu.bind(this);
         this.hideMenu = this.hideMenu.bind(this);
     }
@@ -93,14 +91,6 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
         }).catch(err => {
             this.props.onError(err.response.data.message);
         });
-    }
-
-    protected voteUp(e: React.MouseEvent<HTMLButtonElement>) {
-        console.log(e.currentTarget.id);
-    }
-
-    protected voteDown(e: React.MouseEvent<HTMLButtonElement>) {
-        console.log(e.currentTarget.id);
     }
 
     protected renderContextMenu() {
@@ -156,29 +146,9 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
         ));
     }
 
-    protected renderVoteButtons() {
-        if (!this.props.currentTrack) {
-            return null;
-        }
-        let voteCount = 0;
-        this.props.currentTrack.votes.forEach((v: IVote) => voteCount += v.value);
-        return (
-            <div className="voteButtons">
-                <button type="submit" className="btn btn-primary voteButton up" id={this.props.currentTrack.track.id} onClick={this.voteUp}>
-                    <FontAwesomeIcon icon="thumbs-up" />
-                </button>
-                <div className="voteCount">{voteCount > 0 ? "+" : ""}{voteCount}</div>
-                <button type="submit" className="btn btn-primary voteButton down" id={this.props.currentTrack.track.id} onClick={this.voteDown}>
-                    <FontAwesomeIcon icon="thumbs-down" />
-                </button>
-            </div>
-        );
-    }
-
     public render() {
         return (
             <div className="queue">
-                {this.renderVoteButtons()}
                 <ol className="queuedTracks">
                     {this.renderCurrentTrack()}
                     {this.renderTracks()}

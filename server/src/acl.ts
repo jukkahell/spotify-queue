@@ -1,8 +1,9 @@
+import * as express from "express";
 import QueueService from "./queue.service";
-import Spotify from "./spotify.service";
 import { Queue } from "./queue";
 import { getCurrentSeconds } from "./util";
-import * as winston from "winston";
+import { logger } from "./logger.service";
+import SpotifyService from "./spotify.service";
 
 export interface AuthResult {
     isAuthorized: boolean;
@@ -11,36 +12,30 @@ export interface AuthResult {
 }
 
 class Acl {
-    private spotify: Spotify;
-    private queueService: QueueService;
-    private logger: winston.Logger;
 
-    constructor(logger: winston.Logger, spotify: Spotify, queueService: QueueService) {
-        this.spotify = spotify;
-        this.queueService = queueService;
-        this.logger = logger;
-    }
+    private static excludeEndpointsFromAuth = ["/join", "/create", "/reactivate", "/isAuthorized", "/queue", "/currentlyPlaying"];
+    private static endpointsRequireOwnerPerm = ["/device", "/pauseResume", "/selectPlaylist", "/updateSettings"];
 
-    public saveAccessToken(queue: Queue, passcode: string, userId: string, accessToken: string, expiresIn: number, refreshToken?: string) {
+    public static saveAccessToken(queue: Queue, passcode: string, userId: string, accessToken: string, expiresIn: number, refreshToken?: string) {
         queue.accessToken = accessToken;
         queue.expiresIn = expiresIn;
         queue.accessTokenAcquired = getCurrentSeconds();
         if (refreshToken) {
             queue.refreshToken = refreshToken;
         }
-        this.queueService.updateQueueData(queue, passcode).catch(err => {
-            this.logger.error("Failed to update queue refresh token.", { id: userId });
-            this.logger.error(err);
+        QueueService.updateQueueData(queue, passcode).catch(err => {
+            logger.error("Failed to update queue refresh token.", { id: userId });
+            logger.error(err);
         });
     }
 
-    public isAuthorized = (passcode: string, userId: string) => {
+    public static isAuthorized = (passcode: string, userId: string) => {
         return new Promise<AuthResult>((resolve, reject) => {
             if (!passcode) {
                 reject({ status: 401, message: "Valid passcode required" });
                 return;
             }
-            this.queueService.getQueue(passcode)
+            QueueService.getQueue(passcode)
             .then(queueDao => {
                 const queue: Queue = queueDao.data;
 
@@ -48,11 +43,11 @@ class Acl {
                 if (!queue.accessToken && !queue.refreshToken) {
                     reject({ status: 403, message: "Queue inactive. Owner should reactivate it." });
                 } else {
-                    this.spotify.isAuthorized(passcode, userId, queue.accessTokenAcquired, queue.expiresIn, queue.refreshToken)
+                    SpotifyService.isAuthorized(passcode, userId, queue.accessTokenAcquired, queue.expiresIn, queue.refreshToken)
                         .then((response: any) => {
                         if (response) {
-                            this.logger.info(`Got refresh token. Saving it...`, { userId, passcode });
-                            this.saveAccessToken(queue, passcode, userId, response.access_token,
+                            logger.info(`Got refresh token. Saving it...`, { userId, passcode });
+                            Acl.saveAccessToken(queue, passcode, userId, response.access_token,
                                 response.expires_in, response.refresh_token);
                         }
                         const isOwner = queue.owner === userId;
@@ -62,10 +57,34 @@ class Acl {
                     });
                 }
             }).catch(err => {
-                this.logger.error(err, { id: userId });
+                logger.error(err, { id: userId });
                 reject({ status: 500, message: "Unable to get queue with given passcode" });
             });
         });
+    }
+
+    public static authFilter = (req: express.Request, res: express.Response, next: () => any) => {
+        if (Acl.excludeEndpointsFromAuth.includes(req.path)) {
+            return next();
+        } else {
+            Acl.isAuthorized(req.cookies.get("passcode"), req.cookies.get("user")).then(() => {
+                return next();
+            }).catch(err => {
+                return res.status(err.status).json({ message: err.message });
+            });
+        }
+    }
+
+    public static adminFilter = (req: express.Request, res: express.Response, next: () => any) => {
+        if (Acl.endpointsRequireOwnerPerm.includes(req.path)) {
+            QueueService.isOwner(req.cookies.get("passcode"), req.cookies.get("user")).then(() => {
+                return next();
+            }).catch(err => {
+                return res.status(err.status).json({ message: err.message });
+            });
+        } else {
+            return next();
+        }
     }
 }
 

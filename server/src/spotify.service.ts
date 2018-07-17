@@ -2,7 +2,9 @@ import axios from "axios";
 import * as Querystring from "querystring";
 import { getCurrentSeconds } from "./util";
 import { SpotifySearchQuery, SpotifyCurrentTrack, SpotifyTrack } from "./spotify";
-import * as winston from "winston";
+import { logger } from "./logger.service";
+import config from "./config";
+import secrets from "./secrets";
 
 export interface SearchTrack {
     id: string;
@@ -26,17 +28,12 @@ export class SearchResults {
 }
 
 class SpotifyService {
-    private readonly redirectUri: string;
-    private readonly authHeader: string;
-    private logger: winston.Logger;
+    private static readonly redirectUri = config.spotify.redirectUri;
+    private static readonly clientId = config.spotify.clientId;
+    private static readonly secret = secrets.spotify.secret;
+    private static readonly authHeader = "Basic " + Buffer.from(SpotifyService.clientId + ":" + SpotifyService.secret).toString('base64');
 
-    constructor(logger: winston.Logger, clientId: string, secret: string, redirectUri: string) {
-        this.logger = logger;
-        this.redirectUri = redirectUri;
-        this.authHeader = "Basic " + Buffer.from(clientId + ":" + secret).toString('base64');
-    }
-
-    public getUser = (accessToken: string) => {
+    public static getUser = (accessToken: string) => {
         return axios.get("https://api.spotify.com/v1/me", {
             headers: {
                 "Content-Type": "text/plain",
@@ -45,17 +42,17 @@ class SpotifyService {
         });
     }
 
-    public isAuthorized = (passcode: string, user: string, tokenAcquired: number, expiresIn: number, refreshToken: string) => {
+    public static isAuthorized = (passcode: string, user: string, tokenAcquired: number, expiresIn: number, refreshToken: string) => {
         return new Promise((resolve, reject) => {
             // Refresh it 60 seconds before it goes old to prevent expirations
             if ((getCurrentSeconds() + 60) - tokenAcquired >= expiresIn) {
-                this.logger.info("Getting refresh token...", { user, passcode });
-                this.refreshAccessToken(refreshToken)
+                logger.info("Getting refresh token...", { user, passcode });
+                SpotifyService.refreshAccessToken(refreshToken)
                 .then(response => {
                     return resolve(response.data);
                 }).catch(err => {
-                    this.logger.error("Failed to refresh token...", { user, passcode });
-                    this.logger.error(err.response.data, { user, passcode });
+                    logger.error("Failed to refresh token...", { user, passcode });
+                    logger.error(err.response.data, { user, passcode });
                     return reject({ status: 500, message: "Unable to refresh expired access token" });
                 });
             } else {
@@ -64,7 +61,7 @@ class SpotifyService {
         });
     }
 
-    public getDevices = (accessToken: string) => {
+    public static getDevices = (accessToken: string) => {
         return axios.get("https://api.spotify.com/v1/me/player/devices", {
             headers: {
                 "Content-Type": "text/plain",
@@ -73,16 +70,31 @@ class SpotifyService {
         });
     }
 
-    public getTrack = (accessToken: string, id: string) => {
-        return axios.get("https://api.spotify.com/v1/tracks/" + id, {
+    public static getTrack = (accessToken: string, trackUri: string) => {
+        const trackId = trackUri.split(":")[2];
+
+        return axios.get("https://api.spotify.com/v1/tracks/" + trackId, {
             headers: {
                 "Content-Type": "text/plain",
                 "Authorization": "Bearer " + accessToken
             }
+        }).then(trackResponse => {
+            const track: SpotifyTrack = {
+                artist: trackResponse.data.artists[0].name,
+                id: trackUri,
+                artistId: trackResponse.data.artists[0].id,
+                duration: trackResponse.data.duration_ms,
+                cover: trackResponse.data.album.images[1].url,
+                name: trackResponse.data.name,
+                progress: 0
+            };
+            return track;
+        }).catch(err => {
+            throw { status: 500, message: "Unable to get requested track from Spotify" };
         });
     }
 
-    public currentlyPlaying = (accessToken: string, user: string, passcode: string) => {
+    public static currentlyPlaying = (accessToken: string, user: string, passcode: string) => {
         return new Promise<SpotifyCurrentTrack>((resolve, reject) => {
             axios.get(
                 "https://api.spotify.com/v1/me/player",
@@ -113,22 +125,22 @@ class SpotifyService {
                     };
                     resolve(track);
                 } else {
-                    this.logger.warn("No song playing currently", { user, passcode });
+                    logger.warn("No song playing currently", { user, passcode });
                     reject({ status: 404, message: "No song playing currently." });
                 }
             }).catch(err => {
                 if (err.response) {
-                    this.logger.error(`Error when getting currently playing song`, { user, passcode });
-                    this.logger.error(err.response.data.error.message, { user, passcode });
+                    logger.error(`Error when getting currently playing song`, { user, passcode });
+                    logger.error(err.response.data.error.message, { user, passcode });
                 } else {
-                    this.logger.error(err, { user, passcode });
+                    logger.error(err, { user, passcode });
                 }
                 reject({ status: 500, message: "Unable to get currently playing song from Spotify."});
             });
         });
     }
 
-    public getPlaylists = (accessToken: string, user: string, passcode: string) => {
+    public static getPlaylists = (accessToken: string, user: string, passcode: string) => {
             return axios.get("https://api.spotify.com/v1/me/playlists?limit=50",
             {
                 headers: {
@@ -144,16 +156,16 @@ class SpotifyService {
                 });
             }).catch(err => {
                 if (err.response) {
-                    this.logger.error(`Error when getting playlists`, { user, passcode });
-                    this.logger.error(err.response.data.error.message, { user, passcode });
+                    logger.error(`Error when getting playlists`, { user, passcode });
+                    logger.error(err.response.data.error.message, { user, passcode });
                 } else {
-                    this.logger.error(err, { user, passcode });
+                    logger.error(err, { user, passcode });
                 }
                 throw { status: 500, message: "Unable to get playlists from Spotify."};
             });
     }
 
-    public getPlaylistTracks = (accessToken: string, spotifyUserId: string, id: string, user: string, passcode: string) => {
+    public static getPlaylistTracks = (accessToken: string, spotifyUserId: string, id: string, user: string, passcode: string) => {
         return new Promise<SpotifyTrack[]>((resolve, reject) => {
             axios.get("https://api.spotify.com/v1/users/" + spotifyUserId + "/playlists/" + id + "/tracks", {
                 headers: {
@@ -174,16 +186,16 @@ class SpotifyService {
                 resolve(tracks);
             }).catch(err => {
                 if (err.response) {
-                    this.logger.error(`Unable to fetch albums from Spotify with id ${id}`, { user, passcode });
+                    logger.error(`Unable to fetch albums from Spotify with id ${id}`, { user, passcode });
                 } else {
-                    this.logger.error(err);
+                    logger.error(err);
                 }
                 reject({ status: 500, message: "Unable to fetch albums from Spotify. Please try again later." });
             });
         });
     }
 
-    public startSong = (accessToken: string, ids: string[], deviceId: string) => {
+    public static startSong = (accessToken: string, ids: string[], deviceId: string) => {
         return axios.put(
             "https://api.spotify.com/v1/me/player/play?device_id=" + deviceId,
             {
@@ -198,7 +210,7 @@ class SpotifyService {
         );
     }
 
-    public pause = (accessToken: string) => {
+    public static pause = (accessToken: string) => {
         return axios.put("https://api.spotify.com/v1/me/player/pause",
             {},
             {
@@ -209,7 +221,7 @@ class SpotifyService {
             }
         );
     }
-    public resume = (accessToken: string, deviceId: string) => {
+    public static resume = (accessToken: string, deviceId: string) => {
         return axios.put("https://api.spotify.com/v1/me/player/play?device_id=" + deviceId,
             {},
             {
@@ -221,7 +233,7 @@ class SpotifyService {
         );
     }
 
-    public setDevice = (accessToken: string, isPlaying: boolean, deviceId: string) => {
+    public static setDevice = (accessToken: string, isPlaying: boolean, deviceId: string) => {
         return axios.put(
             "https://api.spotify.com/v1/me/player/",
             {
@@ -237,7 +249,7 @@ class SpotifyService {
         );
     }
 
-    public getArtistTopTracks = (accessToken: string, id: string, user: string, passcode: string) => {
+    public static getArtistTopTracks = (accessToken: string, id: string, user: string, passcode: string) => {
         return new Promise((resolve, reject) => {
             axios.get("https://api.spotify.com/v1/artists/" + id + "/top-tracks?country=FI", {
                 headers: {
@@ -250,22 +262,23 @@ class SpotifyService {
                         artist: i.artists[0].name,
                         name: i.name,
                         id: i.uri,
+                        artistId: i.artists[0].id,
                         duration: i.duration_ms
                     };
                 });
                 resolve(topTracks);
             }).catch(err => {
                 if (err.response) {
-                    this.logger.error(`Unable to fetch top tracks from Spotify with id ${id}`, { user, passcode });
+                    logger.error(`Unable to fetch top tracks from Spotify with id ${id}`, { user, passcode });
                 } else {
-                    this.logger.error(err);
+                    logger.error(err);
                 }
                 reject({ status: 500, message: "Unable to fetch top tracks from Spotify. Please try again later." });
             });
         });
     }
 
-    public getArtistAlbums = (accessToken: string, id: string, user: string, passcode: string) => {
+    public static getArtistAlbums = (accessToken: string, id: string, user: string, passcode: string) => {
         return new Promise((resolve, reject) => {
             axios.get("https://api.spotify.com/v1/artists/" + id + "/albums", {
                 headers: {
@@ -284,16 +297,16 @@ class SpotifyService {
                 resolve(albums);
             }).catch(err => {
                 if (err.response) {
-                    this.logger.error(`Unable to fetch artist's albums from Spotify with id ${id}`, { user, passcode });
+                    logger.error(`Unable to fetch artist's albums from Spotify with id ${id}`, { user, passcode });
                 } else {
-                    this.logger.error(err);
+                    logger.error(err);
                 }
                 reject({ status: 500, message: "Unable to fetch artist's albums from Spotify. Please try again later." });
             });
         });
     }
 
-    public getAlbum = (accessToken: string, id: string, user: string, passcode: string) => {
+    public static getAlbum = (accessToken: string, id: string, user: string, passcode: string) => {
         return new Promise((resolve, reject) => {
             axios.get("https://api.spotify.com/v1/albums/" + id, {
                 headers: {
@@ -313,16 +326,16 @@ class SpotifyService {
                 resolve(albums);
             }).catch(err => {
                 if (err.response) {
-                    this.logger.error(`Unable to fetch albums from Spotify with id ${id}`, { user, passcode });
+                    logger.error(`Unable to fetch albums from Spotify with id ${id}`, { user, passcode });
                 } else {
-                    this.logger.error(err);
+                    logger.error(err);
                 }
                 reject({ status: 500, message: "Unable to fetch albums from Spotify. Please try again later." });
             });
         });
     }
 
-    public search = (user: string, passcode: string, accessToken: string, query: SpotifySearchQuery) => {
+    public static search = (user: string, passcode: string, accessToken: string, query: SpotifySearchQuery) => {
         return new Promise((resolve, reject) => {
             axios.get("https://api.spotify.com/v1/search?" + Querystring.stringify(query), {
                 headers: {
@@ -369,31 +382,31 @@ class SpotifyService {
                 resolve(results);
             }).catch(err => {
                 if (err.response) {
-                    this.logger.error(`Error with search query ${query.q}`, { user, passcode });
-                    this.logger.error(err.response.data.error.message, { user, passcode });
+                    logger.error(`Error with search query ${query.q}`, { user, passcode });
+                    logger.error(err.response.data.error.message, { user, passcode });
                 } else {
-                    this.logger.error(err, { user, passcode });
+                    logger.error(err, { user, passcode });
                 }
                 reject({ status: err.response.status, message: "Unable to get search results from Spotify."});
             });
         });
     }
 
-    public getToken = (code: string, callback: string) => {
+    public static getToken = (code: string, callback: string) => {
         const data = {
             grant_type: "authorization_code",
             code,
-            redirect_uri: this.redirectUri + callback
+            redirect_uri: SpotifyService.redirectUri + callback
         };
         return axios.post("https://accounts.spotify.com/api/token", Querystring.stringify(data), {
             headers: {
                 "Content-Type": "application/x-www-form-urlencoded",
-                "Authorization": this.authHeader
+                "Authorization": SpotifyService.authHeader
             }
         });
     }
 
-    private refreshAccessToken = (refreshToken: string) => {
+    private static refreshAccessToken = (refreshToken: string) => {
         const data = {
             grant_type: "refresh_token",
             refresh_token: refreshToken
@@ -401,7 +414,7 @@ class SpotifyService {
         return axios.post("https://accounts.spotify.com/api/token", Querystring.stringify(data), {
             headers: {
                 "Content-Type": "application/x-www-form-urlencoded",
-                "Authorization": this.authHeader
+                "Authorization": SpotifyService.authHeader
             }
         });
     }

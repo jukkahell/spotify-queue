@@ -8,86 +8,27 @@ import * as https from "https";
 import * as Keygrip from "keygrip";
 import { env } from "process";
 import * as randomstring from "randomstring";
-import { format } from "winston";
-import * as winston from "winston";
-import Acl, { AuthResult } from "./acl";
 import config, { passcodeCookieExpire, userCookieExpire } from "./config";
 import {Queue, QueueDao, Settings} from "./queue";
 import QueueService from "./queue.service";
 import secrets from "./secrets";
 import {SpotifySearchQuery} from "./spotify";
-import Spotify from "./spotify.service";
-const DailyRotateFile = require("winston-daily-rotate-file");
+import { logger } from "./logger.service";
+import SpotifyService from "./spotify.service";
+import Acl, { AuthResult } from "./acl";
+import { Gamify } from "./gamify";
 
 const keys = Array.from({length: 10}, () => randomstring.generate(15));
 const keygrip = new Keygrip(keys, "sha256");
-
-const logFormat = format.printf(info => {
-    const p = info.passcode ? info.passcode : "";
-    const u = info.user ? info.user : "";
-    const i = info.id ? info.id : "";
-    const level = info.level.padEnd(15); // 15 because of the color bytes
-
-    if (p || u) {
-        return `${info.timestamp} ${level} - [${p}][${u}] ${info.message}`;
-    } else if (i) {
-        return `${info.timestamp} ${level} - [${i}] ${info.message}`;
-    } else {
-        return `${info.timestamp} ${level} - ${info.message}`;
-    }
-  });
-const logger = winston.createLogger({
-    level: config.app.logger.level,
-    format: format.combine(
-        format.colorize(),
-        format.timestamp(),
-        logFormat
-    ),
-    transports: [
-      new winston.transports.Console(),
-      new DailyRotateFile({
-        filename: "spotiqu-%DATE%.log",
-        datePattern: "YYYY-MM-DD",
-        zippedArchive: false,
-        maxFiles: "14d"
-      })
-    ]
-  });
-
-const spotify = new Spotify(logger, config.spotify.clientId, secrets.spotify.secret, config.spotify.redirectUri);
-const queueService = new QueueService(logger);
-const acl = new Acl(logger, spotify, queueService);
-
-const excludeEndpointsFromAuth = ["/join", "/create", "/reactivate", "/isAuthorized", "/queue", "/currentlyPlaying"];
-const endpointsRequireOwnerPerm = ["/device", "/pauseResume", "/selectPlaylist", "/updateSettings"];
 
 const app = express();
 app.use(cors(config.app.cors));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(Cookies.express(keygrip));
-app.use((req: express.Request, res: express.Response, next: () => any) => {
-    if (excludeEndpointsFromAuth.includes(req.path)) {
-        return next();
-    } else {
-        acl.isAuthorized(req.cookies.get("passcode"), req.cookies.get("user")).then(() => {
-            return next();
-        }).catch(err => {
-            return res.status(err.status).json({ message: err.message });
-        });
-    }
-});
-app.use((req: express.Request, res: express.Response, next: () => any) => {
-    if (endpointsRequireOwnerPerm.includes(req.path)) {
-        queueService.isOwner(req.cookies.get("passcode"), req.cookies.get("user")).then(() => {
-            return next();
-        }).catch(err => {
-            return res.status(err.status).json({ message: err.message });
-        });
-    } else {
-        return next();
-    }
-});
+app.use(Acl.authFilter);
+app.use(Acl.adminFilter);
+app.use(Gamify.express);
 
 const options = env.NODE_ENV === "production" ? {
     key: fs.readFileSync(secrets.certPath + "privkey.pem"),
@@ -97,7 +38,7 @@ const options = env.NODE_ENV === "production" ? {
 const server = env.NODE_ENV === "production" ? https.createServer(options, app) : http.createServer(app);
 
 app.get("/create", (req, res) => {
-    queueService.create(spotify, req.query.code).then(queue => {
+    QueueService.create(req.query.code).then(queue => {
         config.passcodeCookieOptions.expires = passcodeCookieExpire();
         config.userCookieOptions.expires = userCookieExpire();
         req.cookies.set("user", queue.data.owner, config.userCookieOptions);
@@ -111,7 +52,7 @@ app.get("/create", (req, res) => {
 app.get("/reactivate", (req, res) => {
     const passcode = req.cookies.get("reactivate");
     const user = req.cookies.get("user");
-    queueService.reactivate(spotify, passcode, user, req.query.code).then(queue => {
+    QueueService.reactivate(passcode, user, req.query.code).then(queue => {
         config.passcodeCookieOptions.expires = passcodeCookieExpire();
         config.userCookieOptions.expires = userCookieExpire();
         req.cookies.set("user", queue.owner, config.userCookieOptions);
@@ -128,7 +69,7 @@ app.get("/logout", (req, res) => {
     const user = req.cookies.get("user");
     logger.debug(`Logging out user...`, { user, passcode });
 
-    queueService.logout(passcode, user).then(() => {
+    QueueService.logout(passcode, user).then(() => {
         req.cookies.set("passcode", "", config.passcodeCookieOptions);
         res.status(200).json({ message: "OK" });
     }).catch(err => {
@@ -140,7 +81,7 @@ app.put("/join", (req, res) => {
     const passcode = req.body.code;
     const userId = req.cookies.get("user");
 
-    queueService.join(passcode, userId).then(isOwner => {
+    QueueService.join(passcode, userId).then(isOwner => {
         req.cookies.set("passcode", passcode, config.passcodeCookieOptions);
         req.cookies.set("user", userId, config.userCookieOptions);
         res.status(200).json({ message: "OK", passcode, isOwner });
@@ -158,7 +99,7 @@ app.get("/isAuthorized", (req, res) => {
         return;
     }
 
-    acl.isAuthorized(req.cookies.get("passcode"), req.cookies.get("user")).then((authResult: AuthResult) => {
+    Acl.isAuthorized(req.cookies.get("passcode"), req.cookies.get("user")).then((authResult: AuthResult) => {
         res.status(200).json(authResult);
     }).catch(err => {
         res.status(err.status).json({ isAuthorized: false, message: err.message });
@@ -169,8 +110,8 @@ app.get("/devices", (req, res) => {
     const passcode = req.cookies.get("passcode");
     const user = req.cookies.get("user");
 
-    queueService.getAccessToken(req.cookies.get("passcode")).then(accessToken => {
-        spotify.getDevices(accessToken)
+    QueueService.getAccessToken(req.cookies.get("passcode")).then(accessToken => {
+        SpotifyService.getDevices(accessToken)
         .then((response: any) => {
             let activeDeviceId: string | undefined;
             let spotifyHasActiveDevice = true;
@@ -204,19 +145,19 @@ app.get("/devices", (req, res) => {
 
             // If there was active device set it as device id for this queue
             if (activeDeviceId !== undefined) {
-                queueService.getQueue(passcode, true).then(queueDao => {
+                QueueService.getQueue(passcode, true).then(queueDao => {
                     const queue: Queue = queueDao.data;
                     if (queue.deviceId !== activeDeviceId) {
                         logger.debug(`Different device in db...updating`, { user, passcode });
                         queue.deviceId = activeDeviceId!;
-                        queueService.updateQueueData(queue, passcode).catch(err => {
+                        QueueService.updateQueueData(queue, passcode).catch(err => {
                             logger.error("Unable to set device id", { user, passcode });
                             logger.error(err, { user, passcode });
                         });
                     }
                     if (!spotifyHasActiveDevice) {
                         // Set it to spotify as well
-                        spotify.setDevice(accessToken, queueDao.isPlaying, activeDeviceId!).catch(err => {
+                        SpotifyService.setDevice(accessToken, queueDao.isPlaying, activeDeviceId!).catch(err => {
                             logger.error("Unable to set device to spotify...", {user, passcode});
                             if (err.response) {
                                 logger.error(err.response.data.error.message, {user, passcode});
@@ -243,9 +184,9 @@ app.put("/device", (req, res) => {
 
     logger.info(`Activating device ${req.body.deviceId}`, { user, passcode });
     if (req.body.deviceId) {
-        queueService.setDevice(passcode, user, req.body.deviceId)
+        QueueService.setDevice(passcode, user, req.body.deviceId)
         .then(resp => {
-            spotify.setDevice(resp["accessToken"], resp["isPlaying"], req.body.deviceId).then(() => {
+            SpotifyService.setDevice(resp["accessToken"], resp["isPlaying"], req.body.deviceId).then(() => {
                 logger.debug(`Device set successfully to spotify.`, { user, passcode });
                 res.status(200).json({ message: "OK" });
             }).catch(err => {
@@ -264,7 +205,7 @@ app.put("/device", (req, res) => {
 app.get("/queue", (req, res) => {
     const passcode = req.cookies.get("passcode");
 
-    queueService.getQueue(passcode).then(queueDao => {
+    QueueService.getQueue(passcode).then(queueDao => {
         if (queueDao.data.queue.length === 0) {
             res.status(204).json({ message: "No messages in queue" });
             return;
@@ -283,7 +224,7 @@ app.get("/currentlyPlaying", (req, res) => {
     const user = req.cookies.get("user");
 
     logger.debug(`Fetching currently playing song...`, { user, passcode });
-    queueService.getCurrentTrack(passcode, user, spotify, acl).then(result => {
+    QueueService.getCurrentTrack(passcode, user).then(result => {
         res.status(200).json(result);
     }).catch(() => {
         res.status(204).json({});
@@ -298,14 +239,14 @@ app.delete("/removeFromQueue", (req, res) => {
 
     if (isPlaying) {
         logger.info(`Trying to skip ${trackId}`, { user, passcode });
-        queueService.skip(passcode, user, trackId, spotify, acl).then(() => {
+        QueueService.skip(passcode, user, trackId).then(() => {
             res.status(200).json({ msg: "OK" });
         }).catch(err => {
             res.status(err.status).json({ message: err.message });
         });
     } else {
         logger.info(`Trying to remove ${trackId} from queue`, { user, passcode });
-        queueService.removeFromQueue(passcode, user, trackId).then(() => {
+        QueueService.removeFromQueue(passcode, user, trackId).then(() => {
             res.status(200).json({ msg: "OK" });
         }).catch(err => {
             res.status(err.status).json({ message: err.message });
@@ -318,7 +259,7 @@ app.post("/track", (req, res) => {
     const passcode = req.cookies.get("passcode");
     const user = req.cookies.get("user");
 
-    queueService.addToQueue(user, passcode, spotifyUri, spotify.getTrack).then((queue: QueueDao) => {
+    QueueService.addToQueue(user, passcode, spotifyUri).then((queue: QueueDao) => {
         // Check playback status from spotify
         // If no song is playing
         if (!queue.isPlaying) {
@@ -340,7 +281,7 @@ app.post("/pauseResume", (req, res) => {
     const user = req.cookies.get("user");
     const passcode = req.cookies.get("passcode");
 
-    queueService.pauseResume(user, passcode, spotify, acl).then(isPlaying => {
+    QueueService.pauseResume(user, passcode).then(isPlaying => {
         res.status(200).json({ isPlaying });
     }).catch(err => {
         res.status(err.status).json({ message: err.message });
@@ -351,8 +292,8 @@ app.get("/playlists", async (req, res) => {
     const user = req.cookies.get("user");
     const passcode = req.cookies.get("passcode");
     try {
-        const queueDao = await queueService.getQueue(req.cookies.get("passcode"));
-        const playlists = await spotify.getPlaylists(queueDao.data.accessToken!, user, passcode);
+        const queueDao = await QueueService.getQueue(req.cookies.get("passcode"));
+        const playlists = await SpotifyService.getPlaylists(queueDao.data.accessToken!, user, passcode);
         res.status(200).json(playlists);
     } catch (err) {
         res.status(err.status).json({ message: err.message });
@@ -361,8 +302,29 @@ app.get("/playlists", async (req, res) => {
 
 app.get("/settings", async (req, res) => {
     try {
-        const queueDao = await queueService.getQueue(req.cookies.get("passcode"));
+        const queueDao = await QueueService.getQueue(req.cookies.get("passcode"));
         res.status(200).json(queueDao.data.settings);
+    } catch (err) {
+        res.status(err.status).json({ message: err.message });
+    }
+});
+
+app.get("/user", async (req, res) => {
+    try {
+        const user = await QueueService.getUser(req.cookies.get("passcode"), req.cookies.get("user"));
+        res.status(200).json(user);
+    } catch (err) {
+        res.status(err.status).json({ message: err.message });
+    }
+});
+
+app.put("/vote", async (req, res) => {
+    try {
+        const passcode = req.cookies.get("passcode");
+        const user = req.cookies.get("user");
+        const value = req.body.value;
+        await QueueService.vote(passcode, user, value);
+        res.status(200).json({ message: "OK" });
     } catch (err) {
         res.status(err.status).json({ message: err.message });
     }
@@ -373,7 +335,7 @@ app.post("/updateSettings", async (req, res) => {
     const user = req.cookies.get("user");
     const settings: Settings = req.body.settings;
     try {
-        const resp = await queueService.updateSettings(passcode, user, settings);
+        const resp = await QueueService.updateSettings(passcode, user, settings);
         res.status(200).json(resp);
     } catch (err) {
         res.status(err.status).json({ message: err.message });
@@ -384,9 +346,9 @@ app.put("/selectPlaylist", (req, res) => {
     const user = req.cookies.get("user");
     const passcode = req.cookies.get("passcode");
     const playlistId = req.body.id;
-    queueService.getQueue(req.cookies.get("passcode")).then(queueDao => {
-        spotify.getPlaylistTracks(queueDao.data.accessToken!, queueDao.owner, playlistId, user, passcode).then(tracks => {
-            queueService.addToPlaylistQueue(user, passcode, tracks, playlistId).then(() => {
+    QueueService.getQueue(req.cookies.get("passcode")).then(queueDao => {
+        SpotifyService.getPlaylistTracks(queueDao.data.accessToken!, queueDao.owner, playlistId, user, passcode).then(tracks => {
+            QueueService.addToPlaylistQueue(user, passcode, tracks, playlistId).then(() => {
                 res.status(200).json({ message: "OK" });
             }).catch(err => {
                 res.status(err.status).json({ message: err.message });
@@ -401,8 +363,8 @@ app.get("/selectAlbum", (req, res) => {
     const user = req.cookies.get("user");
     const passcode = req.cookies.get("passcode");
 
-    queueService.getAccessToken(req.cookies.get("passcode")).then(accessToken => {
-        spotify.getAlbum(accessToken, req.query.id, user, passcode).then(albums => {
+    QueueService.getAccessToken(req.cookies.get("passcode")).then(accessToken => {
+        SpotifyService.getAlbum(accessToken, req.query.id, user, passcode).then(albums => {
             res.status(200).json(albums);
         });
     }).catch(err => {
@@ -414,9 +376,9 @@ app.get("/selectArtist", (req, res) => {
     const user = req.cookies.get("user");
     const passcode = req.cookies.get("passcode");
 
-    queueService.getAccessToken(req.cookies.get("passcode")).then(accessToken => {
-        spotify.getArtistTopTracks(accessToken, req.query.id, user, passcode).then((tracks: any) => {
-            spotify.getArtistAlbums(accessToken, req.query.id, user, passcode).then((albums: any) => {
+    QueueService.getAccessToken(req.cookies.get("passcode")).then(accessToken => {
+        SpotifyService.getArtistTopTracks(accessToken, req.query.id, user, passcode).then((tracks: any) => {
+            SpotifyService.getArtistAlbums(accessToken, req.query.id, user, passcode).then((albums: any) => {
                 res.status(200).json({ tracks, albums });
             });
         }).catch(err => {
@@ -438,8 +400,8 @@ app.get("/search", (req, res) => {
         limit: req.query.limit
     };
 
-    queueService.getAccessToken(passcode).then(accessToken => {
-        spotify.search(user, passcode, accessToken, query).then(results => {
+    QueueService.getAccessToken(passcode).then(accessToken => {
+        SpotifyService.search(user, passcode, accessToken, query).then(results => {
             res.status(200).json(results);
         }).catch(err => {
             res.status(err.status).json({ message: err.message });
@@ -465,10 +427,10 @@ const startPlaying = (queue: Queue, passcode: string, user: string) => {
             votes: []
         };
 
-        queueService.updateQueue(queue, true, passcode).then(() => {
+        QueueService.updateQueue(queue, true, passcode).then(() => {
             logger.debug(`Current track set to ${queuedItem.track.id}`, { user, passcode });
-            spotify.startSong(accessToken, [queuedItem.track.id], deviceId!).then(() => {
-                queueService.startPlaying(accessToken, passcode, user, queuedItem.track, spotify, acl);
+            SpotifyService.startSong(accessToken, [queuedItem.track.id], deviceId!).then(() => {
+                QueueService.startPlaying(accessToken, passcode, user, queuedItem.track);
                 logger.info(`Song successfully started.`, { user, passcode });
                 return resolve();
             }).catch((err: any) => {
@@ -486,7 +448,7 @@ const startPlaying = (queue: Queue, passcode: string, user: string) => {
     });
 };
 
-queueService.startOngoingTimers(spotify, acl);
+QueueService.startOngoingTimers();
 
 app.use((error: any, request: express.Request, response: express.Response, next: (error: any) => any) => {
     if (response.headersSent) {

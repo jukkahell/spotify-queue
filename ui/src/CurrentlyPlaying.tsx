@@ -1,11 +1,14 @@
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import axios from "axios";
 import * as React from "react";
-import { FontAwesomeIcon } from "../node_modules/@fortawesome/react-fontawesome";
-import { IQueuedItem } from "./Queue";
+import config from "./config";
+import { IQueuedItem, IVote } from "./Queue";
 
 interface ICurrentlyPlayingProps {
     onSongEnd: () => void;
     onError: (msg: string) => void;
     onPauseResume: () => void;
+    onVoted: () => void;
     currentTrack: IQueuedItem | null;
     isPlaying: boolean;
     isOwner: boolean;
@@ -28,6 +31,9 @@ export class CurrentlyPlaying extends React.Component<ICurrentlyPlayingProps, IC
             progress: 0,
             progressUpdated: 0
         };
+
+        this.voteUp = this.voteUp.bind(this);
+        this.voteDown = this.voteDown.bind(this);
     }
 
     public componentDidMount() {
@@ -52,6 +58,41 @@ export class CurrentlyPlaying extends React.Component<ICurrentlyPlayingProps, IC
         }
     }
 
+    protected vote(value: number) {
+        axios.put(config.backend.url + "/vote", { value }).then(() => {
+            this.props.onVoted();
+        }).catch(err => {
+            this.props.onError(err.response.data.message);
+        });
+    }
+
+    protected voteUp(e: React.MouseEvent<HTMLButtonElement>) {
+        this.vote(1);
+    }
+
+    protected voteDown(e: React.MouseEvent<HTMLButtonElement>) {
+        this.vote(-1);
+    }
+
+    protected renderVoteButtons() {
+        if (!this.props.currentTrack) {
+            return null;
+        }
+        let voteCount = 0;
+        this.props.currentTrack.votes.forEach((v: IVote) => voteCount += v.value);
+        return (
+            <div className="voteButtons">
+                <button type="submit" className="btn btn-primary voteButton up" id={this.props.currentTrack.track.id} onClick={this.voteUp}>
+                    <FontAwesomeIcon icon="thumbs-up" />
+                </button>
+                <div className="voteCount">{voteCount > 0 ? "+" : ""}{voteCount}</div>
+                <button type="submit" className="btn btn-primary voteButton down" id={this.props.currentTrack.track.id} onClick={this.voteDown}>
+                    <FontAwesomeIcon icon="thumbs-down" />
+                </button>
+            </div>
+        );
+    }
+
     public render() {
         if (this.props.currentTrack) {
             const progress = (this.state.progress / this.props.currentTrack.track.duration) * 100;
@@ -71,6 +112,7 @@ export class CurrentlyPlaying extends React.Component<ICurrentlyPlayingProps, IC
                     <div className="progress">
                         <div className="progress-bar" style={{width: progress + "%"}} role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100} />
                     </div>
+                    {this.renderVoteButtons()}
                 </div>
             );
         } else {

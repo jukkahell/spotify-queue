@@ -11,10 +11,15 @@ import Settings, {ISettings} from "./Settings";
 import Share from "./Share";
 import {UserMenu} from "./UserMenu";
 
+interface IUser {
+    id: string;
+    points: number;
+}
+
 export interface IState {
     enteredCode: string | null;
     passcode: string | null;
-    responseMsg: IAlert;
+    responseMsg: IAlert | null;
     joinError: string | null;
     currentTrack: IQueuedItem | null;
     isPlaying: boolean;
@@ -23,6 +28,7 @@ export interface IState {
     reactivate: boolean;
     playlistId: string | null;
     settings: ISettings | null;
+    user: IUser | null;
 }
 
 export class App extends React.Component<{}, IState> {
@@ -35,7 +41,7 @@ export class App extends React.Component<{}, IState> {
         this.state = {
             enteredCode: null,
             passcode: null,
-            responseMsg: { msg: "", className: "alert-info"},
+            responseMsg: null,
             joinError: null,
             currentTrack: null,
             isPlaying: false,
@@ -44,6 +50,7 @@ export class App extends React.Component<{}, IState> {
             reactivate: false,
             playlistId: null,
             settings: null,
+            user: null
         };
 
         this.createQueue = this.createQueue.bind(this);
@@ -61,6 +68,9 @@ export class App extends React.Component<{}, IState> {
         this.onPauseResume = this.onPauseResume.bind(this);
         this.refreshCurrentlyPlaying = this.refreshCurrentlyPlaying.bind(this);
         this.getSettings = this.getSettings.bind(this);
+        this.updateSettings = this.updateSettings.bind(this);
+        this.closeAlert = this.closeAlert.bind(this);
+        this.getUser = this.getUser.bind(this);
     }
 
     public componentDidMount() {
@@ -98,6 +108,7 @@ export class App extends React.Component<{}, IState> {
                     this.getCurrentTrack();
                     this.getQueue();
                     this.getSettings();
+                    this.getUser();
 
                     clearInterval(this.authInterval);
                     this.setState({
@@ -149,10 +160,12 @@ export class App extends React.Component<{}, IState> {
         });
         this.getCurrentTrack();
         this.getQueue();
+        this.getUser();
     }
 
     protected onQueued() {
         this.getQueue();
+        this.getUser();
         if (!this.state.isPlaying) {
             // Give some time for spotify to catch up
             setTimeout(this.getCurrentTrack, 500);
@@ -173,6 +186,12 @@ export class App extends React.Component<{}, IState> {
         }
         this.setState({
             responseMsg: { msg, className: "alert-danger" }
+        });
+    }
+
+    protected closeAlert() {
+        this.setState({
+            responseMsg: null
         });
     }
 
@@ -201,13 +220,14 @@ export class App extends React.Component<{}, IState> {
         if (this.state.passcode) {
             return (
                 <div className="container mainContent">
-                    <AlertBox alert={this.state.responseMsg} />
+                    {this.state.responseMsg ? <AlertBox alert={this.state.responseMsg} close={this.closeAlert} /> : null}
                     <div className="row">
                         <div className="col-md-4">
                             <div className="row">
                                 <CurrentlyPlaying isPlaying={this.state.isPlaying}
                                     currentTrack={this.state.currentTrack}
                                     isOwner={this.state.isOwner}
+                                    onVoted={this.refreshCurrentlyPlaying}
                                     onPauseResume={this.onPauseResume}
                                     onSongEnd={this.onSongEnd}
                                     onError={this.onError} />
@@ -232,7 +252,17 @@ export class App extends React.Component<{}, IState> {
                         <UserMenu passcode={this.state.passcode} onError={this.onError} />
                         <Share passcode={this.state.passcode} onError={this.onError} />
                         {this.state.isOwner ? <DeviceSelect onError={this.onError} /> : null}
-                        {this.state.isOwner && this.state.settings ? <Settings settings={this.state.settings} onError={this.onError} /> : null}
+                        {
+                            this.state.isOwner && this.state.settings ?
+                            <Settings settings={this.state.settings} updateSettings={this.updateSettings} onError={this.onError} /> :
+                            null
+                        }
+                        {this.state.settings && this.state.settings.gamify && this.state.user ?
+                            <p className={"userPoints " + (this.state.user.points >= 0 ? "positive" : "negative")}>
+                                {this.state.user.points >= 0 ? "+" : ""}{this.state.user.points} points
+                            </p> :
+                            null
+                        }
                     </div>
                 </div>
             );
@@ -266,12 +296,40 @@ export class App extends React.Component<{}, IState> {
         }
     }
 
+    private getUser() {
+        axios.get(config.backend.url + "/user")
+            .then(response => {
+                if (response.status === 200) {
+                    this.setState({
+                        user: response.data
+                    });
+                }
+            }).catch(err => {
+                this.onError(err.response.data.message);
+            }
+        );
+    }
+
     private getSettings() {
         axios.get(config.backend.url + "/settings")
             .then(response => {
                 if (response.status === 200) {
                     this.setState({
-                        settings: response.data.settings
+                        settings: response.data
+                    });
+                }
+            }).catch(err => {
+                this.onError(err.response.data.message);
+            }
+        );
+    }
+
+    private updateSettings(settings: ISettings) {
+        axios.post(config.backend.url + "/updateSettings", { settings })
+            .then(response => {
+                if (response.status === 200) {
+                    this.setState({
+                        settings: response.data
                     });
                 }
             }).catch(err => {

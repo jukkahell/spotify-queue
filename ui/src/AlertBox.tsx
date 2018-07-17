@@ -7,43 +7,19 @@ export interface IAlert {
 
 export interface IAlertBoxProps {
     alert: IAlert;
+    close: () => void;
 }
 
-export interface IAlertBoxState {
-    showAlert: boolean;
-}
-
-export class AlertBox extends React.Component<IAlertBoxProps, IAlertBoxState> {
+export class AlertBox extends React.Component<IAlertBoxProps> {
 
     public constructor(props: IAlertBoxProps) {
         super(props);
-
-        this.state = {
-            showAlert: false
-        };
-    }
-
-    public componentDidUpdate(prevProps: IAlertBoxProps) {
-        if (this.props.alert.msg !== prevProps.alert.msg) {
-            this.setState({
-                showAlert: true
-            });
-            setTimeout(() => {
-                this.setState({
-                    showAlert: false
-                });
-            }, 3000);
-        }
     }
 
     public render() {
-        if (this.props.alert) {
-            return (
-                <div className={(this.state.showAlert ? "visible" : "invisible") + " alert " + this.props.alert.className + " fixed-top"} role="alert">{this.props.alert.msg}</div>
-            );
-        } else {
-            return null;
-        }
+        return (
+            <div className={"alert " + this.props.alert.className + " fixed-top"} role="alert" onClick={this.props.close}>{this.props.alert.msg}</div>
+        );
     }
 }
 

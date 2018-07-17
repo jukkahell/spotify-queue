@@ -1,8 +1,8 @@
 import { library } from "@fortawesome/fontawesome-svg-core";
 import {
     faBars, faCheckCircle, faCog, faDesktop, faExchangeAlt, faForward, faGamepad,
-    faLink, faMobile, faPauseCircle, faPlayCircle, faShareAlt, faSignOutAlt, faSlidersH,
-    faThumbsDown, faThumbsUp, faTrashAlt, faUnlock, faVolumeOff, faVolumeUp
+    faLink, faMobile, faPauseCircle, faPlayCircle, faRandom, faShareAlt, faSignOutAlt,
+    faSlidersH, faThumbsDown, faThumbsUp, faTrashAlt, faUnlock, faVolumeOff, faVolumeUp
 } from "@fortawesome/free-solid-svg-icons";
 import "bootstrap/dist/css/bootstrap.min.css";
 import * as React from "react";
@@ -15,7 +15,7 @@ library.add(
     faDesktop, faMobile, faVolumeOff, faPlayCircle, faVolumeUp,
     faShareAlt, faLink, faBars, faSlidersH, faSignOutAlt, faUnlock,
     faExchangeAlt, faThumbsDown, faThumbsUp, faTrashAlt, faPauseCircle,
-    faForward, faCog, faGamepad, faCheckCircle
+    faForward, faCog, faGamepad, faCheckCircle, faRandom
 );
 axios.defaults.withCredentials = true;
 
