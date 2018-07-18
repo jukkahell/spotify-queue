@@ -13,7 +13,7 @@ export interface ITrackProps {
     cover?: string;
     isPlaying: boolean;
     selectTrack: (targetId: string, isPlaying: boolean) => void;
-    selectArtist: (targetId: string,  isPlaying: boolean) => void;
+    selectArtist?: (targetId: string,  isPlaying: boolean) => void;
 }
 
 export class Track extends React.Component<ITrackProps> {
@@ -31,8 +31,10 @@ export class Track extends React.Component<ITrackProps> {
     }
 
     public selectArtist(e: React.MouseEvent<HTMLElement>) {
-        e.preventDefault();
-        this.props.selectArtist(e.currentTarget.id, this.props.isPlaying);
+        if (this.props.selectArtist) {
+            e.preventDefault();
+            this.props.selectArtist(e.currentTarget.id, this.props.isPlaying);
+        }
     }
 
     public render() {
@@ -52,11 +54,11 @@ export class Track extends React.Component<ITrackProps> {
                         {name}
                         {isPlaying ? <div className="speakerIcon"><FontAwesomeIcon icon="volume-up" /></div> : null}
                     </a>
-                    <a href="#" className="trackArtist" id={artistId} onClick={this.selectArtist}>
+                    <a href={"#artist=" + artistId} className="trackArtist" id={artistId} onClick={this.selectArtist}>
                         {artist}
                     </a>
                 </div>
-                <p className="trackDuration"><Duration milliseconds={duration} /></p>
+                <div className="trackDuration"><Duration milliseconds={duration} /></div>
             </div>
         );
     }

@@ -7,6 +7,12 @@ import config from "./config";
 import Playlist, { IPlaylistProps } from "./Playlist";
 import Track, { ITrackProps } from "./Track";
 
+interface ISearchObject {
+    q: string;
+    type: string;
+    limit: number;
+}
+
 interface ISearchFormProps {
     activePlaylistId: string | null;
     isOwner: boolean;
@@ -16,9 +22,7 @@ interface ISearchFormProps {
 }
 
 interface ISearchFormState {
-    q: string;
-    type: string;
-    limit: number;
+    search: ISearchObject;
     tracks: ITrackProps[];
     albums: IAlbumProps[];
     artists: IArtistProps[];
@@ -28,13 +32,16 @@ interface ISearchFormState {
 export class SearchForm extends React.Component<ISearchFormProps, ISearchFormState> {
 
     private readonly defaultLimit = 5;
+    private readonly defaultTypes = "track,album,artist";
 
     public constructor(props: ISearchFormProps) {
         super(props);
         this.state = {
-            q: "",
-            type: "track,album,artist",
-            limit: this.defaultLimit,
+            search: {
+                q: "",
+                type: this.defaultTypes,
+                limit: this.defaultLimit,
+            },
             tracks: [],
             albums: [],
             artists: [],
@@ -47,12 +54,12 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
         this.selectAlbum = this.selectAlbum.bind(this);
         this.selectArtist = this.selectArtist.bind(this);
         this.hashSearch = this.hashSearch.bind(this);
-        this.showMoreTracks = this.showMoreTracks.bind(this);
         this.showMoreArtists = this.showMoreArtists.bind(this);
         this.showMoreAlbums = this.showMoreAlbums.bind(this);
         this.getPlaylists = this.getPlaylists.bind(this);
         this.selectPlaylist = this.selectPlaylist.bind(this);
         this.addToQueue = this.addToQueue.bind(this);
+        this.showMoreTracks = this.showMoreTracks.bind(this);
         this.hashSearch();
     }
 
@@ -67,28 +74,41 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
     public handleChangeEvent(e: React.ChangeEvent<HTMLInputElement>) {
         e.preventDefault();
 
+        const search = this.state.search;
+        search.q = e.target.value;
         this.setState({
-            q: e.target.value
+            search
         });
     }
 
     protected hashSearch() {
         const hash = window.location.hash.substr(1);
-
         if (!hash) {
             this.getPlaylists();
-        } else if (hash.indexOf(":") < 0) {
-            const searchQuery = decodeURIComponent(hash.replace(/\+/g, " "));
-            this.search(searchQuery);
-        } else if (hash.indexOf("album") >= 0) {
-            const id = window.location.hash.split(":")[1];
-            this.selectAlbum(id);
-        } else if (hash.indexOf("artist") >= 0) {
-            const id = window.location.hash.split(":")[1];
-            this.selectArtist(id);
-        } else if (hash.indexOf("playlist") >= 0) {
-            const id = window.location.hash.split(":")[1];
-            this.selectPlaylist(id);
+            return;
+        }
+
+        const search = this.parseHash();
+
+        if (search["q"]) {
+            this.state = {
+                search: {
+                    q: decodeURIComponent(search["q"]),
+                    type: search["type"] ? decodeURIComponent(search["type"]) : this.defaultTypes,
+                    limit: search["limit"] ? search["limit"] : this.defaultLimit
+                },
+                tracks: [],
+                albums: [],
+                artists: [],
+                playlists: []
+            };
+            this.search();
+        } else if (search["album"]) {
+            this.selectAlbum(search["album"]);
+        } else if (search["artist"]) {
+            this.selectArtist(search["artist"]);
+        } else if (search["playlist"]) {
+            this.selectPlaylist(search["playlist"]);
         }
     }
 
@@ -115,7 +135,7 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
        }
 
         const artists = [
-            (<h4 key="artists">Artists</h4>)
+            <h4 key="artists">Artists</h4>
         ];
         return artists.concat(this.state.artists.map((artist, i) => (
             <Artist
@@ -157,7 +177,7 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
        }
 
         const albums = [
-            (<h4 key="albums">Albums</h4>)
+            <h4 key="albums">Albums</h4>
         ];
         return albums.concat(this.state.albums.map((album, i) => (
             <Album
@@ -200,7 +220,7 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
         }
 
         const tracks = [
-            (<h4 key="tracks">Tracks</h4>)
+            <h4 key="tracks">Tracks</h4>
         ];
         return tracks.concat(this.state.tracks.map((track, i) => (
             <Track
@@ -211,35 +231,32 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
                 duration={track.duration}
                 key={i + "-" + track.id}
                 isPlaying={false}
-                selectTrack={this.addToQueue}
-                selectArtist={this.selectArtist} />
+                selectTrack={this.addToQueue} />
         )));
     }
 
     public searchClicked(e: React.MouseEvent<HTMLElement>) {
         e.preventDefault();
 
-        if (this.state.q) {
+        if (this.state.search.q) {
             this.setState({
-                type: "track,album,artist",
-                limit: this.defaultLimit
+                search: {
+                    q: this.state.search.q,
+                    type: "track,album,artist",
+                    limit: this.defaultLimit
+                }
+            }, () => {
+                window.location.hash = this.searchToHash(this.state.search);
             });
-            window.location.hash = "#" + this.state.q;
         } else {
             window.location.hash = "";
         }
     }
 
-    public search(q: string) {
-        const params = {
-            q,
-            type: this.state.type,
-            limit: this.state.limit
-        };
-        axios.get(config.backend.url + "/search?" + Querystring.stringify(params))
+    public search() {
+        axios.get(config.backend.url + "/search?" + Querystring.stringify(this.state.search))
             .then(response => {
                 this.setState({
-                    q,
                     tracks: response.data.tracks,
                     albums: response.data.albums,
                     artists: response.data.artists,
@@ -266,51 +283,87 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
         );
     }
 
-    public showMoreTracks(e: React.MouseEvent<HTMLElement>) {
-        e.preventDefault();
-        this.setState({
-            type: "track",
-            limit: 50,
-            playlists: []
-        }, () => this.search(this.state.q));
-    }
-
     public showMoreArtists(e: React.MouseEvent<HTMLElement>) {
         e.preventDefault();
         this.setState({
-            type: "artist",
-            limit: 50,
-            playlists: []
-        }, () => this.search(this.state.q));
+            search: {
+                q: this.state.search.q,
+                type: "artist",
+                limit: 50
+            }
+        }, () => this.search());
+        window.location.hash = this.searchToHash(this.state.search);
     }
 
     public showMoreAlbums(e: React.MouseEvent<HTMLElement>) {
         e.preventDefault();
         this.setState({
-            type: "album",
-            limit: 50,
-            playlists: []
-        }, () => this.search(this.state.q));
+            search: {
+                q: this.state.search.q,
+                type: "album",
+                limit: 50
+            }
+        }, () => this.search());
+        window.location.hash = this.searchToHash(this.state.search);
+    }
+
+    public showMoreTracks(e: React.MouseEvent<HTMLElement>) {
+        e.preventDefault();
+        this.setState({
+            search: {
+                q: this.state.search.q,
+                type: "track",
+                limit: 50
+            }
+        }, () => this.search());
+        window.location.hash = this.searchToHash(this.state.search);
     }
 
     public render() {
         return (
             <div className="searchContainer">
                 <form className="form-inline searchForm">
-                    <input className="form-control search col-md-9" type="text" name="q" value={this.state.q} onChange={this.handleChangeEvent} placeholder="🔍 Search" />
+                    <input className="form-control search col-md-9" type="text" name="q" value={this.state.search.q} onChange={this.handleChangeEvent} placeholder="🔍 Search" />
                     <button type="submit" className="btn btn-primary search col-md-2" onClick={this.searchClicked}>Search</button>
                 </form>
                 <div className="searchResults">
                     {this.renderPlaylists()}
                     {this.renderArtists()}
-                    {this.state.artists.length > 4 ? <a href="#" className="showMore" onClick={this.showMoreArtists}>Show more</a> : null}
+                    {this.hasMoreResults() ?
+                        <a href="#" className="showMore" onClick={this.showMoreArtists}>Show more</a> :
+                        null
+                    }
                     {this.renderAlbums()}
-                    {this.state.albums.length > 4 ? <a href="#" className="showMore" onClick={this.showMoreAlbums}>Show more</a> : null}
+                    {this.hasMoreResults() ?
+                        <a href="#" className="showMore" onClick={this.showMoreAlbums}>Show more</a> :
+                        null
+                    }
                     {this.renderTracks()}
-                    {this.state.tracks.length > 4 ? <a href="#" className="showMore" onClick={this.showMoreTracks}>Show more</a> : null}
+                    {this.hasMoreResults() ?
+                        <a href="#" className="showMore" onClick={this.showMoreTracks}>Show more</a> :
+                        null
+                    }
                 </div>
             </div>
         );
+    }
+
+    private hasMoreResults() {
+        return this.state.artists.length > 4 && this.state.search.limit < 50 && this.state.search.q;
+    }
+
+    private parseHash() {
+        return window.location.hash.substr(1)
+        .split("&")
+        .map(param => param.split("="))
+        .reduce((values, [key, value]) => {
+            values[key] = value;
+            return values;
+        }, {});
+    }
+
+    private searchToHash(search: any) {
+        return "#" + Object.keys(search).map(k => k + "=" + encodeURIComponent(search[k])).join("&");
     }
 }
 

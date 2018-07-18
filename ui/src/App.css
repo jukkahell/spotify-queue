@@ -216,7 +216,7 @@ input.passcode {
 .trackItem {
     display: grid;
     grid-template-columns: auto 3em;
-    margin-bottom: 0.7em;
+    padding-bottom: 0.7em;
 }
 .trackArtist {
     font-size: 0.7em;

@@ -19,7 +19,7 @@ export class Artist extends React.Component<IArtistProps> {
 
         return (
             <div>
-                <a href={"#artist:" + id} id={id}>{name}</a>
+                <a href={"#artist=" + id} id={id}>{name}</a>
             </div>
         );
     }

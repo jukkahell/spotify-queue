@@ -23,8 +23,8 @@ export class Album extends React.Component<IAlbumProps> {
 
         return (
             <div className="albumInfo">
-                <a href={"#album:" + id} id={id}>{name}</a>
-                <a href={"#artist:" + artistId} className="trackArtist" id={artistId}>{artist}</a>
+                <a href={"#album=" + id} id={id}>{name}</a>
+                <a href={"#artist=" + artistId} className="trackArtist" id={artistId}>{artist}</a>
             </div>
         );
     }

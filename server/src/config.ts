@@ -37,6 +37,9 @@ export interface IConfig {
         clientId: string;
         redirectUri: string;
     };
+    gamify: {
+        initialPoints: number;
+    }
 }
 
 export const userCookieExpire = () => {
@@ -86,6 +89,9 @@ const config: IConfig = {
     spotify: {
         clientId: "da6ea27d63384e858d12bcce0fac006d",
         redirectUri: scheme + host + ":" + port + "/",
+    },
+    gamify: {
+        initialPoints: 15
     }
 };
 

@@ -5,7 +5,8 @@ export interface ISettings {
     gamify: boolean;
     maxDuplicateTracks: number;
     numberOfTracksPerUser: number;
-    random: boolean;
+    randomPlaylist: boolean;
+    randomQueue: boolean;
 }
 
 export interface IShareProps {
@@ -28,7 +29,8 @@ export class Settings extends React.Component<IShareProps, IShareState> {
         };
 
         this.toggleGamify = this.toggleGamify.bind(this);
-        this.toggleRandom = this.toggleRandom.bind(this);
+        this.toggleRandomPlaylist = this.toggleRandomPlaylist.bind(this);
+        this.toggleRandomQueue = this.toggleRandomQueue.bind(this);
         this.dropdownClicked = this.dropdownClicked.bind(this);
         this.hideMenu = this.hideMenu.bind(this);
     }
@@ -40,10 +42,17 @@ export class Settings extends React.Component<IShareProps, IShareState> {
         this.props.updateSettings(settings);
     }
 
-    public toggleRandom(e: React.MouseEvent<HTMLElement>) {
+    public toggleRandomPlaylist(e: React.MouseEvent<HTMLElement>) {
         e.preventDefault();
         const settings = this.props.settings;
-        settings.random = !settings.random;
+        settings.randomPlaylist = !settings.randomPlaylist;
+        this.props.updateSettings(settings);
+    }
+
+    public toggleRandomQueue(e: React.MouseEvent<HTMLElement>) {
+        e.preventDefault();
+        const settings = this.props.settings;
+        settings.randomQueue = !settings.randomQueue;
         this.props.updateSettings(settings);
     }
 
@@ -62,10 +71,15 @@ export class Settings extends React.Component<IShareProps, IShareState> {
                 <span className="settingName">Gamify</span>
                 <FontAwesomeIcon className={"settingOptionCheckmark " + (this.props.settings.gamify ? "active" : "inactive")} icon="check-circle" />
             </a>,
-            <a className="dropdown-item settingsMenuItem" key="random" href="#" id="random" onClick={this.toggleRandom}>
+            <a className="dropdown-item settingsMenuItem" key="randomPlaylist" href="#" id="randomPlaylist" onClick={this.toggleRandomPlaylist}>
                 <FontAwesomeIcon icon="random" />
-                <span className="settingName">Shuffle play</span>
-                <FontAwesomeIcon className={"settingOptionCheckmark " + (this.props.settings.random ? "active" : "inactive")} icon="check-circle" />
+                <span className="settingName">Shuffle playlist</span>
+                <FontAwesomeIcon className={"settingOptionCheckmark " + (this.props.settings.randomPlaylist ? "active" : "inactive")} icon="check-circle" />
+            </a>,
+            <a className="dropdown-item settingsMenuItem" key="randomQueue" href="#" id="randomQueue" onClick={this.toggleRandomQueue}>
+                <FontAwesomeIcon icon="random" />
+                <span className="settingName">Shuffle queue</span>
+                <FontAwesomeIcon className={"settingOptionCheckmark " + (this.props.settings.randomQueue ? "active" : "inactive")} icon="check-circle" />
             </a>
         ]);
     }

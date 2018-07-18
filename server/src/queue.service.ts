@@ -8,6 +8,7 @@ import { getCurrentSeconds } from "./util";
 import Acl from "./acl";
 import { logger } from "./logger.service";
 import { Gamify } from "./gamify";
+import config from "./config";
 
 export interface QueueTimeout {
     [accessToken: string]: NodeJS.Timer;
@@ -242,13 +243,14 @@ class QueueService {
                 gamify: false,
                 maxDuplicateTracks: 2,
                 numberOfTracksPerUser: 5,
-                random: false
+                randomPlaylist: false,
+                randomQueue: false
             },
             users: [
                 {
                     id: userId,
                     spotifyUserId,
-                    points: 15
+                    points: config.gamify.initialPoints
                 }
             ]
         };
@@ -259,7 +261,7 @@ class QueueService {
         return db.query("INSERT INTO queues (id, owner, data) VALUES ($1, $2, $3)", [passcode, spotifyUserId, queue]);
     }
 
-    public static async generatePasscode(): Promise<string|null> {
+    public static async generatePasscode() {
         let loops = 10;
         let passcode = null;
 
@@ -275,86 +277,81 @@ class QueueService {
         return null;
     }
 
-    public static join(passcode: string, userId: string) {
-        return new Promise<boolean>((resolve, reject) => {
-            QueueService.getQueue(passcode, true).then(queueDao => {
-                const queue: Queue = queueDao.data;
+    public static async join(passcode: string, userId: string) {
+        try {
+            const queueDao = await QueueService.getQueue(passcode, true);
+            const queue: Queue = queueDao.data;
 
-                // Check if queue is active
-                if (!queue.accessToken) {
-                    const isOwner = queue.owner === userId;
-                    logger.debug(`Queue is not active. Not allowed to join. Is owner: ${isOwner}.`, { user: userId, passcode });
-                    return reject({ status: 403, message: "Queue not active. The owner needs to reactivate it.", isOwner });
+            // Check if queue is active
+            if (!queue.accessToken) {
+                const isOwner = queue.owner === userId;
+                logger.debug(`Queue is not active. Not allowed to join. Is owner: ${isOwner}.`, { user: userId, passcode });
+                throw { status: 403, message: "Queue not active. The owner needs to reactivate it.", isOwner };
+            }
+
+            if (!userId) {
+                userId = randomstring.generate();
+            }
+            logger.info(`User joining to queue`, { user: userId, passcode });
+
+            const user = {
+                id: userId,
+                spotifyUserId: null,
+                points: config.gamify.initialPoints
+            };
+
+            if (!queue.users.find( user => user.id === userId)) {
+                logger.info(`User not yet part of queue...adding`, { user: userId, passcode });
+                queue.users.push(user);
+                
+                try {
+                    await QueueService.updateQueueData(queue, passcode);
+                    return false;
+                } catch (err) {
+                    logger.error("Error when inserting user into queue", { user: userId, passcode });
+                    logger.error(err, { user: userId, passcode });
+                    throw { status: 400, message: "Error while adding user into database. Please try again later." };
                 }
-
-                if (!userId) {
-                    userId = randomstring.generate();
-                }
-                logger.info(`User joining to queue`, { user: userId, passcode });
-
-                const user = {
-                    id: userId,
-                    spotifyUserId: null,
-                    points: 0
-                };
-
-                if (!queue.users.find( user => user.id === userId)) {
-                    logger.info(`User not yet part of queue...adding`, { user: userId, passcode });
-                    queue.users.push(user);
-                    QueueService.updateQueueData(queue, passcode)
-                    .then(() => {
-                        resolve(false);
-                    }).catch(err => {
-                        logger.error("Error when inserting user into queue", { user: userId, passcode });
-                        logger.error(err, { user: userId, passcode });
-                        reject({ status: 400, message: "Error while adding user into database. Please try again later." });
-                    });
-                } else {
-                    logger.info(`User already part of ${passcode}...authorize`, { user: userId, passcode });
-                    resolve(queue.owner === userId);
-                }
-            }).catch(err => {
-                reject({ status: 500, message: err.message });
-            });
-        });
+            } else {
+                logger.info(`User already part of ${passcode}...authorize`, { user: userId, passcode });
+                return (queue.owner === userId);
+            }
+        } catch (err) {
+            throw { status: 500, message: err.message };
+        }
     }
 
-    public static logout(passcode: string, user: string) {
-        return new Promise((resolve, reject) => {
-            QueueService.getQueue(passcode, true).then(queueDao => {
-                // Inactivate queue if logged out user is the owner
-                const queue: Queue = queueDao.data;
-                if (user === queue.owner) {
-                    queue.currentTrack = null;
-                    queue.accessToken = null;
-                    queue.refreshToken = "";
-                    QueueService.updateQueue(queue, false, passcode).then(() => {
-                        resolve();
-                    }).catch(err => {
-                        logger.error(err, { user, passcode });
-                        reject({ status: 500, message: "Unable to save logout state to database. Please try again later." });
-                    });
-                } else {
-                    resolve();
-                }
-            }).catch(err => {
-                reject({ status: 500, message: err.message });
-            });
-        });
+    public static async logout(passcode: string, user: string) {
+        try {
+            const queueDao = await QueueService.getQueue(passcode, true);
+            // Inactivate queue if logged out user is the owner
+            const queue: Queue = queueDao.data;
+            if (user === queue.owner) {
+                queue.currentTrack = null;
+                queue.accessToken = null;
+                queue.refreshToken = "";
+                QueueService.updateQueue(queue, false, passcode).catch(err => {
+                    logger.error(err, { user, passcode });
+                    throw { status: 500, message: "Unable to save logout state to database. Please try again later." };
+                });
+            }
+            return;
+        } catch (err) {
+            throw { status: 500, message: err.message };
+        }
     }
 
-    public static isOwner(passcode: string, userId: string) {
-        return new Promise((resolve, reject) => {
-            QueueService.getQueue(passcode).then(queueDao => {
-                if (queueDao.data.owner === userId) {
-                    resolve();
-                } else {
-                    reject({ status: 401, message: "Owner permission required for QueueService action." });
-                }
-            }).catch(err => {
-                reject({ status: 500, message: err.message });
-            });
-        });
+    public static async isOwner(passcode: string, userId: string) {
+        try {
+            const queueDao = await QueueService.getQueue(passcode);
+            if (queueDao.data.owner !== userId) {
+                throw { status: 401, message: "Owner permission required for QueueService action." };
+            }
+
+            return true;
+        } catch (err) {
+            throw { status: 500, message: err.message };
+        }
     }
 
     public static activateQueue(queue: Queue, accessToken: string, passcode: string) {
@@ -723,7 +720,12 @@ class QueueService {
                 return;
             }
             const queue: Queue = queueDao.data;
-            const queuedItem = (queue.queue.length > 0) ? queue.queue.shift()! : queue.playlistTracks.shift()!;
+            const nextIndex = (queue.queue.length > 0) ? 
+                QueueService.getNextTrackIdx(queue.queue, queue.settings.randomQueue) :
+                QueueService.getNextTrackIdx(queue.playlistTracks, queue.settings.randomPlaylist);
+            const queuedItem = (queue.queue.length > 0) ?
+                queue.queue.splice(nextIndex, 1)[0] :
+                queue.playlistTracks.splice(nextIndex, 1)[0];
             const trackIds = [queuedItem.track.id];
             const previousTrack = queue.currentTrack;
 
@@ -752,6 +754,14 @@ class QueueService {
         }).catch(() => {
             logger.error("Unable to get queue when starting next track", { user, passcode });
         });
+    }
+
+    private static getNextTrackIdx(queue: QueueItem[], random: boolean) {
+        if (random) {
+            return (Math.random() * queue.length);
+        } else {
+            return 0;
+        }
     }
 
     private static checkTrackStatus(passcode: string, user: string) {

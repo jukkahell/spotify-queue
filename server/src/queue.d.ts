@@ -22,7 +22,8 @@ export interface Settings {
     gamify: boolean;
     maxDuplicateTracks: number;
     numberOfTracksPerUser: number;
-    random: boolean;
+    randomPlaylist: boolean;
+    randomQueue: boolean;
 }
 
 export interface Queue {

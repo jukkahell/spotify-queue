@@ -22,7 +22,7 @@ export class Album extends React.Component<IPlaylistProps> {
 
         return (
             <div>
-                <a className={"playlistItem " + (activeId === id ? "active" : "")} href={"#playlist:" + id} id={id}>
+                <a className={"playlistItem " + (activeId === id ? "active" : "")} href={"#playlist=" + id} id={id}>
                     {name}
                     {activeId === id ? <div className="speakerIcon"><FontAwesomeIcon icon="volume-up" /></div> : null}
                 </a>
