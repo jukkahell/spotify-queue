@@ -358,3 +358,10 @@ button.iconButton:active, button.iconButton:hover, button.iconButton:focus {
 .userPoints.negative {
     color: red;
 }
+
+.numberSettingContainer {
+    display: flex;
+}
+.numberSettingValue {
+    margin: 0 3px;
+}

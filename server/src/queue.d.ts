@@ -24,6 +24,7 @@ export interface Settings {
     numberOfTracksPerUser: number;
     randomPlaylist: boolean;
     randomQueue: boolean;
+    skipThreshold: number;
 }
 
 export interface Queue {

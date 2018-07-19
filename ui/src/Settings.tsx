@@ -1,5 +1,6 @@
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import * as React from "react";
+import NumberSetting from "./NumberSetting";
 
 export interface ISettings {
     gamify: boolean;
@@ -7,6 +8,7 @@ export interface ISettings {
     numberOfTracksPerUser: number;
     randomPlaylist: boolean;
     randomQueue: boolean;
+    skipThreshold: number;
 }
 
 export interface IShareProps {
@@ -33,6 +35,7 @@ export class Settings extends React.Component<IShareProps, IShareState> {
         this.toggleRandomQueue = this.toggleRandomQueue.bind(this);
         this.dropdownClicked = this.dropdownClicked.bind(this);
         this.hideMenu = this.hideMenu.bind(this);
+        this.updateSkipThreshold = this.updateSkipThreshold.bind(this);
     }
 
     public toggleGamify(e: React.MouseEvent<HTMLElement>) {
@@ -64,6 +67,11 @@ export class Settings extends React.Component<IShareProps, IShareState> {
         }));
     }
 
+    public updateSkipThreshold(value: number) {
+        this.props.settings.skipThreshold = value;
+        this.props.updateSettings(this.props.settings);
+    }
+
     public renderSettingsOptions() {
         return ([
             <a className="dropdown-item settingsMenuItem" key="gamify" href="#" id="gamify" onClick={this.toggleGamify}>
@@ -80,6 +88,11 @@ export class Settings extends React.Component<IShareProps, IShareState> {
                 <FontAwesomeIcon icon="random" />
                 <span className="settingName">Shuffle queue</span>
                 <FontAwesomeIcon className={"settingOptionCheckmark " + (this.props.settings.randomQueue ? "active" : "inactive")} icon="check-circle" />
+            </a>,
+            <a className="dropdown-item settingsMenuItem" key="skipThreshold" href="#" id="skipThreshold">
+                <FontAwesomeIcon icon="thumbs-down" />
+                <span className="settingName">Skip if downvoted by {this.props.settings.skipThreshold} users</span>
+                <NumberSetting value={this.props.settings.skipThreshold} step={1} updateValue={this.updateSkipThreshold} />
             </a>
         ]);
     }

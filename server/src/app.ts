@@ -16,10 +16,10 @@ import {SpotifySearchQuery} from "./spotify";
 import { logger } from "./logger.service";
 import SpotifyService from "./spotify.service";
 import Acl, { AuthResult } from "./acl";
-import { Gamify } from "./gamify";
+import Gamify from "./gamify";
 
 const keys = Array.from({length: 10}, () => randomstring.generate(15));
-const keygrip = new Keygrip(keys, "sha256");
+const keygrip = Keygrip(keys, "sha256");
 
 const app = express();
 app.use(cors(config.app.cors));
@@ -227,6 +227,7 @@ app.get("/currentlyPlaying", (req, res) => {
 
     logger.debug(`Fetching currently playing song...`, { user, passcode });
     QueueService.getCurrentTrack(passcode, user).then(result => {
+        delete result.accessToken;
         res.status(200).json(result);
     }).catch(() => {
         res.status(204).json({});

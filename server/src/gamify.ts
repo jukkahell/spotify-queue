@@ -4,7 +4,7 @@ import SpotifyService from "./spotify.service";
 import { logger } from "./logger.service";
 import QueueService from "./queue.service";
 
-export module Gamify {
+export namespace Gamify {
 
     const methods = {
         "track": async (req: express.Request, res: express.Response, next: () => any) => {
