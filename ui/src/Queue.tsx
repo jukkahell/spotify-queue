@@ -2,6 +2,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import * as React from "react";
 import axios from "../node_modules/axios";
 import config from "./config";
+import { ISettings } from "./Settings";
 import Track, { ITrackProps } from "./Track";
 
 export interface IQueuedItem {
@@ -21,6 +22,7 @@ interface IQueueProps {
     onSkip: () => void;
     queue: IQueuedItem[] | null;
     currentTrack: IQueuedItem | null;
+    settings: ISettings | null;
 }
 
 interface IQueueState {
@@ -43,6 +45,7 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
         this.removeFromQueue = this.removeFromQueue.bind(this);
         this.showContextMenu = this.showContextMenu.bind(this);
         this.hideMenu = this.hideMenu.bind(this);
+        this.moveUp = this.moveUp.bind(this);
     }
 
     protected renderCurrentTrack() {
@@ -93,13 +96,38 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
         });
     }
 
+    protected moveUp(e: React.MouseEvent<HTMLElement>) {
+        e.preventDefault();
+
+        axios.post(config.backend.url + "/moveUpInQueue", {
+            trackId: this.state.contextMenuTrackId
+        }).then(() => {
+            this.props.onQueued();
+            this.setState({
+                contextMenuVisible: false,
+                contextMenuTrackId: null,
+                contextMenuTargetPlaying: false
+            });
+        }).catch(err => {
+            this.props.onError(err.response.data.message);
+        });
+    }
+
     protected renderContextMenu() {
         if (!this.state.contextMenuTargetPlaying) {
-            return (
+            const menu = [
                 <a className={"dropdown-item"} key={"removeFromQueue"} href="#" onClick={this.removeFromQueue}>
                     <FontAwesomeIcon icon="trash-alt" /> Remove from queue
                 </a>
-            );
+            ];
+            if (this.props.settings && this.props.settings.gamify) {
+                menu.push(
+                    <a className={"dropdown-item"} key={"moveUp"} href="#" onClick={this.moveUp}>
+                        <FontAwesomeIcon icon="arrow-circle-up" /> Move up in queue (-5 pts)
+                    </a>
+                );
+            }
+            return menu;
         } else {
             return (
                 <a className={"dropdown-item"} key={"removeFromQueue"} href="#" onClick={this.removeFromQueue}>

@@ -228,6 +228,9 @@ class QueueService {
                     reject({ status: 500, message: err.message });
                 });
             }).catch((err: any) => {
+                if (err.response) {
+                    err = err.response.data.error.message;
+                }
                 logger.error(err, { user: userId, passcode });
                 reject({ status: 500, message: "Unable to get data from spotify. Please try again later." });
             });
@@ -297,10 +300,6 @@ class QueueService {
                 logger.debug(`Queue is not active. Not allowed to join. Is owner: ${isOwner}.`, { user: userId, passcode });
                 throw { status: 403, message: "Queue not active. The owner needs to reactivate it.", isOwner };
             }
-
-            if (!userId) {
-                userId = randomstring.generate();
-            }
             logger.info(`User joining to queue`, { user: userId, passcode });
 
             const user = {
@@ -326,7 +325,7 @@ class QueueService {
                 return (queue.owner === userId);
             }
         } catch (err) {
-            throw { status: 500, message: err.message };
+            throw { status: err.status || 500, message: err.message };
         }
     }
 
@@ -483,6 +482,7 @@ class QueueService {
                 throw { status: 404, message: "Cannot remove selected song. Only own songs can be removed." };
             }
         } catch (err) {
+            logger.error(err, { user, passcode });
             throw { status: 500, message: err.message };
         }
     }
@@ -500,6 +500,7 @@ class QueueService {
                 throw { status: 404, message: "Cannot skip current song. Only own songs can be skipped." };
             }
         } catch (err) {
+            logger.error(err, { user, passcode });
             throw { status: 500, message: err.message };
         }
     }
@@ -533,6 +534,24 @@ class QueueService {
         try {
             const queueDao = await QueueService.getQueue(passcode, true);
             const queue: Queue = queueDao.data;
+
+            if (queue.settings.maxDuplicateTracks) {
+                const duplicateCount = queue.queue.reduce((prev, cur) => {
+                    if (cur.track.id === trackUri) {
+                        prev += 1;
+                    }
+                    return prev;
+                }, 0);
+
+                logger.info(`${duplicateCount}/${queue.settings.maxDuplicateTracks} duplicate songs in queue...`, { passcode, user });
+                if (duplicateCount >= queue.settings.maxDuplicateTracks) {
+                    throw { 
+                        status: 403, 
+                        message: `Queuing failed. Max duplicate song count is set to ${queue.settings.maxDuplicateTracks}.` 
+                    };
+                }
+            }
+
             logger.info(`Getting track info for ${trackUri}`, { user, passcode });
             const track = await SpotifyService.getTrack(queue.accessToken!, trackUri);
             
@@ -567,14 +586,10 @@ class QueueService {
             const queueDao = await QueueService.getQueue(passcode, true);
             const queue: Queue = queueDao.data;
             queue.deviceId = deviceId;
-            db.query("UPDATE queues SET data = $1 WHERE id = $2", [queue, passcode]).then(() => {
-                logger.debug(`Device set successfully`, { user, passcode });
-                return { accessToken: queue.accessToken!, isPlaying: queueDao.isPlaying };
-            }).catch(err => {
-                throw { status: 500, message: "Unable to update new device to database. Please try again later." };
-            });
+            await QueueService.updateQueueData(queue, passcode);
+            return { accessToken: queue.accessToken!, isPlaying: queueDao.isPlaying };
         } catch (err) {
-            throw { status: 500, message: err.message };
+            throw { status: 500, message: err };
         }
     }
 
@@ -779,6 +794,10 @@ class QueueService {
                 logger.info(
                     `Track ${currentState.currentTrack!.track.id} still playing for ${seconds} secs. Checking again after that.`,
                     { user, passcode });
+
+                if (QueueService.timeouts[currentState.accessToken!]) {
+                    clearTimeout(QueueService.timeouts[currentState.accessToken!]);
+                }
                 QueueService.timeouts[currentState.accessToken!] = setTimeout(() =>
                     QueueService.checkTrackStatus(passcode, ""),
                     timeLeft - 1000

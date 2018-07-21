@@ -362,6 +362,6 @@ button.iconButton:active, button.iconButton:hover, button.iconButton:focus {
 .numberSettingContainer {
     display: flex;
 }
-.numberSettingValue {
-    margin: 0 3px;
+.numberSettingContainer > div {
+    margin-left: 3px;
 }

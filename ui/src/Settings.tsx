@@ -36,6 +36,7 @@ export class Settings extends React.Component<IShareProps, IShareState> {
         this.dropdownClicked = this.dropdownClicked.bind(this);
         this.hideMenu = this.hideMenu.bind(this);
         this.updateSkipThreshold = this.updateSkipThreshold.bind(this);
+        this.updateDuplicates = this.updateDuplicates.bind(this);
     }
 
     public toggleGamify(e: React.MouseEvent<HTMLElement>) {
@@ -72,6 +73,11 @@ export class Settings extends React.Component<IShareProps, IShareState> {
         this.props.updateSettings(this.props.settings);
     }
 
+    public updateDuplicates(value: number) {
+        this.props.settings.maxDuplicateTracks = value;
+        this.props.updateSettings(this.props.settings);
+    }
+
     public renderSettingsOptions() {
         return ([
             <a className="dropdown-item settingsMenuItem" key="gamify" href="#" id="gamify" onClick={this.toggleGamify}>
@@ -93,6 +99,11 @@ export class Settings extends React.Component<IShareProps, IShareState> {
                 <FontAwesomeIcon icon="thumbs-down" />
                 <span className="settingName">Skip if downvoted by {this.props.settings.skipThreshold} users</span>
                 <NumberSetting value={this.props.settings.skipThreshold} step={1} updateValue={this.updateSkipThreshold} />
+            </a>,
+            <a className="dropdown-item settingsMenuItem" key="duplicates" href="#" id="duplicates">
+                <FontAwesomeIcon icon="clone" />
+                <span className="settingName">Allow {this.props.settings.maxDuplicateTracks} duplicate songs in queue</span>
+                <NumberSetting value={this.props.settings.maxDuplicateTracks} step={1} updateValue={this.updateDuplicates} />
             </a>
         ]);
     }

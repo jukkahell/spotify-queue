@@ -11,6 +11,7 @@ const logFormat = format.printf(info => {
 
     let message = info.message;
     if (typeof info.message === "object") {
+        console.log(message);
         message = JSON.stringify(message);
     }
 

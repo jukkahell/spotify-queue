@@ -119,6 +119,10 @@ export class App extends React.Component<{}, IState> {
                     this.setState({
                         enteredCode: window.location.hash.split("join:")[1]
                     }, this.joinQueue);
+                } else if (window.location.pathname.length > 1) {
+                    this.setState({
+                        enteredCode: window.location.pathname.substr(1)
+                    }, this.joinQueue);
                 }
             }).catch(error => {
                 this.onError(error.response.data.message);
@@ -236,6 +240,7 @@ export class App extends React.Component<{}, IState> {
                                 <Queue currentTrack={this.state.currentTrack}
                                     queue={this.state.queuedItems}
                                     onSkip={this.refreshCurrentlyPlaying}
+                                    settings={this.state.settings}
                                     onQueued={this.onQueued}
                                     onError={this.onError} />
                             </div>

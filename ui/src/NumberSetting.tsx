@@ -16,11 +16,13 @@ export class NumberSetting extends React.Component<INumberSettingProps> {
         this.decrease = this.decrease.bind(this);
     }
 
-    protected increase() {
+    protected increase(e: React.MouseEvent<HTMLElement>) {
+        e.preventDefault();
         this.props.updateValue((this.props.value || 0) + this.props.step);
     }
 
-    protected decrease() {
+    protected decrease(e: React.MouseEvent<HTMLElement>) {
+        e.preventDefault();
         this.props.updateValue((this.props.value || 0) - this.props.step);
     }
 

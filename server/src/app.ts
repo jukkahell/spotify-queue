@@ -79,8 +79,11 @@ app.get("/logout", (req, res) => {
 
 app.put("/join", (req, res) => {
     const passcode = req.body.code;
-    const userId = req.cookies.get("user");
+    let userId = req.cookies.get("user");
 
+    if (!userId) {
+        userId = randomstring.generate();
+    }
     QueueService.join(passcode, userId).then(isOwner => {
         req.cookies.set("passcode", passcode, config.passcodeCookieOptions);
         req.cookies.set("user", userId, config.userCookieOptions);
