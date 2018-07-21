@@ -5,6 +5,7 @@ import Album, { IAlbumProps } from "./Album";
 import Artist, { IArtistProps } from "./Artist";
 import config from "./config";
 import Playlist, { IPlaylistProps } from "./Playlist";
+import { ISettings } from "./Settings";
 import Track, { ITrackProps } from "./Track";
 
 interface ISearchObject {
@@ -14,7 +15,7 @@ interface ISearchObject {
 }
 
 interface ISearchFormProps {
-    activePlaylistId: string | null;
+    settings: ISettings | null;
     isOwner: boolean;
     onQueued: () => void;
     onPlaylistSelected: () => void;
@@ -124,7 +125,7 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
             <Playlist
                 name={playlist.name}
                 id={playlist.id}
-                activeId={this.props.activePlaylistId!}
+                settings={this.props.settings}
                 key={i + "-" + playlist.id} />
         )));
     }
@@ -146,10 +147,13 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
     }
 
     protected selectPlaylist(id: string) {
-        axios.put(config.backend.url + "/selectPlaylist", { id })
-            .then(() => {
-                window.location.hash = "";
-                this.props.onPlaylistSelected();
+        axios.get(config.backend.url + "/playlist?id=" + id)
+            .then(response => {
+                this.setState({
+                    tracks: response.data.tracks,
+                    artists: [],
+                    playlists: []
+                });
             }).catch(err => {
                 this.props.onError(err.response.data.message);
             }

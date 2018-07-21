@@ -18,8 +18,13 @@ export class Share extends React.Component<IShareProps, IShareState> {
     public constructor(props: IShareProps) {
         super(props);
 
+        const shareOptions = ["Copy link"];
+        const navigator: any = window.navigator;
+        if (navigator.share) {
+            shareOptions.push("Choose app");
+        }
         this.state = {
-            shareOptions: ["Copy link"],
+            shareOptions,
             selectedShare: null,
             dropdownVisible: false
         };
@@ -30,9 +35,13 @@ export class Share extends React.Component<IShareProps, IShareState> {
     }
 
     public selectShare(e: React.MouseEvent<HTMLElement>) {
+        const url = "https://spotiqu.eu/#join:" + this.props.passcode;
         switch (e.currentTarget.id) {
             case "Copy link":
-                this.copyText("https://spotiqu.eu/#join:" + this.props.passcode);
+                this.copyText(url);
+                break;
+            case "Choose app":
+                this.chooseApp("SpotiQu", url);
                 break;
         }
         this.setState({
@@ -98,6 +107,15 @@ export class Share extends React.Component<IShareProps, IShareState> {
         textArea.select();
         document.execCommand("Copy");
         textArea.remove();
+    }
+
+    private chooseApp(text: string, url: string) {
+        const navigator: any = window.navigator;
+        navigator.share({
+            title: document.title,
+            text,
+            url
+        }).catch((err: any) => console.log("Error sharing:", err));
     }
 }
 

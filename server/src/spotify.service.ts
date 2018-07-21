@@ -44,8 +44,8 @@ class SpotifyService {
 
     public static isAuthorized = (passcode: string, user: string, tokenAcquired: number, expiresIn: number, refreshToken: string) => {
         return new Promise((resolve, reject) => {
-            // Refresh it 60 seconds before it goes old to prevent expirations
-            if ((getCurrentSeconds() + 60) - tokenAcquired >= expiresIn) {
+            // Refresh it 300 seconds before it goes old to prevent expirations
+            if ((getCurrentSeconds() + 300) - tokenAcquired >= expiresIn) {
                 logger.info("Getting refresh token...", { user, passcode });
                 SpotifyService.refreshAccessToken(refreshToken)
                 .then(response => {

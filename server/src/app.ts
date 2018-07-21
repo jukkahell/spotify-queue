@@ -348,7 +348,20 @@ app.post("/updateSettings", async (req, res) => {
     }
 });
 
-app.put("/selectPlaylist", (req, res) => {
+app.get("/playlist", (req, res) => {
+    const user = req.cookies.get("user");
+    const passcode = req.cookies.get("passcode");
+    const playlistId = req.query.id;
+    QueueService.getQueue(req.cookies.get("passcode")).then(queueDao => {
+        SpotifyService.getPlaylistTracks(queueDao.data.accessToken!, queueDao.owner, playlistId, user, passcode).then(tracks => {
+            res.status(200).json({ tracks });
+        });
+    }).catch(err => {
+        res.status(err.status).json({ message: err.message });
+    });
+});
+
+app.put("/playlist", (req, res) => {
     const user = req.cookies.get("user");
     const passcode = req.cookies.get("passcode");
     const playlistId = req.body.id;

@@ -25,6 +25,7 @@ export interface Settings {
     randomPlaylist: boolean;
     randomQueue: boolean;
     skipThreshold: number;
+    playlist: string | null;
 }
 
 export interface Queue {
@@ -37,7 +38,6 @@ export interface Queue {
     deviceId: string | null;
     settings: Settings;
     queue: QueueItem[];
-    playlistId: string | null;
     playlistTracks: QueueItem[];
     currentTrack: CurrentTrack | null;
     users: User[];

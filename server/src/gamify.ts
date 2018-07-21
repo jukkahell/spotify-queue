@@ -3,6 +3,7 @@ import { Queue, User, Vote, CurrentTrack } from "./queue";
 import SpotifyService from "./spotify.service";
 import { logger } from "./logger.service";
 import QueueService from "./queue.service";
+import config from "./config";
 
 export namespace Gamify {
 
@@ -29,7 +30,6 @@ export namespace Gamify {
             }
         },
         "removeFromQueue": async (req: express.Request, res: express.Response, next: () => any) => {
-            const SKIP_COST = 15;
             const passcode = req.cookies.get("passcode");
             const user = req.cookies.get("user");
             const isPlaying = req.body.isPlaying;
@@ -40,14 +40,14 @@ export namespace Gamify {
 
             if (isPlaying) {
                 if (q.currentTrack && q.currentTrack.owner !== user) {
-                    if (q.users[userIdx].points < SKIP_COST) {
+                    if (q.users[userIdx].points < config.gamify.skipCost) {
                         return res.status(403).json({ 
                             message: `You don't have enough points (${q.users[userIdx].points}). ` +
-                                    `Skipping a song added by someone else costs ${SKIP_COST} points.` 
+                                    `Skipping a song added by someone else costs ${config.gamify.skipCost} points.` 
                         });
                     }
                     logger.info(`Skipping someone else's song...`, { user, passcode });
-                    queueDao.data.users[userIdx].points -= SKIP_COST;
+                    queueDao.data.users[userIdx].points -= config.gamify.skipCost;
                     await QueueService.updateQueueData(queueDao.data, passcode);
                     QueueService.skip(passcode, q.currentTrack!.owner!, trackId);
                     return res.status(200).json({ message: "OK" });
@@ -66,8 +66,6 @@ export namespace Gamify {
             return next();
         },
         "moveUpInQueue": async (req: express.Request, res: express.Response, next: () => any) => {
-            const MOVE_UP_COST = 5;
-
             const passcode = req.cookies.get("passcode");
             const user = req.cookies.get("user");
             const trackId = req.body.trackId;
@@ -79,14 +77,14 @@ export namespace Gamify {
                 if (q.queue[i].track.id === trackId && i == 0) {
                     alreadyFirst = true;
                 } else if (q.queue[i].track.id === trackId) {
-                    if (q.users[userIdx].points < MOVE_UP_COST) {
-                        return res.status(403).json({ message: `You don't have enough points (${q.users[userIdx].points}). Moving costs ${MOVE_UP_COST} points.` });
+                    if (q.users[userIdx].points < config.gamify.moveUpCost) {
+                        return res.status(403).json({ message: `You don't have enough points (${q.users[userIdx].points}). Moving costs ${config.gamify.moveUpCost} points.` });
                     }
                     logger.info(`Moving track from idx ${i} to idx ${(i-1)}`, { user, passcode });
                     const tmp = q.queue[i];
                     q.queue[i] = q.queue[i - 1];
                     q.queue[i - 1] = tmp;
-                    q.users[userIdx].points -= MOVE_UP_COST;
+                    q.users[userIdx].points -= config.gamify.moveUpCost;
                     QueueService.updateQueueData(q, passcode);
                     return res.status(200).json({ message: "OK" });
                 }

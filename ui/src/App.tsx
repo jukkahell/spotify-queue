@@ -246,7 +246,7 @@ export class App extends React.Component<{}, IState> {
                             </div>
                         </div>
                         <div className="col-md-8">
-                            <SearchForm activePlaylistId={this.state.playlistId}
+                            <SearchForm settings={this.state.settings}
                                 isOwner={this.state.isOwner}
                                 onQueued={this.onQueued}
                                 onPlaylistSelected={this.onPlaylistSelected}

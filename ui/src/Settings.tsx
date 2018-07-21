@@ -9,6 +9,7 @@ export interface ISettings {
     randomPlaylist: boolean;
     randomQueue: boolean;
     skipThreshold: number;
+    playlist: string;
 }
 
 export interface IShareProps {

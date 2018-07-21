@@ -39,6 +39,8 @@ export interface IConfig {
     };
     gamify: {
         initialPoints: number;
+        skipCost: number;
+        moveUpCost: number;
     }
 }
 
@@ -91,7 +93,9 @@ const config: IConfig = {
         redirectUri: scheme + host + ":" + port + "/",
     },
     gamify: {
-        initialPoints: 15
+        initialPoints: 10,
+        skipCost: 20,
+        moveUpCost: 5
     }
 };
 

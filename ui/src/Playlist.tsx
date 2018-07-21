@@ -1,10 +1,11 @@
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import * as React from "react";
-import { FontAwesomeIcon } from "../node_modules/@fortawesome/react-fontawesome";
+import { ISettings } from "./Settings";
 
 export interface IPlaylistProps {
     name: string;
     id: string;
-    activeId: string;
+    settings: ISettings | null;
 }
 
 export class Album extends React.Component<IPlaylistProps> {
@@ -17,14 +18,14 @@ export class Album extends React.Component<IPlaylistProps> {
         const {
             name,
             id,
-            activeId
+            settings
         } = this.props;
 
         return (
             <div>
-                <a className={"playlistItem " + (activeId === id ? "active" : "")} href={"#playlist=" + id} id={id}>
+                <a className={"playlistItem " + (settings && settings.playlist === id ? "active" : "")} href={"#playlist=" + id} id={id}>
                     {name}
-                    {activeId === id ? <div className="speakerIcon"><FontAwesomeIcon icon="volume-up" /></div> : null}
+                    {settings && settings.playlist === id ? <div className="speakerIcon"><FontAwesomeIcon icon="volume-up" /></div> : null}
                 </a>
             </div>
         );

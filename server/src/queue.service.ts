@@ -249,7 +249,6 @@ class QueueService {
             name: "Queue 1",
             deviceId: null,
             queue: [],
-            playlistId: null,
             playlistTracks: [],
             settings: {
                 gamify: false,
@@ -257,7 +256,8 @@ class QueueService {
                 numberOfTracksPerUser: 5,
                 randomPlaylist: false,
                 randomQueue: false,
-                skipThreshold: 5
+                skipThreshold: 5,
+                playlist: null
             },
             users: [
                 {
@@ -380,7 +380,7 @@ class QueueService {
                 currentTrack: queue.currentTrack,
                 isSpotiquPlaying: queueDao.isPlaying,
                 isSpotifyPlaying: queueDao.isPlaying,
-                playlistId: queue.playlistId,
+                playlistId: queue.settings.playlist,
                 deviceId: queue.deviceId
             };
             // Get response if Spotify is playing
@@ -391,15 +391,16 @@ class QueueService {
                 const spotiquCurrenTrack = queue.currentTrack;
                 if (spotifyCurrentTrack.item) {
                     const owner = (queue.currentTrack && queue.currentTrack.track.id === spotifyCurrentTrack.item.id) ?
-                        queue.currentTrack.owner : user;
+                        queue.currentTrack.owner : null;
                     const votes = (queue.currentTrack) ? queue.currentTrack.votes : [];
                     queue.currentTrack = {
                         owner,
                         track: spotifyCurrentTrack.item,
                         votes
                     };
+
+                    queue.deviceId = spotifyCurrentTrack.device.id;
                 }
-                queue.deviceId = spotifyCurrentTrack.device.id;
 
                 currentState.currentTrack = queue.currentTrack;
                 currentState.deviceId = queue.deviceId;
@@ -511,7 +512,7 @@ class QueueService {
             const queue: Queue = queueDao.data;
 
             logger.info(`Adding ${tracks.length} tracks to playlist queue...`, { user, passcode });
-            queue.playlistId = playlistId;
+            queue.settings.playlist = playlistId;
             queue.playlistTracks = [];
             tracks.forEach(track => {
                 const item: QueueItem = {
@@ -661,6 +662,11 @@ class QueueService {
                         resolve(false);
                     }).catch(err => {
                         if (err.response) {
+                            if (err.response.status === 403 && err.response.data.error.message.indexOf("Already paused") >= 0) {
+                                QueueService.stopPlaying(queueDao.data, queueDao.data.accessToken!, passcode, user);
+                                resolve(false);
+                                return;
+                            }
                             logger.error(err.response.data.error.message, { user, passcode });
                         } else {
                             logger.error(err);
