@@ -1,5 +1,4 @@
 import axios from "axios";
-import * as Querystring from "querystring";
 import * as React from "react";
 import Album, { IAlbumProps } from "./Album";
 import Artist, { IArtistProps } from "./Artist";
@@ -32,6 +31,7 @@ interface ISearchFormState {
 
 export class SearchForm extends React.Component<ISearchFormProps, ISearchFormState> {
 
+    private searchTimeout: NodeJS.Timer;
     private readonly defaultLimit = 5;
     private readonly defaultTypes = "track,album,artist";
 
@@ -50,7 +50,7 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
         };
 
         this.search = this.search.bind(this);
-        this.searchClicked = this.searchClicked.bind(this);
+        this.executeSearch = this.executeSearch.bind(this);
         this.handleChangeEvent = this.handleChangeEvent.bind(this);
         this.selectAlbum = this.selectAlbum.bind(this);
         this.selectArtist = this.selectArtist.bind(this);
@@ -62,15 +62,27 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
         this.addToQueue = this.addToQueue.bind(this);
         this.queuePlaylist = this.queuePlaylist.bind(this);
         this.showMoreTracks = this.showMoreTracks.bind(this);
+        this.submitForm = this.submitForm.bind(this);
         this.hashSearch();
     }
 
     public componentDidMount() {
         window.addEventListener("hashchange", this.hashSearch, false);
+        document.addEventListener("scroll", this.searchFormScrolled, false);
     }
 
     public componentWillUnmount() {
         window.removeEventListener("hashchange", this.hashSearch, false);
+        document.removeEventListener("scroll", this.searchFormScrolled, false);
+    }
+
+    public searchFormScrolled() {
+        const searchForm = document.getElementById("searchForm");
+        if (searchForm && searchForm.getBoundingClientRect().top < 5) {
+            searchForm.classList.add("stuck");
+        } else if (searchForm) {
+            searchForm.classList.remove("stuck");
+        }
     }
 
     public handleChangeEvent(e: React.ChangeEvent<HTMLInputElement>) {
@@ -78,6 +90,12 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
 
         const search = this.state.search;
         search.q = e.target.value;
+        if (search.q.length > 2) {
+            clearTimeout(this.searchTimeout);
+            this.searchTimeout = setTimeout(this.executeSearch, 1000);
+        } else {
+            window.location.hash = "";
+        }
         this.setState({
             search
         });
@@ -252,14 +270,12 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
         )));
     }
 
-    public searchClicked(e: React.MouseEvent<HTMLElement>) {
-        e.preventDefault();
-
+    public executeSearch() {
         if (this.state.search.q) {
             this.setState({
                 search: {
                     q: this.state.search.q,
-                    type: "track,album,artist",
+                    type: this.defaultTypes,
                     limit: this.defaultLimit
                 }
             }, () => {
@@ -270,8 +286,14 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
         }
     }
 
+    public submitForm(e: any) {
+        clearTimeout(this.searchTimeout);
+        e.preventDefault();
+        this.executeSearch();
+    }
+
     public search() {
-        axios.get(config.backend.url + "/search?" + Querystring.stringify(this.state.search))
+        axios.post(config.backend.url + "/search", this.state.search)
             .then(response => {
                 this.setState({
                     tracks: response.data.tracks,
@@ -339,9 +361,11 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
     public render() {
         return (
             <div className="searchContainer">
-                <form className="form-inline searchForm">
-                    <input className="form-control search col-md-9" type="text" name="q" value={this.state.search.q} onChange={this.handleChangeEvent} placeholder="🔍 Search" />
-                    <button type="submit" className="btn btn-primary search col-md-2" onClick={this.searchClicked}>Search</button>
+                <form className="form-inline searchForm" action={config.backend.url + "/search"} method="post" id="searchForm" onSubmit={this.submitForm}>
+                    <input type="hidden" name="type" value={this.defaultTypes} />
+                    <input type="hidden" name="limit" value={this.defaultLimit} />
+                    <input type="hidden" name="q" value={this.state.search.q} />
+                    <input className="form-control search col-md-12" type="text" name="spotiquSearch" value={this.state.search.q} onChange={this.handleChangeEvent} placeholder="🔍 Search" />
                 </form>
                 <div className="searchResults">
                     {this.renderPlaylists()}

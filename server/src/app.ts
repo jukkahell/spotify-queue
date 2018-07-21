@@ -408,15 +408,15 @@ app.get("/selectArtist", (req, res) => {
     });
 });
 
-app.get("/search", (req, res) => {
+app.post("/search", (req, res) => {
     const passcode = req.cookies.get("passcode");
     const user = req.cookies.get("user");
 
     const query: SpotifySearchQuery = {
-        q: req.query.q,
-        type: req.query.type,
+        q: req.body.q,
+        type: req.body.type,
         market: "FI",
-        limit: req.query.limit
+        limit: req.body.limit
     };
 
     QueueService.getAccessToken(passcode).then(accessToken => {

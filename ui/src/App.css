@@ -132,12 +132,16 @@ input.search {
 
 .searchResults {
     margin-top: 0.5em;
+    padding-left: 15px;
 }
 
 .searchForm {
     position: sticky;
     top: 0;
     padding-top: 1em;
+}
+.searchForm.stuck {
+    background-color: #393939;
 }
 
 .queue {
@@ -373,4 +377,17 @@ button.iconButton:active, button.iconButton:hover, button.iconButton:focus {
 }
 .addPlaylistToQueue.active {
     color: #1ED760;
+}
+
+@media (max-width: 770px) {
+    .settingsDropdown {
+        left: 0;
+        position: fixed;
+        bottom: 35px!important;
+    }
+}
+@media (max-width: 370px) {
+    .settingsDropdown {
+        font-size: 0.8em;
+    }
 }

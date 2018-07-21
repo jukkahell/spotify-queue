@@ -174,6 +174,12 @@ export class App extends React.Component<{}, IState> {
             // Give some time for spotify to catch up
             setTimeout(this.getCurrentTrack, 500);
         }
+        this.setState({
+            responseMsg: { msg: "Queued", className: "alert-success" }
+        });
+        setTimeout(() => {
+            this.setState({ responseMsg: null });
+        }, 2000);
     }
 
     protected refreshCurrentlyPlaying() {

@@ -101,9 +101,9 @@ export class Settings extends React.Component<IShareProps, IShareState> {
                 <span className="settingName">Skip if downvoted by {this.props.settings.skipThreshold} users</span>
                 <NumberSetting value={this.props.settings.skipThreshold} step={1} updateValue={this.updateSkipThreshold} />
             </a>,
-            <a className="dropdown-item settingsMenuItem" key="duplicates" href="#" id="duplicates">
+            <a className="dropdown-item settingsMenuItem " key="duplicates" href="#" id="duplicates">
                 <FontAwesomeIcon icon="clone" />
-                <span className="settingName">Allow {this.props.settings.maxDuplicateTracks} duplicate songs in queue</span>
+                <span className="settingName">Max {this.props.settings.maxDuplicateTracks} duplicate songs in queue</span>
                 <NumberSetting value={this.props.settings.maxDuplicateTracks} step={1} updateValue={this.updateDuplicates} />
             </a>
         ]);
@@ -127,7 +127,7 @@ export class Settings extends React.Component<IShareProps, IShareState> {
                         aria-expanded="false">
                     <FontAwesomeIcon icon="cog" />
                 </button>
-                <div className={"dropdown-menu dropdown-menu-right " + (this.state.dropdownVisible ? "show" : "hide")} aria-labelledby="settingsMenuButton">
+                <div className={"dropdown-menu settingsDropdown " + (this.state.dropdownVisible ? "show" : "hide")} aria-labelledby="settingsMenuButton">
                     {this.renderSettingsOptions()}
                 </div>
                 <div className={"menuOverlay " + (this.state.dropdownVisible ? "visible" : "hidden")} onClick={this.hideMenu}/>
