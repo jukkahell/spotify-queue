@@ -120,6 +120,8 @@ button.search {
 }
 input.search {
     margin: 0 5px;
+    color: transparent;
+    text-shadow: 0 0 0 #6f6f6f;
 }
 
 .progress {
