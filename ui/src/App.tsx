@@ -181,6 +181,7 @@ export class App extends React.Component<{}, IState> {
     }
     protected onPlaylistSelected() {
         this.getCurrentTrack();
+        this.getSettings();
     }
 
     protected onError(msg: string) {

@@ -60,6 +60,7 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
         this.getPlaylists = this.getPlaylists.bind(this);
         this.selectPlaylist = this.selectPlaylist.bind(this);
         this.addToQueue = this.addToQueue.bind(this);
+        this.queuePlaylist = this.queuePlaylist.bind(this);
         this.showMoreTracks = this.showMoreTracks.bind(this);
         this.hashSearch();
     }
@@ -126,7 +127,9 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
                 name={playlist.name}
                 id={playlist.id}
                 settings={this.props.settings}
-                key={i + "-" + playlist.id} />
+                key={i + "-" + playlist.id}
+                isOwner={this.props.isOwner}
+                addToQueue={this.queuePlaylist} />
         )));
     }
 
@@ -154,6 +157,16 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
                     artists: [],
                     playlists: []
                 });
+            }).catch(err => {
+                this.props.onError(err.response.data.message);
+            }
+        );
+    }
+
+    protected queuePlaylist(id: string) {
+        axios.put(config.backend.url + "/queuePlaylist", { id })
+            .then(() => {
+                this.props.onPlaylistSelected();
             }).catch(err => {
                 this.props.onError(err.response.data.message);
             }

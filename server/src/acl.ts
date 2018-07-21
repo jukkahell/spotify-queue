@@ -14,7 +14,7 @@ export interface AuthResult {
 class Acl {
 
     private static excludeEndpointsFromAuth = ["/join", "/create", "/reactivate", "/isAuthorized", "/queue", "/currentlyPlaying"];
-    private static endpointsRequireOwnerPerm = ["/device", "/pauseResume", "/selectPlaylist", "/updateSettings"];
+    private static endpointsRequireOwnerPerm = ["/device", "/pauseResume", "/selectPlaylist", "/updateSettings", "/queuePlaylist"];
 
     public static saveAccessToken(queue: Queue, passcode: string, userId: string, accessToken: string, expiresIn: number, refreshToken?: string) {
         queue.accessToken = accessToken;

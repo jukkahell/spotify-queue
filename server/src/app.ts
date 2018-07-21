@@ -361,7 +361,7 @@ app.get("/playlist", (req, res) => {
     });
 });
 
-app.put("/playlist", (req, res) => {
+app.put("/queuePlaylist", (req, res) => {
     const user = req.cookies.get("user");
     const passcode = req.cookies.get("passcode");
     const playlistId = req.body.id;
