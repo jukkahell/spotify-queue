@@ -120,8 +120,15 @@ button.search {
 }
 input.search {
     margin: 0 5px;
-    color: transparent;
-    text-shadow: 0 0 0 #6f6f6f;
+    padding-left: 2em;
+}
+
+.searchIcon {
+    left: 1em;
+    position: absolute;
+    top: 1.7em;
+    color: #BAC5BE;
+    z-index: 10;
 }
 
 .progress {

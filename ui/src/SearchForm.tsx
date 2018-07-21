@@ -1,3 +1,4 @@
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import axios from "axios";
 import * as React from "react";
 import Album, { IAlbumProps } from "./Album";
@@ -365,7 +366,8 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
                     <input type="hidden" name="type" value={this.defaultTypes} />
                     <input type="hidden" name="limit" value={this.defaultLimit} />
                     <input type="hidden" name="q" value={this.state.search.q} />
-                    <input className="form-control search col-md-12" type="text" name="spotiquSearch" value={this.state.search.q} onChange={this.handleChangeEvent} placeholder="🔍 Search" />
+                    <FontAwesomeIcon className="searchIcon" icon="search" />
+                    <input className="form-control search col-md-12" type="text" name="spotiquSearch" value={this.state.search.q} onChange={this.handleChangeEvent} placeholder="Search" />
                 </form>
                 <div className="searchResults">
                     {this.renderPlaylists()}
