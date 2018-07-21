@@ -127,7 +127,7 @@ export class Settings extends React.Component<IShareProps, IShareState> {
                         aria-expanded="false">
                     <FontAwesomeIcon icon="cog" />
                 </button>
-                <div className={"dropdown-menu dropdown-menu-right" + (this.state.dropdownVisible ? "show" : "hide")} aria-labelledby="settingsMenuButton">
+                <div className={"dropdown-menu dropdown-menu-right " + (this.state.dropdownVisible ? "show" : "hide")} aria-labelledby="settingsMenuButton">
                     {this.renderSettingsOptions()}
                 </div>
                 <div className={"menuOverlay " + (this.state.dropdownVisible ? "visible" : "hidden")} onClick={this.hideMenu}/>
