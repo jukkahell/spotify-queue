@@ -41,7 +41,7 @@ export class Share extends React.Component<IShareProps, IShareState> {
                 this.copyText(url);
                 break;
             case "Choose app":
-                this.chooseApp("SpotiQu", url);
+                this.chooseApp("Join my queue:", url);
                 break;
         }
         this.setState({
@@ -95,6 +95,8 @@ export class Share extends React.Component<IShareProps, IShareState> {
         switch (share) {
             case "Copy link":
                 return "link";
+            case "Choose app":
+                return "share";
             default:
                 return "link";
         }

@@ -2,7 +2,7 @@ import { library } from "@fortawesome/fontawesome-svg-core";
 import {
     faArrowCircleUp, faBars, faCheckCircle, faClipboardCheck, faClone, faCog, faDesktop, faExchangeAlt,
     faForward, faGamepad, faLink, faMinusCircle, faMobile, faPauseCircle, faPlayCircle,
-    faPlusCircle, faRandom, faShareAlt, faSignOutAlt, faSlidersH, faThumbsDown, faThumbsUp,
+    faPlusCircle, faRandom, faShare, faShareAlt, faSignOutAlt, faSlidersH, faThumbsDown, faThumbsUp,
     faTrashAlt, faUnlock, faVolumeOff, faVolumeUp
 } from "@fortawesome/free-solid-svg-icons";
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -17,7 +17,7 @@ library.add(
     faShareAlt, faLink, faBars, faSlidersH, faSignOutAlt, faUnlock,
     faExchangeAlt, faThumbsDown, faThumbsUp, faTrashAlt, faPauseCircle,
     faForward, faCog, faGamepad, faCheckCircle, faRandom, faPlusCircle,
-    faMinusCircle, faClone, faArrowCircleUp, faClipboardCheck
+    faMinusCircle, faClone, faArrowCircleUp, faClipboardCheck, faShare
 );
 axios.defaults.withCredentials = true;
 
