@@ -2,11 +2,14 @@ import { IconProp } from "@fortawesome/fontawesome-svg-core";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import * as React from "react";
 import axios from "../node_modules/axios";
+import { IUser } from "./App";
 import config from "./config";
 
 export interface IUserMenuProps {
     onError: (msg: string) => void;
+    onSpotifyLogin: () => void;
     passcode: string;
+    user: IUser | null;
 }
 
 export interface IUserMenuState {
@@ -17,12 +20,15 @@ export interface IUserMenuState {
 
 export class UserMenu extends React.Component<IUserMenuProps, IUserMenuState> {
 
+    private authInterval: NodeJS.Timer;
+
     public constructor(props: IUserMenuProps) {
         super(props);
 
         this.state = {
             menuOptions: [
-                "Logout"
+                "Logout",
+                "Login with Spotify"
             ],
             selectedMenuItem: null,
             dropdownVisible: false
@@ -32,12 +38,26 @@ export class UserMenu extends React.Component<IUserMenuProps, IUserMenuState> {
         this.dropdownClicked = this.dropdownClicked.bind(this);
         this.logout = this.logout.bind(this);
         this.hideMenu = this.hideMenu.bind(this);
+        this.isAuthorized = this.isAuthorized.bind(this);
+    }
+
+    public componentDidUpdate(prevProps: IUserMenuProps) {
+        if (prevProps.user !== this.props.user) {
+            if (this.props.user && this.props.user.spotifyUserId) {
+                this.setState({
+                    menuOptions: ["Logout"]
+                });
+            }
+        }
     }
 
     public selectMenuItem(e: React.MouseEvent<HTMLElement>) {
         switch (e.currentTarget.id) {
             case "Logout":
                 this.logout();
+                break;
+            case "Login with Spotify":
+                this.loginWithSpotify();
                 break;
         }
         this.setState({
@@ -95,10 +115,37 @@ export class UserMenu extends React.Component<IUserMenuProps, IUserMenuState> {
         });
     }
 
+    private loginWithSpotify() {
+        const client_id = "da6ea27d63384e858d12bcce0fac006d";
+        const visitorCallback = config.backend.url + "/visitorAuth";
+        const url = "https://accounts.spotify.com/authorize" +
+            "?client_id=" + client_id +
+            "&response_type=code" +
+            "&scope=playlist-read-private,playlist-read-collaborative" +
+            "&redirect_uri=" + encodeURIComponent(visitorCallback);
+
+        window.open(url, "SpotiQu", "WIDTH=400,HEIGHT=550");
+
+        this.authInterval = setInterval(this.isAuthorized, 2000);
+    }
+
+    private isAuthorized() {
+        axios.get(config.backend.url + "/user").then(response => {
+            if (response.data.spotifyUserId) {
+                clearInterval(this.authInterval);
+                this.props.onSpotifyLogin();
+            }
+        }).catch(error => {
+            this.props.onError(error.response.data.message);
+        });
+    }
+
     private optionToIcon(share: string): IconProp {
         switch (share) {
             case "Logout":
                 return "sign-out-alt";
+            case "Login with Spotify":
+                return ["fab", "spotify"];
             default:
                 return "sign-out-alt";
         }

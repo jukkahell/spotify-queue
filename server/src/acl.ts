@@ -1,6 +1,6 @@
 import * as express from "express";
 import QueueService from "./queue.service";
-import { Queue } from "./queue";
+import { Queue, User } from "./queue";
 import { getCurrentSeconds } from "./util";
 import { logger } from "./logger.service";
 import SpotifyService from "./spotify.service";
@@ -13,10 +13,13 @@ export interface AuthResult {
 
 class Acl {
 
-    private static excludeEndpointsFromAuth = ["/join", "/create", "/reactivate", "/isAuthorized", "/queue", "/currentlyPlaying"];
+    private static excludeEndpointsFromAuth = ["/join", "/create", "/reactivate", "/isAuthorized", "/queue", "/currentlyPlaying", "/logout", "/visitorAuth"];
     private static endpointsRequireOwnerPerm = ["/device", "/pauseResume", "/selectPlaylist", "/updateSettings", "/queuePlaylist"];
+    private static visitorAuthRequired = ["/playlists"];
 
-    public static saveAccessToken(queue: Queue, passcode: string, userId: string, accessToken: string, expiresIn: number, refreshToken?: string) {
+    public static async saveAccessToken(passcode: string, userId: string, accessToken: string, expiresIn: number, refreshToken?: string) {
+        const queueDao = await QueueService.getQueue(passcode, true);
+        const queue = queueDao.data;
         queue.accessToken = accessToken;
         queue.expiresIn = expiresIn;
         queue.accessTokenAcquired = getCurrentSeconds();
@@ -29,43 +32,100 @@ class Acl {
         });
     }
 
-    public static isAuthorized = (passcode: string, userId: string) => {
-        return new Promise<AuthResult>((resolve, reject) => {
-            if (!passcode) {
-                reject({ status: 401, message: "Valid passcode required" });
-                return;
+    public static async saveUserAccessToken(passcode: string, userId: string, accessToken: string, expiresIn: number, refreshToken?: string) {
+        const queueDao = await QueueService.getQueue(passcode, true);
+        const queue = queueDao.data;
+        const userIdx = queue.users.findIndex((user: User) => user.id === userId);
+        if (userIdx > 0) { 
+            const user = queue.users[userIdx];
+            user.accessToken = accessToken;
+            user.expiresIn = expiresIn;
+            user.accessTokenAcquired = getCurrentSeconds();
+            if (refreshToken) {
+                user.refreshToken = refreshToken;
             }
-            QueueService.getQueue(passcode)
-            .then(queueDao => {
-                const queue: Queue = queueDao.data;
+            queue.users[userIdx] = user;
 
-                // Queue is incative if we don't have accessToken nor refreshToken
-                if (!queue.accessToken && !queue.refreshToken) {
-                    reject({ status: 403, message: "Queue inactive. Owner should reactivate it." });
-                } else {
-                    SpotifyService.isAuthorized(passcode, userId, queue.accessTokenAcquired, queue.expiresIn, queue.refreshToken)
-                        .then((response: any) => {
-                        if (response) {
-                            logger.info(`Got refresh token. Saving it...`, { userId, passcode });
-                            Acl.saveAccessToken(queue, passcode, userId, response.access_token,
-                                response.expires_in, response.refresh_token);
-                        }
-                        const isOwner = queue.owner === userId;
-                        resolve({ isAuthorized: true, passcode, isOwner });
-                    }).catch(err => {
-                        reject(err);
-                    });
-                }
-            }).catch(err => {
-                logger.error(err, { id: userId });
-                reject({ status: 500, message: "Unable to get queue with given passcode" });
+            QueueService.updateQueueData(queue, passcode).catch(err => {
+                logger.error("Failed to update queue refresh token.", { id: userId });
+                logger.error(err);
             });
-        });
+        }
+    }
+
+    public static isAuthorized = async (passcode: string, userId: string) => {
+        try {
+            if (!passcode) {
+                throw { status: 401, message: "Valid passcode required" };
+            }
+            const queueDao = await QueueService.getQueue(passcode);
+            const queue: Queue = queueDao.data;
+
+            // Queue is incative if we don't have accessToken nor refreshToken
+            if (!queue.accessToken && !queue.refreshToken) {
+                throw { status: 403, message: "Queue inactive. Owner should reactivate it." };
+            } else {
+                const authResponse: any = await SpotifyService.isAuthorized(passcode, userId, queue.accessTokenAcquired, queue.expiresIn, queue.refreshToken);
+                if (authResponse) {
+                    logger.info(`Got refresh token. Saving it...`, { user: userId, passcode });
+                    Acl.saveAccessToken(passcode, userId, authResponse.access_token,
+                        authResponse.expires_in, authResponse.refresh_token);
+                }
+                const isOwner = queue.owner === userId;
+                return { isAuthorized: true, passcode, isOwner };
+            }
+        } catch(err) {
+            logger.error(err, { id: userId });
+            throw { status: 500, message: "Unable to get queue with given passcode" };
+        }
+    }
+
+    public static isVisitorAuthorized = async (passcode: string, userId: string) => {
+        try {
+            if (!passcode) {
+                throw { status: 401, message: "Valid passcode required" };
+            }
+            const queueDao = await QueueService.getQueue(passcode);
+            const queue: Queue = queueDao.data;
+            const user = await QueueService.getUser(passcode, userId);
+
+            // No content if not authorized
+            if (user) {
+                if (!user.accessToken && !user.refreshToken) {
+                    throw { status: 204, message: "" };
+                } else {
+                    const authResponse: any = await SpotifyService.isAuthorized(passcode, userId, user.accessTokenAcquired!, user.expiresIn!, user.refreshToken!);
+                    if (authResponse) {
+                        logger.info(`Got refresh token. Saving it...`, { user: userId, passcode });
+                        if (user.spotifyUserId !== queueDao.owner) {
+                            Acl.saveUserAccessToken(passcode, userId, authResponse.access_token,
+                                authResponse.expires_in, authResponse.refresh_token);
+                        } else {
+                            Acl.saveAccessToken(passcode, userId, authResponse.access_token,
+                                authResponse.expires_in, authResponse.refresh_token);
+                        }
+                    }
+                    const isOwner = queue.owner === userId;
+                    return { isAuthorized: true, passcode, isOwner };
+                }
+            } else {
+                throw { status: 404, message: "User not found" };
+            }
+        } catch(err) {
+            logger.error(err, { id: userId });
+            throw { status: 500, message: "Unable to get queue with given passcode" };
+        }
     }
 
     public static authFilter = (req: express.Request, res: express.Response, next: () => any) => {
         if (Acl.excludeEndpointsFromAuth.includes(req.path)) {
             return next();
+        } else if (Acl.visitorAuthRequired.includes(req.path)) {
+            Acl.isVisitorAuthorized(req.cookies.get("passcode"), req.cookies.get("user")).then(() => {
+                return next();
+            }).catch(err => {
+                return res.status(err.status).json({ message: err.message });
+            });
         } else {
             Acl.isAuthorized(req.cookies.get("passcode"), req.cookies.get("user")).then(() => {
                 return next();

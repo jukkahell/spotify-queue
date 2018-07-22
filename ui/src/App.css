@@ -157,8 +157,11 @@ input.search {
     width: 100%;
 }
 
-ol.queuedTracks {
+.queuedTracks {
     margin-top: 0.5em;
+}
+.queuedTracks.randomQueue {
+    list-style: none;
 }
 
 input.passcode {

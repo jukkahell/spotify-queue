@@ -64,6 +64,18 @@ app.get("/reactivate", (req, res) => {
     });
 });
 
+app.get("/visitorAuth", (req, res) => {
+    const passcode = req.cookies.get("passcode");
+    const user = req.cookies.get("user");
+    QueueService.visitorSpotifyLogin(passcode, user, req.query.code).then((user) => {
+        config.userCookieOptions.expires = userCookieExpire();
+        req.cookies.set("user", user.id, config.userCookieOptions);
+        res.status(200).send("<script>window.close();</script>");
+    }).catch(err => {
+        res.status(err.status).send(err.message);
+    });
+});
+
 app.get("/logout", (req, res) => {
     const passcode = req.cookies.get("passcode");
     const user = req.cookies.get("user");
@@ -295,12 +307,16 @@ app.post("/pauseResume", (req, res) => {
 });
 
 app.get("/playlists", async (req, res) => {
-    const user = req.cookies.get("user");
+    const userId = req.cookies.get("user");
     const passcode = req.cookies.get("passcode");
     try {
-        const queueDao = await QueueService.getQueue(req.cookies.get("passcode"));
-        const playlists = await SpotifyService.getPlaylists(queueDao.data.accessToken!, user, passcode);
-        res.status(200).json(playlists);
+        const user = await QueueService.getUser(passcode, userId);
+        if (user && user.accessToken) {
+            const playlists = await SpotifyService.getPlaylists(user.accessToken, userId, passcode);
+            res.status(200).json(playlists);
+        } else {
+            res.status(403).json({ message: "Can't get playlists. Please login with Spotify first." });
+        }
     } catch (err) {
         res.status(err.status).json({ message: err.message });
     }
@@ -318,6 +334,10 @@ app.get("/settings", async (req, res) => {
 app.get("/user", async (req, res) => {
     try {
         const user = await QueueService.getUser(req.cookies.get("passcode"), req.cookies.get("user"));
+        delete user.accessToken;
+        delete user.refreshToken;
+        delete user.expiresIn;
+        delete user.accessTokenAcquired;
         res.status(200).json(user);
     } catch (err) {
         res.status(err.status).json({ message: err.message });

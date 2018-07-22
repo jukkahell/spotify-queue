@@ -2,6 +2,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import axios from "axios";
 import * as React from "react";
 import Album, { IAlbumProps } from "./Album";
+import { IUser } from "./App";
 import Artist, { IArtistProps } from "./Artist";
 import config from "./config";
 import Playlist, { IPlaylistProps } from "./Playlist";
@@ -17,6 +18,7 @@ interface ISearchObject {
 interface ISearchFormProps {
     settings: ISettings | null;
     isOwner: boolean;
+    user: IUser | null;
     onQueued: () => void;
     onPlaylistSelected: () => void;
     onError: (msg: string) => void;
@@ -102,6 +104,12 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
         });
     }
 
+    public componentDidUpdate(prevProps: ISearchFormProps) {
+        if (prevProps.user !== this.props.user && !window.location.hash.substr(1)) {
+            this.getPlaylists();
+        }
+    }
+
     protected hashSearch() {
         const hash = window.location.hash.substr(1);
         if (!hash) {
@@ -134,9 +142,9 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
     }
 
     protected renderPlaylists() {
-        if (!this.props.isOwner || this.state.playlists.length === 0) {
+        if (this.state.playlists.length === 0) {
             return null;
-       }
+        }
 
         const playlists = [
             (<h4 key="playlists">Playlists</h4>)
@@ -309,18 +317,20 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
     }
 
     public getPlaylists() {
-        axios.get(config.backend.url + "/playlists")
-            .then(response => {
-                this.setState({
-                    tracks: [],
-                    albums: [],
-                    artists: [],
-                    playlists: response.data
-                });
-            }).catch(err => {
-                this.props.onError(err.response.data.message);
-            }
-        );
+        if (this.props.user && this.props.user.spotifyUserId) {
+            axios.get(config.backend.url + "/playlists")
+                .then(response => {
+                    this.setState({
+                        tracks: [],
+                        albums: [],
+                        artists: [],
+                        playlists: response.data
+                    });
+                }).catch(err => {
+                    this.props.onError(err.response.data.message);
+                }
+            );
+        }
     }
 
     public showMoreArtists(e: React.MouseEvent<HTMLElement>) {

@@ -47,6 +47,10 @@ export interface User {
     id: string;
     spotifyUserId: string | null; // Ensure that the owner is always found even if cookie is deleted
     points: number;
+    accessToken: string | null;
+    refreshToken: string | null;
+    expiresIn: number | null;
+    accessTokenAcquired: number | null;
 }
 
 export interface QueueItem {

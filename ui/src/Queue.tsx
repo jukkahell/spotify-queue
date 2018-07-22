@@ -177,7 +177,7 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
     public render() {
         return (
             <div className="queue">
-                <ol className="queuedTracks">
+                <ol className={"queuedTracks " + (this.props.settings && this.props.settings.randomQueue ? "randomQueue" : "")}>
                     {this.renderCurrentTrack()}
                     {this.renderTracks()}
                 </ol>

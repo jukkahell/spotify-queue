@@ -42,23 +42,24 @@ class SpotifyService {
         });
     }
 
-    public static isAuthorized = (passcode: string, user: string, tokenAcquired: number, expiresIn: number, refreshToken: string) => {
-        return new Promise((resolve, reject) => {
+    public static isAuthorized = async (passcode: string, user: string, tokenAcquired: number, expiresIn: number, refreshToken: string) => {
+        try {
             // Refresh it 300 seconds before it goes old to prevent expirations
             if ((getCurrentSeconds() + 300) - tokenAcquired >= expiresIn) {
                 logger.info("Getting refresh token...", { user, passcode });
-                SpotifyService.refreshAccessToken(refreshToken)
-                .then(response => {
-                    return resolve(response.data);
-                }).catch(err => {
-                    logger.error("Failed to refresh token...", { user, passcode });
-                    logger.error(err.response.data, { user, passcode });
-                    return reject({ status: 500, message: "Unable to refresh expired access token" });
-                });
+                const response: any = await SpotifyService.refreshAccessToken(refreshToken);
+                return response.data;
             } else {
-                return resolve(undefined);
+                return undefined;
             }
-        });
+        } catch (err) {
+            if (err.response) {
+                err = err.response.data.error.message;
+            }
+            logger.error("Failed to refresh token...", { user, passcode });
+            logger.error(err.response.data, { user, passcode });
+            throw { status: 500, message: "Unable to get refresh token from Spotify" };
+        }
     }
 
     public static getDevices = (accessToken: string) => {

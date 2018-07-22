@@ -23,14 +23,14 @@ export interface IConfig {
         domain: string;
         expires: Date | null;
         secure: boolean;
-        sameSite: boolean;
+        sameSite: string;
         signed: boolean;
     };
     passcodeCookieOptions: {
         domain: string;
         expires: Date | null;
         secure: boolean;
-        sameSite: boolean;
+        sameSite: string;
         signed: boolean;
     };
     spotify: {
@@ -78,14 +78,14 @@ const config: IConfig = {
         domain: host,
         expires: null,
         secure: prod,
-        sameSite: true,
+        sameSite: "lax",
         signed: true
     },
     passcodeCookieOptions: {
         domain: host,
         expires: null,
         secure: prod,
-        sameSite: true,
+        sameSite: "lax",
         signed: false
     },
     spotify: {

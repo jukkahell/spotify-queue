@@ -1,7 +1,7 @@
 import * as randomstring from "randomstring";
 import { QueryResult } from "../node_modules/@types/pg";
 import * as db from "./db";
-import {Queue, QueueItem, QueueDao, CurrentTrack, Settings, Vote} from "./queue";
+import {Queue, QueueItem, QueueDao, CurrentTrack, Settings, Vote, User} from "./queue";
 import { SpotifyTrack } from "./spotify";
 import SpotifyService from "./spotify.service";
 import { getCurrentSeconds } from "./util";
@@ -60,6 +60,12 @@ class QueueService {
     public static async getUser(passcode: string, userId: string) {
         const queueDao = await QueueService.getQueue(passcode, false);
         const user = queueDao.data.users.find(user => user.id === userId);
+        if (user && queueDao.owner === user.spotifyUserId) {
+            user.accessToken = queueDao.data.accessToken;
+            user.refreshToken = queueDao.data.refreshToken;
+            user.expiresIn = queueDao.data.expiresIn;
+            user.accessTokenAcquired = queueDao.data.accessTokenAcquired;
+        }
         if (!user) {
             throw { status: 404, message: "User not found with given id" };
         }
@@ -92,7 +98,7 @@ class QueueService {
         if (voteSum < 0) {
             if (Math.abs(voteSum) >= queueDao.data.settings.skipThreshold) {
                 logger.info(`Got downvote form ${Math.abs(voteSum)}/${queueDao.data.settings.skipThreshold} users. Skipping this song...`, { user, passcode });
-                QueueService.startNextTrack(passcode, user, queueDao.data.accessToken!);
+                QueueService.startNextTrack(passcode, user);
             }
         }
     }
@@ -237,6 +243,55 @@ class QueueService {
         });
     }
 
+    public static async visitorSpotifyLogin(passcode: string, userId: string, code: string) {
+        try {
+            logger.info(`Logging visitor to Spotify...`, { user: userId, passcode });
+            const tokenResponse = await SpotifyService.getToken(code, "visitorAuth");
+
+            logger.info("Access token received...going to get username", { user: userId, passcode });
+            const spotifyUser = await SpotifyService.getUser(tokenResponse.data.access_token);
+            const spotifyUserId = spotifyUser.data.id;
+            logger.debug(`Found spotify userId ${spotifyUserId}...saving data for the visitor`, { user: userId, passcode });
+
+            const queueDao = await QueueService.getQueue(passcode, true);
+            let i = queueDao.data.users.findIndex(user => user.spotifyUserId === spotifyUserId);
+            let user;
+            if (i < 0) {
+                i = queueDao.data.users.findIndex(user => user.id === userId);
+                user = queueDao.data.users[i];
+            } else {
+                // User found with spotify user is. We can remove the current user id and switch to original.
+                logger.info(`Found existing user with spotify id ${spotifyUserId}...remove current user and use old user instead.`, { passcode, user: userId });
+                const currentUserIdx = queueDao.data.users.findIndex(user => user.id === userId);
+                const currentUser = queueDao.data.users[currentUserIdx];
+                user = queueDao.data.users[i];
+                user.points += (currentUser.points - config.gamify.initialPoints);
+                queueDao.data.users.splice(currentUserIdx, 1);
+            }
+
+            if (i < 0) {
+                throw { status: 404, message: "User not found from this queue" };
+            }
+            user.spotifyUserId = spotifyUserId;
+            user.accessToken = tokenResponse.data.access_token;
+            user.refreshToken = tokenResponse.data.refresh_token;
+            user.expiresIn = tokenResponse.data.expires_in;
+            user.accessTokenAcquired = getCurrentSeconds();
+            queueDao.data.users[i] = user;
+
+            QueueService.updateQueueData(queueDao.data, passcode);
+            return user;
+        } catch(err) {
+            if (err.response) {
+                err = err.response.data.error.message;
+            } else if (err.message) {
+                err = err.message;
+            }
+            logger.error(err, { user: userId, passcode });
+            throw { status: 500, message: "Error occurred while getting access token from Spotify." };
+        }
+    }
+
     public static createQueueObject(spotifyUserId: string, accessToken: string,
                              userId: string, refreshToken: string, expiresIn: number): Queue {
         return {
@@ -263,7 +318,11 @@ class QueueService {
                 {
                     id: userId,
                     spotifyUserId,
-                    points: config.gamify.initialPoints
+                    points: config.gamify.initialPoints,
+                    accessToken: null,
+                    refreshToken: null,
+                    accessTokenAcquired: null,
+                    expiresIn: null
                 }
             ]
         };
@@ -305,7 +364,11 @@ class QueueService {
             const user = {
                 id: userId,
                 spotifyUserId: null,
-                points: config.gamify.initialPoints
+                points: config.gamify.initialPoints,
+                accessToken: null,
+                refreshToken: null,
+                expiresIn: null,
+                accessTokenAcquired: null
             };
 
             if (!queue.users.find( user => user.id === userId)) {
@@ -329,12 +392,12 @@ class QueueService {
         }
     }
 
-    public static async logout(passcode: string, user: string) {
+    public static async logout(passcode: string, userId: string) {
         try {
             const queueDao = await QueueService.getQueue(passcode, true);
             // Inactivate queue if logged out user is the owner
             const queue: Queue = queueDao.data;
-            if (user === queue.owner) {
+            if (userId === queue.owner) {
                 queue.currentTrack = null;
                 queue.accessToken = null;
                 queue.refreshToken = "";
@@ -342,6 +405,13 @@ class QueueService {
                     logger.error(err, { user, passcode });
                     throw { status: 500, message: "Unable to save logout state to database. Please try again later." };
                 });
+            }
+            const user = queue.users.find((user: User) => user.id === userId);
+            if (user) {
+                user.accessToken = null;
+                user.refreshToken = null;
+                user.expiresIn = null;
+                user.accessTokenAcquired = null;
             }
             return;
         } catch (err) {
@@ -495,7 +565,7 @@ class QueueService {
                 queueDao.data.accessToken &&
                 queueDao.data.currentTrack.track.id === trackId &&
                 queueDao.data.currentTrack.owner === user) {
-                    QueueService.startNextTrack(passcode, user, queueDao.data.accessToken);
+                    QueueService.startNextTrack(passcode, user);
                     return;
             } else {
                 throw { status: 404, message: "Cannot skip current song. Only own songs can be skipped." };
@@ -698,7 +768,7 @@ class QueueService {
                             reject({ status: 500, message: "Unable to resume playback. Please try again later." });
                         });
                     } else if (queueDao.data.queue.length > 0) {
-                        QueueService.startNextTrack(passcode, user, queueDao.data.accessToken!);
+                        QueueService.startNextTrack(passcode, user);
                     } else {
                         logger.info(`Current track not found and queue empty. Unable to resume.`, { user, passcode });
                         reject({ status: 500, message: "Spotify didn't start playing. Please try again later." });
@@ -722,12 +792,12 @@ class QueueService {
         }
     }
 
-    private static startNextTrack(passcode: string, user: string, accessToken: string) {
+    private static startNextTrack(passcode: string, user: string) {
         logger.info(`Starting next track`, { user, passcode });
         QueueService.getQueue(passcode, true).then(queueDao => {
             if (queueDao.data.queue.length === 0 && queueDao.data.playlistTracks.length === 0) {
                 logger.info("No more songs in queue. Stop playing.", { user, passcode });
-                QueueService.stopPlaying(queueDao.data, accessToken, passcode, user);
+                QueueService.stopPlaying(queueDao.data, queueDao.data.accessToken!, passcode, user);
                 return;
             }
             const queue: Queue = queueDao.data;
@@ -748,8 +818,8 @@ class QueueService {
 
             logger.info(`Next track is ${queuedItem.track.id}`, { user, passcode });
             QueueService.updateQueue(queue, true, passcode).then(() => {
-                SpotifyService.startSong(accessToken, trackIds, queue.deviceId!).then(() => {
-                    QueueService.startPlaying(accessToken, passcode, user, queuedItem.track);
+                SpotifyService.startSong(queueDao.data.accessToken!, trackIds, queue.deviceId!).then(() => {
+                    QueueService.startPlaying(queueDao.data.accessToken!, passcode, user, queuedItem.track);
                     logger.info(`Track ${queuedItem.track.id} successfully started.`, { user, passcode });
                     if (previousTrack) {
                         Gamify.trackEndReward(passcode, previousTrack);
@@ -775,9 +845,10 @@ class QueueService {
         }
     }
 
-    private static checkTrackStatus(passcode: string, user: string) {
+    private static async checkTrackStatus(passcode: string, user: string) {
         logger.info(`Checking playback state for currently playing track...`, { user, passcode });
-        QueueService.getCurrentTrack(passcode, user).then((currentState: CurrentState) => {
+        try {
+            const currentState = await QueueService.getCurrentTrack(passcode, user);
             if (!currentState.isSpotiquPlaying) {
                 logger.info(`We are paused so no need to do it...`, { user, passcode });
                 return;
@@ -789,11 +860,11 @@ class QueueService {
             // We can start next if spotify isn't playing anymore
             if (!currentState.isSpotifyPlaying && currentState.isSpotiquPlaying) {
                 logger.info(`Track was already over...starting next`, { user, passcode });
-                QueueService.startNextTrack(passcode, "", currentState.accessToken!);
+                QueueService.startNextTrack(passcode, "");
             } else if (timeLeft < 5000) {
                 logger.info(`Less than 5 secs left...initiating timer to start the next song...`, { user, passcode });
                 // Start new song after timeLeft and check for that song's duration
-                setTimeout(() => QueueService.startNextTrack(passcode, "", currentState.accessToken!), timeLeft - 1000);
+                setTimeout(() => QueueService.startNextTrack(passcode, ""), timeLeft - 1000);
             } else {
                 // If there's still time, check for progress again after a while
                 const seconds = Math.round(timeLeft / 1000);
@@ -809,14 +880,14 @@ class QueueService {
                     timeLeft - 1000
                 );
             }
-        }).catch(err => {
+        } catch (err) {
             if (err.status === 404) {
                 logger.info(err.message, { user, passcode });
             } else {
                 logger.error("Unable to get currently playing track from spotify.", { user, passcode });
                 logger.error(err, { user, passcode });
             }
-        });
+        }
     }
 }
 

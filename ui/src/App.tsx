@@ -11,9 +11,10 @@ import Settings, {ISettings} from "./Settings";
 import Share from "./Share";
 import {UserMenu} from "./UserMenu";
 
-interface IUser {
+export interface IUser {
     id: string;
     points: number;
+    spotifyUserId?: string;
 }
 
 export interface IState {
@@ -71,6 +72,7 @@ export class App extends React.Component<{}, IState> {
         this.updateSettings = this.updateSettings.bind(this);
         this.closeAlert = this.closeAlert.bind(this);
         this.getUser = this.getUser.bind(this);
+        this.onSpotifyLogin = this.onSpotifyLogin.bind(this);
     }
 
     public componentDidMount() {
@@ -105,10 +107,10 @@ export class App extends React.Component<{}, IState> {
         axios.get(config.backend.url + "/isAuthorized")
             .then(response => {
                 if (response.data.isAuthorized) {
+                    this.getUser();
                     this.getCurrentTrack();
                     this.getQueue();
                     this.getSettings();
-                    this.getUser();
 
                     clearInterval(this.authInterval);
                     this.setState({
@@ -180,6 +182,10 @@ export class App extends React.Component<{}, IState> {
         setTimeout(() => {
             this.setState({ responseMsg: null });
         }, 2000);
+    }
+
+    protected onSpotifyLogin() {
+        this.getUser();
     }
 
     protected refreshCurrentlyPlaying() {
@@ -255,13 +261,14 @@ export class App extends React.Component<{}, IState> {
                         <div className="col-md-8">
                             <SearchForm settings={this.state.settings}
                                 isOwner={this.state.isOwner}
+                                user={this.state.user}
                                 onQueued={this.onQueued}
                                 onPlaylistSelected={this.onPlaylistSelected}
                                 onError={this.onError} />
                         </div>
                     </div>
                     <div className="footer fixed-bottom d-flex">
-                        <UserMenu passcode={this.state.passcode} onError={this.onError} />
+                        <UserMenu passcode={this.state.passcode} onError={this.onError} onSpotifyLogin={this.onSpotifyLogin} user={this.state.user} />
                         <Share passcode={this.state.passcode} onError={this.onError} />
                         {this.state.isOwner ? <DeviceSelect onError={this.onError} /> : null}
                         {
