@@ -792,19 +792,17 @@ class QueueService {
         }
     }
 
-    private static startNextTrack(passcode: string, user: string) {
+    private static async startNextTrack(passcode: string, user: string) {
         logger.info(`Starting next track`, { user, passcode });
-        QueueService.getQueue(passcode, true).then(queueDao => {
+        try {
+            await Gamify.trackEndReward(passcode);
+            const queueDao = await QueueService.getQueue(passcode, true)
             if (queueDao.data.queue.length === 0 && queueDao.data.playlistTracks.length === 0) {
                 logger.info("No more songs in queue. Stop playing.", { user, passcode });
                 QueueService.stopPlaying(queueDao.data, queueDao.data.accessToken!, passcode, user);
                 return;
             }
             const queue: Queue = queueDao.data;
-            if (queue.currentTrack) {
-                Gamify.trackEndReward(passcode, queue.currentTrack);
-            }
-
             const nextIndex = (queue.queue.length > 0) ? 
                 QueueService.getNextTrackIdx(queue.queue, queue.settings.randomQueue) :
                 QueueService.getNextTrackIdx(queue.playlistTracks, queue.settings.randomPlaylist);
@@ -832,9 +830,10 @@ class QueueService {
                 logger.error("Unable to update queue", { user, passcode });
                 logger.error(err, { user, passcode });
             });
-        }).catch(() => {
-            logger.error("Unable to get queue when starting next track", { user, passcode });
-        });
+        } catch (err) {
+            logger.error("Error occurred while starting next track", { user, passcode });
+            logger.error(err);
+        }
     }
 
     private static getNextTrackIdx(queue: QueueItem[], random: boolean) {

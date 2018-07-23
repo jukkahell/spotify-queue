@@ -164,9 +164,11 @@ export class App extends React.Component<{}, IState> {
         this.setState({
             isPlaying: false
         });
-        this.getCurrentTrack();
-        this.getQueue();
-        this.getUser();
+        setTimeout(() => {
+            this.getCurrentTrack();
+            this.getQueue();
+            this.getUser();
+        }, 500);
     }
 
     protected onQueued() {

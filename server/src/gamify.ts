@@ -1,5 +1,5 @@
 import * as express from "express";
-import { Queue, User, CurrentTrack } from "./queue";
+import { Queue, User } from "./queue";
 import SpotifyService from "./spotify.service";
 import { logger } from "./logger.service";
 import QueueService from "./queue.service";
@@ -109,16 +109,16 @@ export namespace Gamify {
 
     const millisToPoints = (millis: number) => {
         const minutes = Math.floor(millis / 60000);
-        const seconds = ((millis % 60000) / 1000) > 30 ? 1 : 0;
-        return minutes + seconds;
+        return minutes + 1;
     }
 
-    export const trackEndReward = async (passcode: string, currentTrack: CurrentTrack) => {
+    export const trackEndReward = async (passcode: string) => {
         // TODO: Give reward for active users. Based on recent activity.
-
+        try {
+            const queueDao = await QueueService.getQueue(passcode, true);
+            const currentTrack = queueDao.data.currentTrack;
+            if (queueDao.data.settings.gamify && currentTrack) {
         let reward = millisToPoints(currentTrack.track.duration);
-        const queueDao = await QueueService.getQueue(passcode, true);
-        if (queueDao.data.settings.gamify) {
             logger.info(`Rewarding active users for ${reward} points`, { passcode });
             queueDao.data.users = queueDao.data.users.map((user: User) => { 
                 const queued = queueDao.data.queue.some(queuedItem => queuedItem.userId === user.id);
@@ -129,11 +129,22 @@ export namespace Gamify {
                         logger.info(`${voteCount} vote points for user`, { passcode, user: user.id });
                         user.points += voteCount;
                     } else {
-                        user.points += Math.ceil(reward/3);                    }
+                            if (currentTrack.owner !== null) {
+                                // Give 1/3 points if someone else's song
+                                user.points += Math.ceil(reward/3);
+                            } else {
+                                // Give 1 point if playlist track
+                                user.points += 1;
+                            }
+                        }
                 }
                 return user;
             });
-            QueueService.updateQueueData(queueDao.data, passcode);
+                await QueueService.updateQueueData(queueDao.data, passcode);
+            }
+        } catch (err) {
+            logger.error("Error while giving gamify points for users.", { passcode });
+            logger.error(err);
         }
     }
 
