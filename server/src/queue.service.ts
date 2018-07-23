@@ -801,6 +801,10 @@ class QueueService {
                 return;
             }
             const queue: Queue = queueDao.data;
+            if (queue.currentTrack) {
+                Gamify.trackEndReward(passcode, queue.currentTrack);
+            }
+
             const nextIndex = (queue.queue.length > 0) ? 
                 QueueService.getNextTrackIdx(queue.queue, queue.settings.randomQueue) :
                 QueueService.getNextTrackIdx(queue.playlistTracks, queue.settings.randomPlaylist);
@@ -808,7 +812,6 @@ class QueueService {
                 queue.queue.splice(nextIndex, 1)[0] :
                 queue.playlistTracks.splice(nextIndex, 1)[0];
             const trackIds = [queuedItem.track.id];
-            const previousTrack = queue.currentTrack;
 
             queue.currentTrack = {
                 track: queuedItem.track,
@@ -821,9 +824,6 @@ class QueueService {
                 SpotifyService.startSong(queueDao.data.accessToken!, trackIds, queue.deviceId!).then(() => {
                     QueueService.startPlaying(queueDao.data.accessToken!, passcode, user, queuedItem.track);
                     logger.info(`Track ${queuedItem.track.id} successfully started.`, { user, passcode });
-                    if (previousTrack) {
-                        Gamify.trackEndReward(passcode, previousTrack);
-                    }
                 }).catch((err: any) => {
                     logger.error(err.response.data.error.message, { user, passcode });
                     logger.error(`Unable to start track on Spotify.`, { user, passcode });

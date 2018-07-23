@@ -1,5 +1,5 @@
 import * as express from "express";
-import { Queue, User, Vote, CurrentTrack } from "./queue";
+import { Queue, User, CurrentTrack } from "./queue";
 import SpotifyService from "./spotify.service";
 import { logger } from "./logger.service";
 import QueueService from "./queue.service";
