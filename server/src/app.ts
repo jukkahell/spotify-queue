@@ -154,7 +154,7 @@ app.get("/devices", (req, res) => {
                 spotifyHasActiveDevice = false;
             } else if (!activeDeviceId && devices.length === 0) {
                 logger.debug(`No available devices found...giving info for user`, { user, passcode });
-                res.status(404).json({ message: "No available devices found. Please start a song in Spotify and then refresh the page." });
+                res.status(404).json({ message: "No available devices found. Please start Spotify and then try again." });
                 return;
             }
 
