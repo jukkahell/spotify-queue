@@ -279,7 +279,7 @@ class QueueService {
             user.accessTokenAcquired = getCurrentSeconds();
             queueDao.data.users[i] = user;
 
-            QueueService.updateQueueData(queueDao.data, passcode);
+            await QueueService.updateQueueData(queueDao.data, passcode);
             return user;
         } catch(err) {
             if (err.response) {
@@ -312,7 +312,8 @@ class QueueService {
                 randomPlaylist: false,
                 randomQueue: false,
                 skipThreshold: 5,
-                playlist: null
+                playlist: null,
+                maxSequentialTracks: 3
             },
             users: [
                 {
@@ -500,7 +501,7 @@ class QueueService {
                 }
                 // Sync with Spotify
                 logger.debug(`Syncing current track data and device id with Spotify...`, { user, passcode });
-                QueueService.updateQueueData(queue, passcode);
+                await QueueService.updateQueueData(queue, passcode);
 
                 return currentState;
             } catch (err) {
@@ -545,7 +546,7 @@ class QueueService {
             }
 
             if (found) {
-                QueueService.updateQueueData(q, passcode).catch(err => {
+                await QueueService.updateQueueData(q, passcode).catch(err => {
                     logger.error(err, { user, passcode });
                     throw { status: 500, message: "Error occurred while removing song from queue. Please try again later." };
                 });
@@ -619,6 +620,26 @@ class QueueService {
                     throw { 
                         status: 403, 
                         message: `Queuing failed. Max duplicate song count is set to ${queue.settings.maxDuplicateTracks}.` 
+                    };
+                }
+            }
+
+            // If sequential tracks are restricted and the last song in the queue is added by this user
+            if (queue.settings.maxSequentialTracks && queue.queue.length > 0 && queue.queue[queue.queue.length - 1].userId === user) {
+                let sequentialCount = 0
+                for (let i = queue.queue.length - 1; i >= 0; i--) {
+                    if (queue.queue[i].userId === user) {
+                        sequentialCount++;
+                    } else {
+                        break;
+                    }
+                }
+
+                logger.info(`${sequentialCount}/${queue.settings.maxSequentialTracks} sequential songs for user...`, { passcode, user });
+                if (sequentialCount >= queue.settings.maxSequentialTracks) {
+                    throw { 
+                        status: 403, 
+                        message: `Queuing failed. Max sequential songs per user is set to ${queue.settings.maxSequentialTracks}.` 
                     };
                 }
             }
@@ -724,7 +745,7 @@ class QueueService {
 
     public static pauseResume(user: string, passcode: string) {
         return new Promise<boolean>((resolve, reject) => {
-            QueueService.getQueue(passcode).then(queueDao => {
+            QueueService.getQueue(passcode, true).then(queueDao => {
                 if (queueDao.isPlaying) {
                     logger.debug(`Pausing playback...`, { user, passcode });
                     SpotifyService.pause(queueDao.data.accessToken!).then(() => {
@@ -758,6 +779,14 @@ class QueueService {
                                 if (err.response.data.error.status === 404) {
                                     logger.info("No device selected when trying to resume.", {user, passcode});
                                     reject({ status: 404, message: "No device selected. Please select a device from bottom left corner." });
+                                    return;
+                                } else if (err.response.status === 403 && err.response.data.error.message.indexOf("Not paused") >= 0) {
+                                    QueueService.startPlaying(queueDao.data.accessToken!, passcode, user, queueDao.data.currentTrack!.track);
+                                    QueueService.updateQueue(queueDao.data, true, passcode).then(() => {
+                                        resolve(true);
+                                    }).catch(() => {
+                                        reject({ status: 500, message: "Unable to save playback state. Please try again later." });
+                                    });
                                     return;
                                 } else {
                                     logger.error(err.response.data.error.message, {user, passcode});

@@ -31,12 +31,16 @@ export class Album extends React.Component<IPlaylistProps> {
             isOwner
         } = this.props;
 
+        const clipboardIcon = (settings && settings.playlist === id)
+            ? <FontAwesomeIcon icon="clipboard-check" />
+            : <FontAwesomeIcon icon="clipboard-list" />;
+
         return (
             <div className="d-flex">
                 {
                     isOwner ?
                         <div className={"addPlaylistToQueue " + (settings && settings.playlist === id ? "active" : "")} id={id} title="Play this list after queue ends" onClick={this.addToQueue}>
-                            <FontAwesomeIcon icon="clipboard-check" />
+                            {clipboardIcon}
                         </div> :
                         null
                 }

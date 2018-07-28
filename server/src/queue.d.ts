@@ -26,6 +26,7 @@ export interface Settings {
     randomQueue: boolean;
     skipThreshold: number;
     playlist: string | null;
+    maxSequentialTracks: number;
 }
 
 export interface Queue {

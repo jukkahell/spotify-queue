@@ -22,7 +22,7 @@ export namespace Gamify {
             if (user.points - cost >= 0) {
                 logger.info(`Reducing ${cost} points from ${user.points}`, { userId, passcode });
                 queueDao.data.users[userIdx].points -= cost;
-                QueueService.updateQueueData(queueDao.data, passcode);
+                await QueueService.updateQueueData(queueDao.data, passcode);
                 return next();
             } else {
                 logger.info(`${user.points} points is not enough to pay ${cost} points`, { user: userId, passcode });
@@ -58,7 +58,7 @@ export namespace Gamify {
                         const refund = millisToPoints(q.queue[i].track.duration);
                         logger.info(`Refunding ${refund} points`, { user, passcode });
                         queueDao.data.users[userIdx].points += refund;
-                        QueueService.updateQueueData(queueDao.data, passcode);
+                        await QueueService.updateQueueData(queueDao.data, passcode);
                         return next();
                     }
                 }
@@ -85,7 +85,7 @@ export namespace Gamify {
                     q.queue[i] = q.queue[i - 1];
                     q.queue[i - 1] = tmp;
                     q.users[userIdx].points -= config.gamify.moveUpCost;
-                    QueueService.updateQueueData(q, passcode);
+                    await QueueService.updateQueueData(q, passcode);
                     return res.status(200).json({ message: "OK" });
                 }
             }

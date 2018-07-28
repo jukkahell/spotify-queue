@@ -10,6 +10,7 @@ export interface ISettings {
     randomQueue: boolean;
     skipThreshold: number;
     playlist: string;
+    maxSequentialTracks: number;
 }
 
 export interface IShareProps {
@@ -38,6 +39,7 @@ export class Settings extends React.Component<IShareProps, IShareState> {
         this.hideMenu = this.hideMenu.bind(this);
         this.updateSkipThreshold = this.updateSkipThreshold.bind(this);
         this.updateDuplicates = this.updateDuplicates.bind(this);
+        this.updateSequential = this.updateSequential.bind(this);
     }
 
     public toggleGamify(e: React.MouseEvent<HTMLElement>) {
@@ -79,6 +81,11 @@ export class Settings extends React.Component<IShareProps, IShareState> {
         this.props.updateSettings(this.props.settings);
     }
 
+    public updateSequential(value: number) {
+        this.props.settings.maxSequentialTracks = value;
+        this.props.updateSettings(this.props.settings);
+    }
+
     public renderSettingsOptions() {
         return ([
             <a className="dropdown-item settingsMenuItem" key="gamify" href="#" id="gamify" onClick={this.toggleGamify}>
@@ -92,7 +99,7 @@ export class Settings extends React.Component<IShareProps, IShareState> {
                 <FontAwesomeIcon className={"settingOptionCheckmark " + (this.props.settings.randomPlaylist ? "active" : "inactive")} icon="check-circle" />
             </a>,
             <a className="dropdown-item settingsMenuItem" key="randomQueue" href="#" id="randomQueue" onClick={this.toggleRandomQueue}>
-                <FontAwesomeIcon icon="random" />
+                <FontAwesomeIcon icon="dice" />
                 <span className="settingName">Shuffle queue</span>
                 <FontAwesomeIcon className={"settingOptionCheckmark " + (this.props.settings.randomQueue ? "active" : "inactive")} icon="check-circle" />
             </a>,
@@ -105,6 +112,11 @@ export class Settings extends React.Component<IShareProps, IShareState> {
                 <FontAwesomeIcon icon="clone" />
                 <span className="settingName">Max {this.props.settings.maxDuplicateTracks} duplicate songs in queue</span>
                 <NumberSetting value={this.props.settings.maxDuplicateTracks} step={1} updateValue={this.updateDuplicates} />
+            </a>,
+            <a className="dropdown-item settingsMenuItem " key="sequential" href="#" id="sequential">
+                <FontAwesomeIcon icon="layer-group" />
+                <span className="settingName">Max {this.props.settings.maxSequentialTracks} sequential songs per user</span>
+                <NumberSetting value={this.props.settings.maxSequentialTracks} step={1} updateValue={this.updateSequential} />
             </a>
         ]);
     }

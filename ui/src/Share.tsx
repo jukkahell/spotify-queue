@@ -35,6 +35,8 @@ export class Share extends React.Component<IShareProps, IShareState> {
     }
 
     public selectShare(e: React.MouseEvent<HTMLElement>) {
+        e.preventDefault();
+
         const url = "https://spotiqu.eu/#join:" + this.props.passcode;
         switch (e.currentTarget.id) {
             case "Copy link":
