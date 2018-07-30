@@ -66,6 +66,7 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
         this.queuePlaylist = this.queuePlaylist.bind(this);
         this.showMoreTracks = this.showMoreTracks.bind(this);
         this.submitForm = this.submitForm.bind(this);
+        this.clearSearch = this.clearSearch.bind(this);
         this.hashSearch();
     }
 
@@ -99,6 +100,15 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
         } else {
             window.location.hash = "";
         }
+        this.setState({
+            search
+        });
+    }
+
+    public clearSearch() {
+        const search = this.state.search;
+        search.q = "";
+        window.location.hash = "";
         this.setState({
             search
         });
@@ -378,6 +388,9 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
                     <input type="hidden" name="q" value={this.state.search.q} />
                     <FontAwesomeIcon className="searchIcon" icon="search" />
                     <input className="form-control search col-md-12" type="text" name="spotiquSearch" value={this.state.search.q} onChange={this.handleChangeEvent} placeholder="Search" />
+                    <div className={(this.state.search.q ? "visible" : "invisible") + " clearSearch"} onClick={this.clearSearch}>
+                        <FontAwesomeIcon icon="times-circle" />
+                    </div>
                 </form>
                 <div className="searchResults">
                     {this.renderPlaylists()}

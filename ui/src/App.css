@@ -131,6 +131,13 @@ input.search {
     z-index: 10;
 }
 
+.clearSearch {
+    right: 1em;
+    position: absolute;
+    color: #383838;
+    cursor: pointer;
+}
+
 .progress {
     height: 4px;
 }
