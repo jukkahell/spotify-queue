@@ -177,6 +177,7 @@ class SpotifyService {
                 const tracks: SpotifyTrack[] = response.data.items.map((i: any) => {
                     return {
                         artist: i.track.artists[0].name,
+                        artistId: i.track.artist[0].id,
                         name: i.track.name,
                         id: i.track.uri,
                         duration: i.track.duration_ms,
