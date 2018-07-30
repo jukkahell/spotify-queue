@@ -247,7 +247,7 @@ export class App extends React.Component<{}, IState> {
                         <p>You'll get points from the following events:</p>
                         <ul>
                             <li>+1 point if you have a song queued when someone else's song ends.</li>
-                            <li>Points you spent on a song when that song ends.</li>
+                            <li>Points you spent to queue a song when that song ends.</li>
                             <li>Same amount of points how much votes your song gets. Can be negative as well.</li>
                         </ul>
                         <p>You can spend points on the following:</p>
@@ -318,7 +318,7 @@ export class App extends React.Component<{}, IState> {
                     <div className="row h-20 w-100 justify-content-center">
                         <div className="row h-20 w-100 justify-content-center">
                             <div className="col-md-3">
-                                <button type="submit" className="btn btn-primary w-100" onClick={this.createQueue}>Create Queue</button>
+                                <button type="submit" className="btn btn-primary w-100" onClick={this.createQueue}>Create/Restore Queue</button>
                             </div>
                         </div>
                         <div className="Divider">

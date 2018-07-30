@@ -119,7 +119,7 @@ export namespace Gamify {
             const currentTrack = queueDao.data.currentTrack;
             if (queueDao.data.settings.gamify && currentTrack) {
         let reward = millisToPoints(currentTrack.track.duration);
-            logger.info(`Rewarding active users for ${reward} points`, { passcode });
+            logger.info(`Rewarding track owner ${currentTrack.owner || "-"} for ${reward} points`, { passcode });
             queueDao.data.users = queueDao.data.users.map((user: User) => { 
                 const queued = queueDao.data.queue.some(queuedItem => queuedItem.userId === user.id);
                 if (queued || currentTrack.owner === user.id) {
