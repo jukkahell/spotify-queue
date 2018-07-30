@@ -363,10 +363,15 @@ button.iconButton:active, button.iconButton:hover, button.iconButton:focus {
     align-items: center;
 }
 
+.pointsContainer {
+    display: flex;
+    align-self: center;
+}
+
 .userPoints {
     padding: 0 0 0 10px;
     margin: 0;
-    align-self: center;
+    cursor: default;
 }
 .userPoints.positive {
     color: #1DB954;
@@ -402,4 +407,8 @@ button.iconButton:active, button.iconButton:hover, button.iconButton:focus {
     .settingsDropdown {
         font-size: 0.8em;
     }
+}
+
+.alert {
+    cursor: pointer !important;
 }

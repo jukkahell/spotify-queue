@@ -1,5 +1,6 @@
 import axios from "axios";
 import * as React from "react";
+import * as ReactTooltip from "react-tooltip";
 import {AlertBox, IAlert} from "./AlertBox";
 import "./App.css";
 import config from "./config";
@@ -235,6 +236,34 @@ export class App extends React.Component<{}, IState> {
         );
     }
 
+    protected renderPoints() {
+        if (this.state.settings && this.state.settings.gamify && this.state.user) {
+            return (
+                <div className="pointsContainer">
+                    <p className={"userPoints " + (this.state.user.points >= 0 ? "positive" : "negative")} data-tip="" data-for="gamifyHelp">
+                        {this.state.user.points >= 0 ? "+" : ""}{this.state.user.points} points
+                    </p>
+                    <ReactTooltip id="gamifyHelp">
+                        <p>You'll get points from the following events:</p>
+                        <ul>
+                            <li>+1 point if you have a song queued when someone else's song ends.</li>
+                            <li>Points you spent on a song when that song ends.</li>
+                            <li>Same amount of points how much votes your song gets. Can be negative as well.</li>
+                        </ul>
+                        <p>You can spend points on the following:</p>
+                        <ul>
+                            <li>Add a song to queue. 1min song costs 2 points, 2min song 3 points etc.</li>
+                            <li>-5 points to move your song one step forward in the queue.</li>
+                            <li>-20 points to skip or remove another user's song from the queue.</li>
+                        </ul>
+                    </ReactTooltip>
+                </div>
+            );
+        } else {
+            return null;
+        }
+    }
+
     public render() {
         if (this.state.passcode) {
             return (
@@ -278,12 +307,7 @@ export class App extends React.Component<{}, IState> {
                             <Settings settings={this.state.settings} updateSettings={this.updateSettings} onError={this.onError} /> :
                             null
                         }
-                        {this.state.settings && this.state.settings.gamify && this.state.user ?
-                            <p className={"userPoints " + (this.state.user.points >= 0 ? "positive" : "negative")}>
-                                {this.state.user.points >= 0 ? "+" : ""}{this.state.user.points} points
-                            </p> :
-                            null
-                        }
+                        {this.renderPoints()}
                     </div>
                 </div>
             );
