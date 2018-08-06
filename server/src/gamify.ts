@@ -10,7 +10,7 @@ export namespace Gamify {
     const methods = {
         "track": async (req: express.Request, res: express.Response, next: () => any) => {
             const passcode = req.cookies.get("passcode");
-            const userId = req.cookies.get("user");
+            const userId = req.cookies.get("user", { signed: true });
             const trackUri = req.body.spotifyUri;
             const queueDao = await QueueService.getQueue(passcode, true);
             const userIdx = getUser(queueDao.data, userId);
@@ -31,7 +31,7 @@ export namespace Gamify {
         },
         "removeFromQueue": async (req: express.Request, res: express.Response, next: () => any) => {
             const passcode = req.cookies.get("passcode");
-            const user = req.cookies.get("user");
+            const user = req.cookies.get("user", { signed: true });
             const isPlaying = req.body.isPlaying;
             const trackId = req.body.trackId;
             const queueDao = await QueueService.getQueue(passcode, true);
@@ -67,7 +67,7 @@ export namespace Gamify {
         },
         "moveUpInQueue": async (req: express.Request, res: express.Response, next: () => any) => {
             const passcode = req.cookies.get("passcode");
-            const user = req.cookies.get("user");
+            const user = req.cookies.get("user", { signed: true });
             const trackId = req.body.trackId;
             const queueDao = await QueueService.getQueue(passcode, true);
             const userIdx = getUser(queueDao.data, user);

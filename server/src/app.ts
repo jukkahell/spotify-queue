@@ -51,7 +51,7 @@ app.get("/create", (req, res) => {
 
 app.get("/reactivate", (req, res) => {
     const passcode = req.cookies.get("reactivate");
-    const user = req.cookies.get("user");
+    const user = req.cookies.get("user", { signed: true });
     QueueService.reactivate(passcode, user, req.query.code).then(queue => {
         config.passcodeCookieOptions.expires = passcodeCookieExpire();
         config.userCookieOptions.expires = userCookieExpire();
@@ -66,7 +66,7 @@ app.get("/reactivate", (req, res) => {
 
 app.get("/visitorAuth", (req, res) => {
     const passcode = req.cookies.get("passcode");
-    const user = req.cookies.get("user");
+    const user = req.cookies.get("user", { signed: true });
     QueueService.visitorSpotifyLogin(passcode, user, req.query.code).then((user) => {
         config.userCookieOptions.expires = userCookieExpire();
         req.cookies.set("user", user.id, config.userCookieOptions);
@@ -78,7 +78,7 @@ app.get("/visitorAuth", (req, res) => {
 
 app.get("/logout", (req, res) => {
     const passcode = req.cookies.get("passcode");
-    const user = req.cookies.get("user");
+    const user = req.cookies.get("user", { signed: true });
     logger.debug(`Logging out user...`, { user, passcode });
 
     QueueService.logout(passcode, user).then(() => {
@@ -91,7 +91,7 @@ app.get("/logout", (req, res) => {
 
 app.put("/join", (req, res) => {
     const passcode = req.body.code;
-    let userId = req.cookies.get("user");
+    let userId = req.cookies.get("user", { signed: true });
 
     if (!userId) {
         userId = randomstring.generate();
@@ -114,7 +114,7 @@ app.get("/isAuthorized", (req, res) => {
         return;
     }
 
-    Acl.isAuthorized(req.cookies.get("passcode"), req.cookies.get("user")).then((authResult: AuthResult) => {
+    Acl.isAuthorized(req.cookies.get("passcode"), req.cookies.get("user", { signed: true })).then((authResult: AuthResult) => {
         config.passcodeCookieOptions.expires = passcodeCookieExpire();
         req.cookies.set("passcode", req.cookies.get("passcode"), config.passcodeCookieOptions);
         res.status(200).json(authResult);
@@ -125,7 +125,7 @@ app.get("/isAuthorized", (req, res) => {
 
 app.get("/devices", (req, res) => {
     const passcode = req.cookies.get("passcode");
-    const user = req.cookies.get("user");
+    const user = req.cookies.get("user", { signed: true });
 
     QueueService.getAccessToken(req.cookies.get("passcode")).then(accessToken => {
         SpotifyService.getDevices(accessToken)
@@ -197,7 +197,7 @@ app.get("/devices", (req, res) => {
 
 app.put("/device", (req, res) => {
     const passcode = req.cookies.get("passcode");
-    const user = req.cookies.get("user");
+    const user = req.cookies.get("user", { signed: true });
 
     logger.info(`Activating device ${req.body.deviceId}`, { user, passcode });
     if (req.body.deviceId) {
@@ -238,7 +238,7 @@ app.get("/queue", (req, res) => {
 
 app.get("/currentlyPlaying", (req, res) => {
     const passcode = req.cookies.get("passcode");
-    const user = req.cookies.get("user");
+    const user = req.cookies.get("user", { signed: true });
 
     logger.debug(`Fetching currently playing song...`, { user, passcode });
     QueueService.getCurrentTrack(passcode, user).then(result => {
@@ -251,7 +251,7 @@ app.get("/currentlyPlaying", (req, res) => {
 
 app.delete("/removeFromQueue", (req, res) => {
     const passcode = req.cookies.get("passcode");
-    const user = req.cookies.get("user");
+    const user = req.cookies.get("user", { signed: true });
     const isPlaying = req.body.isPlaying;
     const trackId = req.body.trackId;
 
@@ -275,7 +275,7 @@ app.delete("/removeFromQueue", (req, res) => {
 app.post("/track", (req, res) => {
     const spotifyUri = req.body.spotifyUri;
     const passcode = req.cookies.get("passcode");
-    const user = req.cookies.get("user");
+    const user = req.cookies.get("user", { signed: true });
 
     QueueService.addToQueue(user, passcode, spotifyUri).then((queue: QueueDao) => {
         // Check playback status from spotify
@@ -296,7 +296,7 @@ app.post("/track", (req, res) => {
 });
 
 app.post("/pauseResume", (req, res) => {
-    const user = req.cookies.get("user");
+    const user = req.cookies.get("user", { signed: true });
     const passcode = req.cookies.get("passcode");
 
     QueueService.pauseResume(user, passcode).then(isPlaying => {
@@ -307,7 +307,7 @@ app.post("/pauseResume", (req, res) => {
 });
 
 app.get("/playlists", async (req, res) => {
-    const userId = req.cookies.get("user");
+    const userId = req.cookies.get("user", { signed: true });
     const passcode = req.cookies.get("passcode");
     try {
         const user = await QueueService.getUser(passcode, userId);
@@ -333,7 +333,7 @@ app.get("/settings", async (req, res) => {
 
 app.get("/user", async (req, res) => {
     try {
-        const user = await QueueService.getUser(req.cookies.get("passcode"), req.cookies.get("user"));
+        const user = await QueueService.getUser(req.cookies.get("passcode"), req.cookies.get("user", { signed: true }));
         delete user.accessToken;
         delete user.refreshToken;
         delete user.expiresIn;
@@ -347,7 +347,7 @@ app.get("/user", async (req, res) => {
 app.put("/vote", async (req, res) => {
     try {
         const passcode = req.cookies.get("passcode");
-        const user = req.cookies.get("user");
+        const user = req.cookies.get("user", { signed: true });
         const value = req.body.value;
         await QueueService.vote(passcode, user, value);
         res.status(200).json({ message: "OK" });
@@ -358,7 +358,7 @@ app.put("/vote", async (req, res) => {
 
 app.post("/updateSettings", async (req, res) => {
     const passcode = req.cookies.get("passcode");
-    const user = req.cookies.get("user");
+    const user = req.cookies.get("user", { signed: true });
     const settings: Settings = req.body.settings;
     try {
         const resp = await QueueService.updateSettings(passcode, user, settings);
@@ -369,7 +369,7 @@ app.post("/updateSettings", async (req, res) => {
 });
 
 app.get("/playlist", (req, res) => {
-    const user = req.cookies.get("user");
+    const user = req.cookies.get("user", { signed: true });
     const passcode = req.cookies.get("passcode");
     const playlistId = req.query.id;
     QueueService.getQueue(req.cookies.get("passcode")).then(queueDao => {
@@ -382,7 +382,7 @@ app.get("/playlist", (req, res) => {
 });
 
 app.put("/queuePlaylist", (req, res) => {
-    const user = req.cookies.get("user");
+    const user = req.cookies.get("user", { signed: true });
     const passcode = req.cookies.get("passcode");
     const playlistId = req.body.id;
     QueueService.getQueue(req.cookies.get("passcode")).then(queueDao => {
@@ -399,7 +399,7 @@ app.put("/queuePlaylist", (req, res) => {
 });
 
 app.get("/selectAlbum", (req, res) => {
-    const user = req.cookies.get("user");
+    const user = req.cookies.get("user", { signed: true });
     const passcode = req.cookies.get("passcode");
 
     QueueService.getAccessToken(req.cookies.get("passcode")).then(accessToken => {
@@ -412,7 +412,7 @@ app.get("/selectAlbum", (req, res) => {
 });
 
 app.get("/selectArtist", (req, res) => {
-    const user = req.cookies.get("user");
+    const user = req.cookies.get("user", { signed: true });
     const passcode = req.cookies.get("passcode");
 
     QueueService.getAccessToken(req.cookies.get("passcode")).then(accessToken => {
@@ -430,7 +430,7 @@ app.get("/selectArtist", (req, res) => {
 
 app.post("/search", (req, res) => {
     const passcode = req.cookies.get("passcode");
-    const user = req.cookies.get("user");
+    const user = req.cookies.get("user", { signed: true });
 
     const query: SpotifySearchQuery = {
         q: req.body.q,
