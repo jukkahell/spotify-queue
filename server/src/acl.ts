@@ -53,11 +53,33 @@ class Acl {
         }
     }
 
+    public static async isOwner(passcode: string, userId: string) {
+        if (!userId) {
+            throw { status: 401, message: "Valid user required. Please login again." };
+        }
+        try {
+            const queueDao = await QueueService.getQueue(passcode);
+            if (queueDao.data.owner !== userId) {
+                throw { status: 401, message: "Owner permission required for QueueService action." };
+            }
+
+            return true;
+        } catch (err) {
+            if (err.message) {
+                throw err;
+            }
+            throw { status: 500, message: err.message };
+        }
+    }
+
     public static isAuthorized = async (passcode: string, userId: string) => {
         try {
             if (!passcode) {
                 throw { status: 401, message: "Valid passcode required" };
+            } else if (!userId) {
+                throw { status: 401, message: "Valid user required. Please login again." };
             }
+
             const queueDao = await QueueService.getQueue(passcode);
             const queue: Queue = queueDao.data;
 
@@ -75,6 +97,9 @@ class Acl {
                 return { isAuthorized: true, passcode, isOwner };
             }
         } catch(err) {
+            if (err.message) {
+                throw err;
+            }
             logger.error(err, { id: userId });
             throw { status: 500, message: "Unable to get queue with given passcode" };
         }
@@ -84,6 +109,8 @@ class Acl {
         try {
             if (!passcode) {
                 throw { status: 401, message: "Valid passcode required" };
+            } else if (!userId) {
+                throw { status: 401, message: "Valid user required. Please login again." };
             }
             const queueDao = await QueueService.getQueue(passcode);
             const queue: Queue = queueDao.data;
@@ -112,6 +139,9 @@ class Acl {
                 throw { status: 404, message: "User not found" };
             }
         } catch(err) {
+            if (err.message) {
+                throw err;
+            }
             logger.error(err, { id: userId });
             throw { status: 500, message: "Unable to get queue with given passcode" };
         }
@@ -121,13 +151,13 @@ class Acl {
         if (Acl.excludeEndpointsFromAuth.includes(req.path)) {
             return next();
         } else if (Acl.visitorAuthRequired.includes(req.path)) {
-            Acl.isVisitorAuthorized(req.cookies.get("passcode"), req.cookies.get("user")).then(() => {
+            Acl.isVisitorAuthorized(req.cookies.get("passcode"), req.cookies.get("user", { signed: true })).then(() => {
                 return next();
             }).catch(err => {
                 return res.status(err.status).json({ message: err.message });
             });
         } else {
-            Acl.isAuthorized(req.cookies.get("passcode"), req.cookies.get("user")).then(() => {
+            Acl.isAuthorized(req.cookies.get("passcode"), req.cookies.get("user", { signed: true })).then(() => {
                 return next();
             }).catch(err => {
                 return res.status(err.status).json({ message: err.message });
@@ -137,7 +167,7 @@ class Acl {
 
     public static adminFilter = (req: express.Request, res: express.Response, next: () => any) => {
         if (Acl.endpointsRequireOwnerPerm.includes(req.path)) {
-            QueueService.isOwner(req.cookies.get("passcode"), req.cookies.get("user")).then(() => {
+            Acl.isOwner(req.cookies.get("passcode"), req.cookies.get("user", { signed: true })).then(() => {
                 return next();
             }).catch(err => {
                 return res.status(err.status).json({ message: err.message });

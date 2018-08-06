@@ -94,12 +94,10 @@ class QueueService {
         await QueueService.updateQueueData(queueDao.data, passcode);
 
         // Skip the song if enough downvotes
-        let voteSum = queueDao.data.currentTrack.votes.reduce((prev, cur) => prev + cur.value, 0);
-        if (voteSum < 0) {
-            if (Math.abs(voteSum) >= queueDao.data.settings.skipThreshold) {
-                logger.info(`Got downvote form ${Math.abs(voteSum)}/${queueDao.data.settings.skipThreshold} users. Skipping this song...`, { user, passcode });
-                QueueService.startNextTrack(passcode, user);
-            }
+        const voteSum = queueDao.data.currentTrack.votes.reduce((sum, v) => sum + v.value, 0);
+        if (voteSum <= -queueDao.data.settings.skipThreshold) {
+            logger.info(`Got downvote form ${Math.abs(voteSum)}/${queueDao.data.settings.skipThreshold} users. Skipping this song...`, { user, passcode });
+            QueueService.startNextTrack(passcode, user);
         }
     }
 
@@ -415,19 +413,6 @@ class QueueService {
                 user.accessTokenAcquired = null;
             }
             return;
-        } catch (err) {
-            throw { status: 500, message: err.message };
-        }
-    }
-
-    public static async isOwner(passcode: string, userId: string) {
-        try {
-            const queueDao = await QueueService.getQueue(passcode);
-            if (queueDao.data.owner !== userId) {
-                throw { status: 401, message: "Owner permission required for QueueService action." };
-            }
-
-            return true;
         } catch (err) {
             throw { status: 500, message: err.message };
         }

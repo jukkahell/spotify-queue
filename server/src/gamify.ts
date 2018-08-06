@@ -118,28 +118,22 @@ export namespace Gamify {
             const queueDao = await QueueService.getQueue(passcode, true);
             const currentTrack = queueDao.data.currentTrack;
             if (queueDao.data.settings.gamify && currentTrack) {
-        let reward = millisToPoints(currentTrack.track.duration);
-            logger.info(`Rewarding track owner ${currentTrack.owner || "-"} for ${reward} points`, { passcode });
-            queueDao.data.users = queueDao.data.users.map((user: User) => { 
-                const queued = queueDao.data.queue.some(queuedItem => queuedItem.userId === user.id);
-                if (queued || currentTrack.owner === user.id) {
-                    if (currentTrack.owner === user.id) {
-                        user.points += reward;
-                        let voteCount = currentTrack.votes.reduce((sum, v) => sum += v.value, 0);
-                        logger.info(`${voteCount} vote points for user`, { passcode, user: user.id });
-                        user.points += voteCount;
-                    } else {
-                            if (currentTrack.owner !== null) {
-                                // Give 1/3 points if someone else's song
-                                user.points += Math.ceil(reward/3);
-                            } else {
-                                // Give 1 point if playlist track
-                                user.points += 1;
-                            }
+                let reward = millisToPoints(currentTrack.track.duration);
+                logger.info(`Rewarding track owner ${currentTrack.owner || "-"} for ${reward} points`, { passcode });
+                queueDao.data.users = queueDao.data.users.map((user: User) => {
+                    const queued = queueDao.data.queue.some(queuedItem => queuedItem.userId === user.id);
+                    if (queued || currentTrack.owner === user.id) {
+                        if (currentTrack.owner === user.id) {
+                            user.points += reward;
+                            let voteCount = currentTrack.votes.reduce((sum, v) => sum += v.value, 0);
+                            logger.info(`${voteCount} vote points for user`, { passcode, user: user.id });
+                            user.points += voteCount;
+                        } else {
+                            user.points += 1;
                         }
-                }
-                return user;
-            });
+                    }
+                    return user;
+                });
                 await QueueService.updateQueueData(queueDao.data, passcode);
             }
         } catch (err) {
