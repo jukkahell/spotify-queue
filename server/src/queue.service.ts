@@ -889,7 +889,7 @@ class QueueService {
                     clearTimeout(QueueService.timeouts[currentState.accessToken!]);
                 }
                 QueueService.timeouts[currentState.accessToken!] = setTimeout(() =>
-                    QueueService.checkTrackStatus(passcode, ""),
+                    QueueService.checkTrackStatus(passcode, "-"),
                     timeLeft - 1000
                 );
             }
