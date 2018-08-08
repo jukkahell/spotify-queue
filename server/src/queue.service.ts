@@ -874,11 +874,11 @@ class QueueService {
             // We can start next if spotify isn't playing anymore
             if (!currentState.isSpotifyPlaying && currentState.isSpotiquPlaying) {
                 logger.info(`Track was already over...starting next`, { user, passcode });
-                QueueService.startNextTrack(passcode, "");
+                QueueService.startNextTrack(passcode, "-");
             } else if (timeLeft < 5000) {
                 logger.info(`Less than 5 secs left...initiating timer to start the next song...`, { user, passcode });
                 // Start new song after timeLeft and check for that song's duration
-                setTimeout(() => QueueService.startNextTrack(passcode, ""), timeLeft - 1000);
+                setTimeout(() => QueueService.startNextTrack(passcode, "-"), timeLeft - 1000);
             } else {
                 // If there's still time, check for progress again after a while
                 const seconds = Math.round(timeLeft / 1000);
@@ -890,7 +890,7 @@ class QueueService {
                     clearTimeout(QueueService.timeouts[currentState.accessToken!]);
                 }
                 QueueService.timeouts[currentState.accessToken!] = setTimeout(() =>
-                    QueueService.checkTrackStatus(passcode, ""),
+                    QueueService.checkTrackStatus(passcode, "-"),
                     timeLeft - 1000
                 );
             }
