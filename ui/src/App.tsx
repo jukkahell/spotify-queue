@@ -89,6 +89,7 @@ export class App extends React.Component<{}, IState> {
             .then(response => {
                 if (response.data.passcode) {
                     this.setState({
+                        responseMsg: null,
                         passcode: response.data.passcode,
                         isOwner: response.data.isOwner
                     });
@@ -115,6 +116,7 @@ export class App extends React.Component<{}, IState> {
 
                     clearInterval(this.authInterval);
                     this.setState({
+                        responseMsg: null,
                         passcode: response.data.passcode,
                         isOwner: response.data.isOwner
                     });
@@ -275,6 +277,7 @@ export class App extends React.Component<{}, IState> {
                                 <CurrentlyPlaying isPlaying={this.state.isPlaying}
                                     currentTrack={this.state.currentTrack}
                                     isOwner={this.state.isOwner}
+                                    user={this.state.user}
                                     onVoted={this.refreshCurrentlyPlaying}
                                     onPauseResume={this.onPauseResume}
                                     onSongEnd={this.onSongEnd}

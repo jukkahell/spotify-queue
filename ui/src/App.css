@@ -315,6 +315,10 @@ button.iconButton:active, button.iconButton:hover, button.iconButton:focus {
 .voteButton.down:active {
     background: #b80f0f!important;
 }
+.voteButton:disabled,.voteButton:disabled:hover {
+    background: grey!important;
+    border-color: grey!important;
+}
 
 .voteCount {
     display: flex;

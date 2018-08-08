@@ -11,6 +11,7 @@ export interface ISettings {
     skipThreshold: number;
     playlist: string;
     maxSequentialTracks: number;
+    spotifyLogin: boolean;
 }
 
 export interface IShareProps {
@@ -40,6 +41,7 @@ export class Settings extends React.Component<IShareProps, IShareState> {
         this.updateSkipThreshold = this.updateSkipThreshold.bind(this);
         this.updateDuplicates = this.updateDuplicates.bind(this);
         this.updateSequential = this.updateSequential.bind(this);
+        this.toggleSpotifyLogin = this.toggleSpotifyLogin.bind(this);
     }
 
     public toggleGamify(e: React.MouseEvent<HTMLElement>) {
@@ -60,6 +62,13 @@ export class Settings extends React.Component<IShareProps, IShareState> {
         e.preventDefault();
         const settings = this.props.settings;
         settings.randomQueue = !settings.randomQueue;
+        this.props.updateSettings(settings);
+    }
+
+    public toggleSpotifyLogin(e: React.MouseEvent<HTMLElement>) {
+        e.preventDefault();
+        const settings = this.props.settings;
+        settings.spotifyLogin = !settings.spotifyLogin;
         this.props.updateSettings(settings);
     }
 
@@ -117,6 +126,11 @@ export class Settings extends React.Component<IShareProps, IShareState> {
                 <FontAwesomeIcon icon="layer-group" />
                 <span className="settingName">Max {this.props.settings.maxSequentialTracks} sequential songs per user</span>
                 <NumberSetting value={this.props.settings.maxSequentialTracks} step={1} updateValue={this.updateSequential} />
+            </a>,
+            <a className="dropdown-item settingsMenuItem " key="spotifyLogin" href="#" id="spotifyLogin" onClick={this.toggleSpotifyLogin}>
+                <FontAwesomeIcon icon={["fab", "spotify"]} />
+                <span className="settingName">Require Spotify login for users</span>
+                <FontAwesomeIcon className={"settingOptionCheckmark " + (this.props.settings.spotifyLogin ? "active" : "inactive")} icon="check-circle" />
             </a>
         ]);
     }

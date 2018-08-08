@@ -1,6 +1,7 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import axios from "axios";
 import * as React from "react";
+import { IUser } from "./App";
 import config from "./config";
 import { IQueuedItem, IVote } from "./Queue";
 
@@ -12,6 +13,7 @@ interface ICurrentlyPlayingProps {
     currentTrack: IQueuedItem | null;
     isPlaying: boolean;
     isOwner: boolean;
+    user: IUser | null;
 }
 
 interface ICurrentlyPlayingState {
@@ -78,15 +80,23 @@ export class CurrentlyPlaying extends React.Component<ICurrentlyPlayingProps, IC
         if (!this.props.currentTrack) {
             return null;
         }
+
+        let alreadyVoted = false;
+        let alreadyVotedTitle = "";
+        if (this.props.user && this.props.currentTrack.votes.some(v => v.userId === this.props.user!.id)) {
+            alreadyVoted = true;
+            alreadyVotedTitle = "Already voted";
+        }
+
         let voteCount = 0;
         this.props.currentTrack.votes.forEach((v: IVote) => voteCount += v.value);
         return (
             <div className="voteButtons">
-                <button type="submit" className="btn btn-primary voteButton up" id={this.props.currentTrack.track.id} onClick={this.voteUp}>
+                <button disabled={alreadyVoted} title={alreadyVotedTitle} type="submit" className="btn btn-primary voteButton up" id={this.props.currentTrack.track.id} onClick={this.voteUp}>
                     <FontAwesomeIcon icon="thumbs-up" />
                 </button>
                 <div className="voteCount">{voteCount > 0 ? "+" : ""}{voteCount}</div>
-                <button type="submit" className="btn btn-primary voteButton down" id={this.props.currentTrack.track.id} onClick={this.voteDown}>
+                <button disabled={alreadyVoted} title={alreadyVotedTitle} type="submit" className="btn btn-primary voteButton down" id={this.props.currentTrack.track.id} onClick={this.voteDown}>
                     <FontAwesomeIcon icon="thumbs-down" />
                 </button>
             </div>

@@ -27,6 +27,7 @@ export interface Settings {
     skipThreshold: number;
     playlist: string | null;
     maxSequentialTracks: number;
+    spotifyLogin: boolean;
 }
 
 export interface Queue {

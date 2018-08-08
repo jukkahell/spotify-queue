@@ -72,7 +72,7 @@ class Acl {
         }
     }
 
-    public static isAuthorized = async (passcode: string, userId: string) => {
+    public static isAuthorized = async (passcode: string, userId: string, signedUser?: string) => {
         try {
             if (!passcode) {
                 throw { status: 401, message: "Valid passcode required" };
@@ -82,6 +82,15 @@ class Acl {
 
             const queueDao = await QueueService.getQueue(passcode);
             const queue: Queue = queueDao.data;
+
+            // If signed user is not set but user is
+            // Then we can check if it's found from the queue and allow it to go further
+            // Otherwise throw error
+            if (!signedUser) {
+                if (!queue.users.some(user => user.id === userId)) {
+                    throw { status: 401, message: "Valid user required. Please login again." };
+                }
+            }
 
             // Queue is incative if we don't have accessToken nor refreshToken
             if (!queue.accessToken && !queue.refreshToken) {
@@ -119,7 +128,7 @@ class Acl {
             // No content if not authorized
             if (user) {
                 if (!user.accessToken && !user.refreshToken) {
-                    throw { status: 204, message: "" };
+                    throw { status: 403, message: "You need to login with Spotify credentials for this action." };
                 } else {
                     const authResponse: any = await SpotifyService.isAuthorized(passcode, userId, user.accessTokenAcquired!, user.expiresIn!, user.refreshToken!);
                     if (authResponse) {
@@ -147,21 +156,30 @@ class Acl {
         }
     }
 
-    public static authFilter = (req: express.Request, res: express.Response, next: () => any) => {
-        if (Acl.excludeEndpointsFromAuth.includes(req.path)) {
-            return next();
-        } else if (Acl.visitorAuthRequired.includes(req.path)) {
-            Acl.isVisitorAuthorized(req.cookies.get("passcode"), req.cookies.get("user", { signed: true })).then(() => {
+    public static authFilter = async (req: express.Request, res: express.Response, next: () => any) => {
+        const passcode = req.cookies.get("passcode");
+        const user = req.cookies.get("user", { signed: true });
+
+        try {
+            const queueDao = passcode ? await QueueService.getQueue(passcode) : null;
+            if (Acl.excludeEndpointsFromAuth.includes(req.path)) {
                 return next();
-            }).catch(err => {
-                return res.status(err.status).json({ message: err.message });
-            });
-        } else {
-            Acl.isAuthorized(req.cookies.get("passcode"), req.cookies.get("user", { signed: true })).then(() => {
-                return next();
-            }).catch(err => {
-                return res.status(err.status).json({ message: err.message });
-            });
+            } else if (Acl.visitorAuthRequired.includes(req.path) || (queueDao && queueDao.data.settings.spotifyLogin)) {
+                Acl.isVisitorAuthorized(passcode, user).then(() => {
+                    return next();
+                }).catch(err => {
+                    return res.status(err.status).json({ message: err.message });
+                });
+            } else {
+                Acl.isAuthorized(passcode, user).then(() => {
+                    return next();
+                }).catch(err => {
+                    return res.status(err.status).json({ message: err.message });
+                });
+            }
+        } catch (err) {
+            logger.error(err);
+            return res.status(500).json({ message: "Unable to authorize user. Please try again later." });
         }
     }
 

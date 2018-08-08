@@ -192,6 +192,7 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
                 this.setState({
                     tracks: response.data.tracks,
                     artists: [],
+                    albums: [],
                     playlists: []
                 });
             }).catch(err => {

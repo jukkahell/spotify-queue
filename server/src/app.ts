@@ -114,9 +114,12 @@ app.get("/isAuthorized", (req, res) => {
         return;
     }
 
-    Acl.isAuthorized(req.cookies.get("passcode"), req.cookies.get("user", { signed: true })).then((authResult: AuthResult) => {
+    const signedUser = req.cookies.get("user", { signed: true });
+    const user = req.cookies.get("user");
+    Acl.isAuthorized(req.cookies.get("passcode"), user, signedUser).then((authResult: AuthResult) => {
         config.passcodeCookieOptions.expires = passcodeCookieExpire();
         req.cookies.set("passcode", req.cookies.get("passcode"), config.passcodeCookieOptions);
+        req.cookies.set("user", req.cookies.get("user"), config.userCookieOptions);
         res.status(200).json(authResult);
     }).catch(err => {
         res.status(err.status).json({ isAuthorized: false, message: err.message });

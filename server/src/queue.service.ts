@@ -311,7 +311,8 @@ class QueueService {
                 randomQueue: false,
                 skipThreshold: 5,
                 playlist: null,
-                maxSequentialTracks: 3
+                maxSequentialTracks: 3,
+                spotifyLogin: false
             },
             users: [
                 {
