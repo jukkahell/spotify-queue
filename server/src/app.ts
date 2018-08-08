@@ -18,7 +18,7 @@ import SpotifyService from "./spotify.service";
 import Acl, { AuthResult } from "./acl";
 import Gamify from "./gamify";
 
-const keys = Array.from({length: 10}, () => randomstring.generate(15));
+const keys = secrets.cookie.signKeys;
 const keygrip = Keygrip(keys, "sha256");
 
 const app = express();
@@ -114,9 +114,7 @@ app.get("/isAuthorized", (req, res) => {
         return;
     }
 
-    const signedUser = req.cookies.get("user", { signed: true });
-    const user = req.cookies.get("user");
-    Acl.isAuthorized(req.cookies.get("passcode"), user, signedUser).then((authResult: AuthResult) => {
+    Acl.isAuthorized(req.cookies.get("passcode"), req.cookies.get("user", { signed: true })).then((authResult: AuthResult) => {
         config.passcodeCookieOptions.expires = passcodeCookieExpire();
         req.cookies.set("passcode", req.cookies.get("passcode"), config.passcodeCookieOptions);
         req.cookies.set("user", req.cookies.get("user"), config.userCookieOptions);
@@ -342,6 +340,39 @@ app.get("/user", async (req, res) => {
         delete user.expiresIn;
         delete user.accessTokenAcquired;
         res.status(200).json(user);
+    } catch (err) {
+        res.status(err.status).json({ message: err.message });
+    }
+});
+
+app.get("/users", async (req, res) => {
+    try {
+        const users = await QueueService.getUsers(req.cookies.get("passcode"), req.cookies.get("user", { signed: true }));
+        res.status(200).json(users);
+    } catch (err) {
+        res.status(err.status).json({ message: err.message });
+    }
+});
+
+app.delete("/removeUser", async (req, res) => {
+    try {
+        const passcode = req.cookies.get("passcode");
+        const user = req.cookies.get("user", { signed: true });
+        const removeUser = req.body.userId;
+        await QueueService.removeUser(passcode, user, removeUser);
+        res.status(200).json({ msg: "OK" });
+    } catch (err) {
+        res.status(err.status).json({ message: err.message });
+    }
+});
+
+app.put("/resetPoints", async (req, res) => {
+    try {
+        const passcode = req.cookies.get("passcode");
+        const user = req.cookies.get("user", { signed: true });
+        const resetUser = req.body.userId;
+        await QueueService.resetPoints(passcode, user, resetUser);
+        res.status(200).json({ msg: "OK" });
     } catch (err) {
         res.status(err.status).json({ message: err.message });
     }

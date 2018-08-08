@@ -14,7 +14,7 @@ export interface AuthResult {
 class Acl {
 
     private static excludeEndpointsFromAuth = ["/join", "/create", "/reactivate", "/isAuthorized", "/queue", "/currentlyPlaying", "/logout", "/visitorAuth"];
-    private static endpointsRequireOwnerPerm = ["/device", "/pauseResume", "/selectPlaylist", "/updateSettings", "/queuePlaylist"];
+    private static endpointsRequireOwnerPerm = ["/device", "/pauseResume", "/selectPlaylist", "/updateSettings", "/queuePlaylist", "/removeUser", "/resetPoints"];
     private static visitorAuthRequired = ["/playlists"];
 
     public static async saveAccessToken(passcode: string, userId: string, accessToken: string, expiresIn: number, refreshToken?: string) {
@@ -72,7 +72,7 @@ class Acl {
         }
     }
 
-    public static isAuthorized = async (passcode: string, userId: string, signedUser?: string) => {
+    public static isAuthorized = async (passcode: string, userId: string) => {
         try {
             if (!passcode) {
                 throw { status: 401, message: "Valid passcode required" };
@@ -82,15 +82,6 @@ class Acl {
 
             const queueDao = await QueueService.getQueue(passcode);
             const queue: Queue = queueDao.data;
-
-            // If signed user is not set but user is
-            // Then we can check if it's found from the queue and allow it to go further
-            // Otherwise throw error
-            if (!signedUser) {
-                if (!queue.users.some(user => user.id === userId)) {
-                    throw { status: 401, message: "Valid user required. Please login again." };
-                }
-            }
 
             // Queue is incative if we don't have accessToken nor refreshToken
             if (!queue.accessToken && !queue.refreshToken) {

@@ -72,6 +72,33 @@ class QueueService {
         return user;
     }
 
+    public static async getUsers(passcode: string, userId: string) {
+        const queueDao = await QueueService.getQueue(passcode, false);
+        const users = queueDao.data.users.map((user) => { 
+            return { "id": user.id, "spotifyUserId": user.spotifyUserId, "points": user.points }
+        });
+        return users;
+    }
+
+    public static async resetPoints(passcode: string, userId: string, resetId: string) {
+        logger.info(`Resetting ${resetId} points...`, { passcode, user: userId });
+        const queueDao = await QueueService.getQueue(passcode, false);
+        queueDao.data.users = queueDao.data.users.map((user) => {
+            if (user.id === resetId) {
+                user.points = config.gamify.initialPoints;
+            }
+            return user;
+        });
+        await QueueService.updateQueueData(queueDao.data, passcode);
+    }
+
+    public static async removeUser(passcode: string, userId: string, removeId: string) {
+        logger.info(`Removing user ${removeId}...`, { passcode, user: userId });
+        const queueDao = await QueueService.getQueue(passcode, false);
+        queueDao.data.users = queueDao.data.users.filter((user) => user.id !== removeId);
+        await QueueService.updateQueueData(queueDao.data, passcode);
+    }
+
     public static async vote(passcode: string, user: string, value: number) {
         const queueDao = await QueueService.getQueue(passcode, false);
         if (value !== 1 && value !== -1) {

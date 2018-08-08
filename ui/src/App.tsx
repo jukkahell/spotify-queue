@@ -10,6 +10,7 @@ import {IQueuedItem, Queue} from "./Queue";
 import SearchForm from "./SearchForm";
 import Settings, {ISettings} from "./Settings";
 import Share from "./Share";
+import UserList from "./UserList";
 import {UserMenu} from "./UserMenu";
 
 export interface IUser {
@@ -31,6 +32,7 @@ export interface IState {
     playlistId: string | null;
     settings: ISettings | null;
     user: IUser | null;
+    users: IUser[] | null;
 }
 
 export class App extends React.Component<{}, IState> {
@@ -52,7 +54,8 @@ export class App extends React.Component<{}, IState> {
             reactivate: false,
             playlistId: null,
             settings: null,
-            user: null
+            user: null,
+            users: null
         };
 
         this.createQueue = this.createQueue.bind(this);
@@ -73,6 +76,7 @@ export class App extends React.Component<{}, IState> {
         this.updateSettings = this.updateSettings.bind(this);
         this.closeAlert = this.closeAlert.bind(this);
         this.getUser = this.getUser.bind(this);
+        this.getUsers = this.getUsers.bind(this);
         this.onSpotifyLogin = this.onSpotifyLogin.bind(this);
     }
 
@@ -110,6 +114,7 @@ export class App extends React.Component<{}, IState> {
             .then(response => {
                 if (response.data.isAuthorized) {
                     this.getUser();
+                    this.getUsers();
                     this.getCurrentTrack();
                     this.getQueue();
                     this.getSettings();
@@ -304,6 +309,7 @@ export class App extends React.Component<{}, IState> {
                     <div className="footer fixed-bottom d-flex">
                         <UserMenu passcode={this.state.passcode} onError={this.onError} onSpotifyLogin={this.onSpotifyLogin} user={this.state.user} />
                         <Share passcode={this.state.passcode} onError={this.onError} />
+                        <UserList onError={this.onError} isOwner={this.state.isOwner} users={this.state.users} onEdit={this.getUsers} />
                         {this.state.isOwner ? <DeviceSelect onError={this.onError} /> : null}
                         {
                             this.state.isOwner && this.state.settings ?
@@ -350,6 +356,20 @@ export class App extends React.Component<{}, IState> {
                 if (response.status === 200) {
                     this.setState({
                         user: response.data
+                    });
+                }
+            }).catch(err => {
+                this.onError(err.response.data.message);
+            }
+        );
+    }
+
+    private getUsers() {
+        axios.get(config.backend.url + "/users")
+            .then(response => {
+                if (response.status === 200) {
+                    this.setState({
+                        users: response.data
                     });
                 }
             }).catch(err => {

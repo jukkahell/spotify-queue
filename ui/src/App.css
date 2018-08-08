@@ -420,6 +420,39 @@ button.iconButton:active, button.iconButton:hover, button.iconButton:focus {
     }
 }
 
+.usersDropdown {
+    max-height: 50vh;
+    overflow-y: scroll;
+}
+@media (max-width: 770px) {
+    .usersDropdown {
+        left: 0;
+        position: fixed;
+        bottom: 35px!important;
+    }
+}
+@media (max-width: 460px) {
+    .usersDropdown {
+        font-size: 0.8em;
+    }
+}
+
 .alert {
     cursor: pointer !important;
+}
+
+.userListItem {
+    cursor: pointer;
+    margin: 0;
+    display: grid;
+    grid-template-columns: auto min-content;
+}
+
+.userListContextMenu {
+    display: flex;
+    justify-content: space-around;
+}
+
+.userId {
+    padding-right: 1em;
 }
