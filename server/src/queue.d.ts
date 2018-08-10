@@ -19,6 +19,7 @@ export interface Vote {
 }
 
 export interface Settings {
+    name: string;
     gamify: boolean;
     maxDuplicateTracks: number;
     numberOfTracksPerUser: number;
@@ -31,7 +32,6 @@ export interface Settings {
 }
 
 export interface Queue {
-    name: string;
     owner: string,
     accessToken: string | null;
     accessTokenAcquired: number;

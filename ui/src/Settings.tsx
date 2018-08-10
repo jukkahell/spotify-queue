@@ -3,6 +3,7 @@ import * as React from "react";
 import NumberSetting from "./NumberSetting";
 
 export interface ISettings {
+    name: string;
     gamify: boolean;
     maxDuplicateTracks: number;
     numberOfTracksPerUser: number;
@@ -16,12 +17,14 @@ export interface ISettings {
 
 export interface IShareProps {
     settings: ISettings;
-    updateSettings: (settings: ISettings) => void;
+    updateSettings: (settings: ISettings, updatedFields?: string[]) => void;
     onError: (msg: string) => void;
 }
 
 export interface IShareState {
     dropdownVisible: boolean;
+    editName: boolean;
+    name: string;
 }
 
 export class Settings extends React.Component<IShareProps, IShareState> {
@@ -30,7 +33,9 @@ export class Settings extends React.Component<IShareProps, IShareState> {
         super(props);
 
         this.state = {
-            dropdownVisible: false
+            dropdownVisible: false,
+            editName: false,
+            name: props.settings.name
         };
 
         this.toggleGamify = this.toggleGamify.bind(this);
@@ -42,6 +47,9 @@ export class Settings extends React.Component<IShareProps, IShareState> {
         this.updateDuplicates = this.updateDuplicates.bind(this);
         this.updateSequential = this.updateSequential.bind(this);
         this.toggleSpotifyLogin = this.toggleSpotifyLogin.bind(this);
+        this.editName = this.editName.bind(this);
+        this.updateName = this.updateName.bind(this);
+        this.handleNameChange = this.handleNameChange.bind(this);
     }
 
     public toggleGamify(e: React.MouseEvent<HTMLElement>) {
@@ -95,8 +103,52 @@ export class Settings extends React.Component<IShareProps, IShareState> {
         this.props.updateSettings(this.props.settings);
     }
 
+    public editName() {
+        this.setState({
+            editName: true
+        });
+    }
+
+    public handleNameChange(e: React.ChangeEvent<HTMLInputElement>) {
+        e.preventDefault();
+        this.setState({
+            name: e.target.value
+        });
+    }
+
+    public updateName(e: React.MouseEvent<HTMLElement>) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (!this.state.name || this.state.name.length === 0) {
+            this.props.onError("Name cannot be empty.");
+            return;
+        } else if (this.state.name.length > 50) {
+            this.props.onError("Name can't be longer than 50 characters.");
+            return;
+        }
+
+        const settings = this.props.settings;
+        settings.name = this.state.name;
+        this.props.updateSettings(settings, ["name"]);
+
+        this.setState({
+            editName: false
+        });
+    }
+
     public renderSettingsOptions() {
         return ([
+            <a className="dropdown-item settingsMenuItem" key="name" href="#" id="name" onClick={this.editName}>
+                <FontAwesomeIcon icon="edit" />
+                {this.state.editName ?
+                    <form className="queueName">
+                        <input type="text" value={this.state.name} onChange={this.handleNameChange} />
+                        <button onClick={this.updateName}><FontAwesomeIcon icon="save" /></button>
+                    </form> :
+                    <span className="settingName">{this.state.name || "Queue name"}</span>
+                }
+            </a>,
             <a className="dropdown-item settingsMenuItem" key="gamify" href="#" id="gamify" onClick={this.toggleGamify}>
                 <FontAwesomeIcon icon="gamepad" />
                 <span className="settingName">Gamify</span>

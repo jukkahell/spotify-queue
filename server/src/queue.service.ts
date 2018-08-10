@@ -80,6 +80,25 @@ class QueueService {
         return users;
     }
 
+    public static async getUserQueues(passcode: string, user: string) {
+        let query = "SELECT name, passcode FROM user_queues WHERE user_id = $1";
+        try {
+            logger.debug(`Getting user's queues...`, { user, passcode });
+            const result: QueryResult = await db.query(query, [user]);
+            if (result.rowCount > 0) {
+                return result.rows.map(row => { 
+                    return { "name": row.name, "passcode": row.passcode }
+                });
+            } else {
+                return [];
+            }
+        } catch (err) {
+            logger.error("Error occurred while fetching user queues from database", { passcode });
+            logger.error(err, { user, passcode });
+            throw Error("Error occurred while fetching user queues from database. Please try again later.");
+        }
+    }
+
     public static async resetPoints(passcode: string, userId: string, resetId: string) {
         logger.info(`Resetting ${resetId} points...`, { passcode, user: userId });
         const queueDao = await QueueService.getQueue(passcode, false);
@@ -175,6 +194,7 @@ class QueueService {
                                 const queue: Queue = QueueService.createQueueObject(spotifyUserId, accessToken,
                                     userId, refreshToken, expiresIn);
                                 QueueService.createQueue(passcode, spotifyUserId, queue).then(() => {
+                                    db.query("INSERT INTO user_queues (user_id, name, passcode) VALUES ($1, $2, $3)", [userId, queue.settings.name, passcode]);
                                     resolve({ id: passcode, data: queue, isPlaying: false, owner: spotifyUserId });
                                 }).catch(err => {
                                     logger.error(`Unable to insert queue into database`, { user: userId, passcode });
@@ -326,11 +346,11 @@ class QueueService {
             expiresIn,
             accessTokenAcquired: getCurrentSeconds(),
             currentTrack: null,
-            name: "Queue 1",
             deviceId: null,
             queue: [],
             playlistTracks: [],
             settings: {
+                name: "Queue 1",
                 gamify: false,
                 maxDuplicateTracks: 2,
                 numberOfTracksPerUser: 5,
@@ -355,7 +375,7 @@ class QueueService {
         };
     }
 
-    public static createQueue(passcode: string, spotifyUserId: string, queue: Queue) {
+    public static async createQueue(passcode: string, spotifyUserId: string, queue: Queue) {
         logger.info(`Creating new queue`, { user: queue.owner, passcode });
         return db.query("INSERT INTO queues (id, owner, data) VALUES ($1, $2, $3)", [passcode, spotifyUserId, queue]);
     }
@@ -403,6 +423,7 @@ class QueueService {
                 queue.users.push(user);
                 
                 try {
+                    await db.query("INSERT INTO user_queues (id, user_id, name, passcode) VALUES (default, $1, $2, $3) ON CONFLICT (user_id, passcode) DO NOTHING", [userId, queue.settings.name, passcode]);
                     await QueueService.updateQueueData(queue, passcode);
                     return false;
                 } catch (err) {
@@ -822,13 +843,22 @@ class QueueService {
         });
     }
 
-    public static async updateSettings(passcode: string, user: string, settings: Settings) {
+    public static async updateSettings(passcode: string, user: string, settings: Settings, updatedFields?: string[]) {
         try {
+            if (!settings.name || settings.name.length > 50) {
+                throw { status: 400, message: "Invalid queue name." };
+            }
+            if (updatedFields && updatedFields.indexOf("name") >= 0) {
+                await db.query("UPDATE user_queues SET name = $1 WHERE passcode = $2", [settings.name, passcode]);
+            }
             const queueDao = await QueueService.getQueue(passcode, true);
             queueDao.data.settings = settings;
             await QueueService.updateQueueData(queueDao.data, passcode);
             return settings;
         } catch (err) {
+            if (err.message) {
+                throw { status: err.status, message: err.message };
+            }
             logger.error(err, { user, passcode });
             throw { status: 500, message: "Unexpected error occurred while saving the settings." };
         }

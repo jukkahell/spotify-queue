@@ -7,6 +7,7 @@ import config from "./config";
 import CurrentlyPlaying from "./CurrentlyPlaying";
 import {DeviceSelect} from "./DeviceSelect";
 import {IQueuedItem, Queue} from "./Queue";
+import QueueList, { IUserQueue } from "./QueueList";
 import SearchForm from "./SearchForm";
 import Settings, {ISettings} from "./Settings";
 import Share from "./Share";
@@ -33,6 +34,7 @@ export interface IState {
     settings: ISettings | null;
     user: IUser | null;
     users: IUser[] | null;
+    userQueues: IUserQueue[] | null;
 }
 
 export class App extends React.Component<{}, IState> {
@@ -55,7 +57,8 @@ export class App extends React.Component<{}, IState> {
             playlistId: null,
             settings: null,
             user: null,
-            users: null
+            users: null,
+            userQueues: null
         };
 
         this.createQueue = this.createQueue.bind(this);
@@ -78,6 +81,8 @@ export class App extends React.Component<{}, IState> {
         this.getUser = this.getUser.bind(this);
         this.getUsers = this.getUsers.bind(this);
         this.onSpotifyLogin = this.onSpotifyLogin.bind(this);
+        this.getUserQueues = this.getUserQueues.bind(this);
+        this.selectQueue = this.selectQueue.bind(this);
     }
 
     public componentDidMount() {
@@ -97,12 +102,12 @@ export class App extends React.Component<{}, IState> {
                         passcode: response.data.passcode,
                         isOwner: response.data.isOwner
                     });
-                    this.getCurrentTrack();
-                    this.getQueue();
+                    this.isAuthorized();
                 }
             }).catch((err) => {
                 this.setState({
                     joinError: "Unable to join the given queue: " + err.response.data.message,
+                    responseMsg: { className: "alert-danger", msg: "Unable to join queue: " + err.response.data.message },
                     reactivate: true
                 });
             }
@@ -115,6 +120,7 @@ export class App extends React.Component<{}, IState> {
                 if (response.data.isAuthorized) {
                     this.getUser();
                     this.getUsers();
+                    this.getUserQueues();
                     this.getCurrentTrack();
                     this.getQueue();
                     this.getSettings();
@@ -298,6 +304,7 @@ export class App extends React.Component<{}, IState> {
                             </div>
                         </div>
                         <div className="col-md-8">
+                            <h1>{this.state.settings ? this.state.settings.name : ""}</h1>
                             <SearchForm settings={this.state.settings}
                                 isOwner={this.state.isOwner}
                                 user={this.state.user}
@@ -310,6 +317,7 @@ export class App extends React.Component<{}, IState> {
                         <UserMenu passcode={this.state.passcode} onError={this.onError} onSpotifyLogin={this.onSpotifyLogin} user={this.state.user} />
                         <Share passcode={this.state.passcode} onError={this.onError} />
                         <UserList onError={this.onError} isOwner={this.state.isOwner} users={this.state.users} onEdit={this.getUsers} />
+                        <QueueList onError={this.onError} queues={this.state.userQueues} passcode={this.state.passcode} selectQueue={this.selectQueue} />
                         {this.state.isOwner ? <DeviceSelect onError={this.onError} /> : null}
                         {
                             this.state.isOwner && this.state.settings ?
@@ -350,6 +358,12 @@ export class App extends React.Component<{}, IState> {
         }
     }
 
+    private selectQueue(passcode: string) {
+        this.setState({
+            enteredCode: passcode
+        }, this.joinQueue);
+    }
+
     private getUser() {
         axios.get(config.backend.url + "/user")
             .then(response => {
@@ -378,6 +392,20 @@ export class App extends React.Component<{}, IState> {
         );
     }
 
+    private getUserQueues() {
+        axios.get(config.backend.url + "/userQueues")
+            .then(response => {
+                if (response.status === 200) {
+                    this.setState({
+                        userQueues: response.data
+                    });
+                }
+            }).catch(err => {
+                this.onError(err.response.data.message);
+            }
+        );
+    }
+
     private getSettings() {
         axios.get(config.backend.url + "/settings")
             .then(response => {
@@ -392,8 +420,8 @@ export class App extends React.Component<{}, IState> {
         );
     }
 
-    private updateSettings(settings: ISettings) {
-        axios.post(config.backend.url + "/updateSettings", { settings })
+    private updateSettings(settings: ISettings, updatedFields?: string[]) {
+        axios.post(config.backend.url + "/updateSettings", { settings, updatedFields })
             .then(response => {
                 if (response.status === 200) {
                     this.setState({

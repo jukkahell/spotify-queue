@@ -456,3 +456,34 @@ button.iconButton:active, button.iconButton:hover, button.iconButton:focus {
 .userId {
     padding-right: 1em;
 }
+
+form.queueName > input {
+    padding-left: 1em;
+}
+form.queueName > button {
+    background: none;
+    border: none;
+    padding: 0;
+    margin-left: 0.5em;
+    color: white;
+    cursor: pointer;
+}
+
+h1 {
+    margin: 0;
+}
+
+.userQueueListItem {
+    display: grid;
+    grid-template-columns: min-content auto;
+    cursor: pointer;
+}
+.userQueueListItem.selected {
+    cursor: default;
+}
+.queueName {
+    margin-left: 0.5em;
+}
+.selected {
+    color: #1ED760;
+}

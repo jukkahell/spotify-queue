@@ -354,6 +354,15 @@ app.get("/users", async (req, res) => {
     }
 });
 
+app.get("/userQueues", async (req, res) => {
+    try {
+        const queues = await QueueService.getUserQueues(req.cookies.get("passcode"), req.cookies.get("user", { signed: true }));
+        res.status(200).json(queues);
+    } catch (err) {
+        res.status(err.status).json({ message: err.message });
+    }
+});
+
 app.delete("/removeUser", async (req, res) => {
     try {
         const passcode = req.cookies.get("passcode");
@@ -394,8 +403,9 @@ app.post("/updateSettings", async (req, res) => {
     const passcode = req.cookies.get("passcode");
     const user = req.cookies.get("user", { signed: true });
     const settings: Settings = req.body.settings;
+    const updatedFields: string[] = req.body.updatedFields;
     try {
-        const resp = await QueueService.updateSettings(passcode, user, settings);
+        const resp = await QueueService.updateSettings(passcode, user, settings, updatedFields);
         res.status(200).json(resp);
     } catch (err) {
         res.status(err.status).json({ message: err.message });
