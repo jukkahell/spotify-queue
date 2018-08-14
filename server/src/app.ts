@@ -22,6 +22,7 @@ const keys = secrets.cookie.signKeys;
 const keygrip = Keygrip(keys, "sha256");
 
 const app = express();
+app.use(express.static(".well-known"));
 app.use(cors(config.app.cors));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));

@@ -81,22 +81,25 @@ export class CurrentlyPlaying extends React.Component<ICurrentlyPlayingProps, IC
             return null;
         }
 
-        let alreadyVoted = false;
-        let alreadyVotedTitle = "";
+        let voteDisabled = false;
+        let voteDisabledTitle = "";
         if (this.props.user && this.props.currentTrack.votes.some(v => v.userId === this.props.user!.id)) {
-            alreadyVoted = true;
-            alreadyVotedTitle = "Already voted";
+            voteDisabled = true;
+            voteDisabledTitle = "Already voted";
+        } else if (this.props.user && this.props.currentTrack.userId === this.props.user.id) {
+            voteDisabled = true;
+            voteDisabledTitle = "Can't vote own songs";
         }
 
         let voteCount = 0;
         this.props.currentTrack.votes.forEach((v: IVote) => voteCount += v.value);
         return (
             <div className="voteButtons">
-                <button disabled={alreadyVoted} title={alreadyVotedTitle} type="submit" className="btn btn-primary voteButton up" id={this.props.currentTrack.track.id} onClick={this.voteUp}>
+                <button disabled={voteDisabled} title={voteDisabledTitle} type="submit" className="btn btn-primary voteButton up" id={this.props.currentTrack.track.id} onClick={this.voteUp}>
                     <FontAwesomeIcon icon="thumbs-up" />
                 </button>
                 <div className="voteCount">{voteCount > 0 ? "+" : ""}{voteCount}</div>
-                <button disabled={alreadyVoted} title={alreadyVotedTitle} type="submit" className="btn btn-primary voteButton down" id={this.props.currentTrack.track.id} onClick={this.voteDown}>
+                <button disabled={voteDisabled} title={voteDisabledTitle} type="submit" className="btn btn-primary voteButton down" id={this.props.currentTrack.track.id} onClick={this.voteDown}>
                     <FontAwesomeIcon icon="thumbs-down" />
                 </button>
             </div>

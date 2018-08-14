@@ -170,6 +170,11 @@ class QueueService {
                 let passcode: string;
                 let userId: string;
 
+                // User must have premium account
+                if (response.data.product !== "premium") {
+                    return reject({ status: 403, message: "You must have Spotify Premium to use Spotiqu." });
+                }
+
                 logger.debug(`Found spotify userId...trying to find existing queues`, { id: spotifyUserId });
 
                 // Check if QueueService user already has a queue
