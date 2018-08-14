@@ -1,6 +1,7 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import axios from "axios";
 import * as React from "react";
-import axios from "../node_modules/axios";
+import { IUser } from "./App";
 import config from "./config";
 import { ISettings } from "./Settings";
 import Track, { ITrackProps } from "./Track";
@@ -23,11 +24,12 @@ interface IQueueProps {
     queue: IQueuedItem[] | null;
     currentTrack: IQueuedItem | null;
     settings: ISettings | null;
+    user: IUser | null;
 }
 
 interface IQueueState {
     contextMenuVisible: boolean;
-    contextMenuTrackId: string | null;
+    contextMenuTrack: IQueuedItem | null;
     contextMenuTargetPlaying: boolean;
 }
 
@@ -38,7 +40,7 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
 
         this.state = {
             contextMenuVisible: false,
-            contextMenuTrackId: null,
+            contextMenuTrack: null,
             contextMenuTargetPlaying: false
         };
 
@@ -77,7 +79,7 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
 
         axios.delete(config.backend.url + "/removeFromQueue", {
             data: {
-                trackId: this.state.contextMenuTrackId,
+                trackId: this.state.contextMenuTrack!.track.id,
                 isPlaying: this.state.contextMenuTargetPlaying
             }
         }).then(() => {
@@ -87,7 +89,7 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
             }
             this.setState({
                 contextMenuVisible: false,
-                contextMenuTrackId: null,
+                contextMenuTrack: null,
                 contextMenuTargetPlaying: false
             });
         }).catch(err => {
@@ -99,12 +101,12 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
         e.preventDefault();
 
         axios.post(config.backend.url + "/moveUpInQueue", {
-            trackId: this.state.contextMenuTrackId
+            trackId: this.state.contextMenuTrack!.track.id
         }).then(() => {
             this.props.onQueued();
             this.setState({
                 contextMenuVisible: false,
-                contextMenuTrackId: null,
+                contextMenuTrack: null,
                 contextMenuTargetPlaying: false
             });
         }).catch(err => {
@@ -114,9 +116,10 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
 
     protected renderContextMenu() {
         if (!this.state.contextMenuTargetPlaying) {
+            const showPoints = (this.state.contextMenuTrack!.userId !== this.props.user!.id) ? "(-20 pts)" : "";
             const menu = [
                 <a className={"dropdown-item"} key={"removeFromQueue"} href="#" onClick={this.removeFromQueue}>
-                    <FontAwesomeIcon icon="trash-alt" /> Remove from queue
+                    <FontAwesomeIcon icon="trash-alt" /> Remove from queue {showPoints}
                 </a>
             ];
             if (this.props.settings && this.props.settings.gamify) {
@@ -136,16 +139,17 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
         }
     }
     protected showContextMenu(targetId: string, isPlaying: boolean) {
+        const track: IQueuedItem = this.props.queue!.find(q => q.track.id === targetId)!;
         this.setState((prevState) => ({
             contextMenuVisible: !prevState.contextMenuVisible,
-            contextMenuTrackId: targetId,
+            contextMenuTrack: track,
             contextMenuTargetPlaying: isPlaying
         }));
     }
     protected hideMenu() {
         this.setState(() => ({
             contextMenuVisible: false,
-            contextMenuTrackId: null,
+            contextMenuTrack: null,
             contextMenuTargetPlaying: false
         }));
     }

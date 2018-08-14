@@ -299,6 +299,7 @@ export class App extends React.Component<{}, IState> {
                                     queue={this.state.queuedItems}
                                     onSkip={this.refreshCurrentlyPlaying}
                                     settings={this.state.settings}
+                                    user={this.state.user}
                                     onQueued={this.onQueued}
                                     onError={this.onError} />
                             </div>
