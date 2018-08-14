@@ -141,26 +141,28 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
         }
 
         const menu = [];
-        const showPoints = (this.state.contextMenuTrack.userId !== this.props.user!.id) ? "(-20 pts)" : "";
-        if (!this.state.contextMenuTargetPlaying) {
-            menu.push(
-                <a className={"dropdown-item"} key={"removeFromQueue"} href="#" onClick={this.removeFromQueue}>
-                    <FontAwesomeIcon icon="trash-alt" /> Remove from queue {showPoints}
-                </a>
-            );
-            if (this.props.settings && this.props.settings.gamify) {
+        const showPoints = (this.props.settings!.gamify && this.state.contextMenuTrack.userId !== this.props.user!.id) ? "(-20 pts)" : "";
+        if (this.props.settings!.gamify || this.state.contextMenuTrack.userId === this.props.user!.id) {
+            if (!this.state.contextMenuTargetPlaying) {
                 menu.push(
-                    <a className={"dropdown-item"} key={"moveUp"} href="#" onClick={this.moveUp}>
-                        <FontAwesomeIcon icon="arrow-circle-up" /> Move up in queue (-5 pts)
+                    <a className={"dropdown-item"} key={"removeFromQueue"} href="#" onClick={this.removeFromQueue}>
+                        <FontAwesomeIcon icon="trash-alt" /> Remove from queue {showPoints}
+                    </a>
+                );
+                if (this.props.settings && this.props.settings.gamify) {
+                    menu.push(
+                        <a className={"dropdown-item"} key={"moveUp"} href="#" onClick={this.moveUp}>
+                            <FontAwesomeIcon icon="arrow-circle-up" /> Move up in queue (-5 pts)
+                        </a>
+                    );
+                }
+            } else {
+                menu.push(
+                    <a className={"dropdown-item"} key={"removeFromQueue"} href="#" onClick={this.removeFromQueue}>
+                        <FontAwesomeIcon icon="forward" /> Skip {showPoints}
                     </a>
                 );
             }
-        } else {
-            menu.push(
-                <a className={"dropdown-item"} key={"removeFromQueue"} href="#" onClick={this.removeFromQueue}>
-                    <FontAwesomeIcon icon="forward" /> Skip {showPoints}
-                </a>
-            );
         }
 
         // If gamify enabled
@@ -172,6 +174,10 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
                     <FontAwesomeIcon icon="shield-alt" /> Protect from skip (-10 pts)
                 </a>
             );
+        }
+
+        if (menu.length === 0) {
+            this.hideMenu();
         }
 
         return menu;

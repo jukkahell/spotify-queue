@@ -10,6 +10,7 @@ interface ICurrentlyPlayingProps {
     onError: (msg: string) => void;
     onPauseResume: () => void;
     onVoted: () => void;
+    refreshData: () => void;
     currentTrack: IQueuedItem | null;
     isPlaying: boolean;
     isOwner: boolean;
@@ -20,6 +21,7 @@ interface ICurrentlyPlayingState {
     trackId: string;
     progress: number;
     progressUpdated: number;
+    lastRefresh: number;
 }
 
 export class CurrentlyPlaying extends React.Component<ICurrentlyPlayingProps, ICurrentlyPlayingState> {
@@ -31,7 +33,8 @@ export class CurrentlyPlaying extends React.Component<ICurrentlyPlayingProps, IC
         this.state = {
             trackId: "",
             progress: 0,
-            progressUpdated: 0
+            progressUpdated: 0,
+            lastRefresh: (new Date).getTime()
         };
 
         this.voteUp = this.voteUp.bind(this);
@@ -53,7 +56,8 @@ export class CurrentlyPlaying extends React.Component<ICurrentlyPlayingProps, IC
             this.setState({
                 trackId: this.props.currentTrack.track.id,
                 progress: this.props.currentTrack.track.progress!,
-                progressUpdated: (new Date).getTime()
+                progressUpdated: (new Date).getTime(),
+                lastRefresh: (new Date).getTime()
             }, this.startProgress);
         } else if (!this.props.isPlaying) {
             clearInterval(this.progressInterval);
@@ -141,6 +145,13 @@ export class CurrentlyPlaying extends React.Component<ICurrentlyPlayingProps, IC
                 progress: (prevState.progress + elapsed),
                 progressUpdated: (new Date).getTime()
             }));
+
+            const elapsedSinceLastRefresh = (new Date).getTime() - this.state.lastRefresh;
+            if (elapsedSinceLastRefresh > 60 * 1000) {
+                this.setState(() => ({
+                    lastRefresh: (new Date).getTime()
+                }), this.props.refreshData);
+            }
 
             const progress = (this.state.progress / this.props.currentTrack!.track.duration) * 100;
 

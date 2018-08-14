@@ -85,6 +85,7 @@ export class App extends React.Component<{}, IState> {
         this.selectQueue = this.selectQueue.bind(this);
         this.onProtected = this.onProtected.bind(this);
         this.onSkip = this.onSkip.bind(this);
+        this.refreshData = this.refreshData.bind(this);
     }
 
     public componentDidMount() {
@@ -174,6 +175,15 @@ export class App extends React.Component<{}, IState> {
         this.setState({
             enteredCode: e.target.value
         });
+    }
+
+    protected refreshData() {
+        this.getUser();
+        this.getUsers();
+        this.getUserQueues();
+        this.getCurrentTrack();
+        this.getQueue();
+        this.getSettings();
     }
 
     protected onSongEnd() {
@@ -320,6 +330,7 @@ export class App extends React.Component<{}, IState> {
                                     onVoted={this.refreshCurrentlyPlaying}
                                     onPauseResume={this.onPauseResume}
                                     onSongEnd={this.onSongEnd}
+                                    refreshData={this.refreshData}
                                     onError={this.onError} />
                             </div>
                             <div className="row">
