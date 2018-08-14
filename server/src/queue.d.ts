@@ -7,9 +7,7 @@ export interface QueueDao {
     isPlaying: boolean;
 }
 
-export interface CurrentTrack {
-    track: SpotifyTrack;
-    owner: string | null;
+export interface CurrentTrack extends QueueItem {
     votes: Vote[];
 }
 
@@ -58,4 +56,5 @@ export interface User {
 export interface QueueItem {
     userId: string | null;
     track: SpotifyTrack;
+    protected: boolean;
 }

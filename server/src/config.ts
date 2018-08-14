@@ -41,6 +41,7 @@ export interface IConfig {
         initialPoints: number;
         skipCost: number;
         moveUpCost: number;
+        protectCost: number;
     }
 }
 
@@ -95,7 +96,8 @@ const config: IConfig = {
     gamify: {
         initialPoints: 10,
         skipCost: 20,
-        moveUpCost: 5
+        moveUpCost: 5,
+        protectCost: 10
     }
 };
 

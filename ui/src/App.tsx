@@ -83,6 +83,8 @@ export class App extends React.Component<{}, IState> {
         this.onSpotifyLogin = this.onSpotifyLogin.bind(this);
         this.getUserQueues = this.getUserQueues.bind(this);
         this.selectQueue = this.selectQueue.bind(this);
+        this.onProtected = this.onProtected.bind(this);
+        this.onSkip = this.onSkip.bind(this);
     }
 
     public componentDidMount() {
@@ -200,6 +202,32 @@ export class App extends React.Component<{}, IState> {
         }, 2000);
     }
 
+    protected onProtected() {
+        this.setState({
+            responseMsg: { msg: "Song protected", className: "alert-success" }
+        });
+        setTimeout(() => {
+            this.getCurrentTrack();
+            this.getQueue();
+        }, 500);
+        setTimeout(() => {
+            this.setState({ responseMsg: null });
+        }, 2000);
+    }
+
+    protected onSkip() {
+        this.setState({
+            responseMsg: { msg: "Skipped", className: "alert-success" }
+        });
+        setTimeout(() => {
+            this.getCurrentTrack();
+            this.getQueue();
+        }, 500);
+        setTimeout(() => {
+            this.setState({ responseMsg: null });
+        }, 2000);
+    }
+
     protected onSpotifyLogin() {
         this.getUser();
     }
@@ -297,7 +325,8 @@ export class App extends React.Component<{}, IState> {
                             <div className="row">
                                 <Queue currentTrack={this.state.currentTrack}
                                     queue={this.state.queuedItems}
-                                    onSkip={this.refreshCurrentlyPlaying}
+                                    onSkip={this.onSkip}
+                                    onProtected={this.onProtected}
                                     settings={this.state.settings}
                                     user={this.state.user}
                                     onQueued={this.onQueued}

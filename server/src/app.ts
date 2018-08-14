@@ -507,8 +507,9 @@ const startPlaying = (queue: Queue, passcode: string, user: string) => {
         const queuedItem = queue.queue.shift()!;
         queue.currentTrack = {
             track: queuedItem.track,
-            owner: queuedItem.userId,
-            votes: []
+            userId: queuedItem.userId,
+            votes: [],
+            protected: queuedItem.protected
         };
 
         QueueService.updateQueue(queue, true, passcode).then(() => {

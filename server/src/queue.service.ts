@@ -128,7 +128,7 @@ class QueueService {
             throw { status: 404, message: "Current song not found. Vote not added." };
         } else if (queueDao.data.currentTrack.votes.find((vote: Vote) => vote.userId === user)) {
             throw { status: 403, message: "You have already voted for this song. Only one vote per user." };
-        } else if (queueDao.data.currentTrack.owner === user) {
+        } else if (queueDao.data.currentTrack.userId === user) {
             throw { status: 403, message: "Can't vote for own songs." };
         }
         
@@ -500,13 +500,15 @@ class QueueService {
                 // Go with spotify's data if our current track equals to spotify's current track
                 const spotiquCurrenTrack = queue.currentTrack;
                 if (spotifyCurrentTrack.item) {
-                    const owner = (queue.currentTrack && queue.currentTrack.track.id === spotifyCurrentTrack.item.id) ?
-                        queue.currentTrack.owner : null;
+                    const userId = (queue.currentTrack && queue.currentTrack.track.id === spotifyCurrentTrack.item.id) ?
+                        queue.currentTrack.userId : null;
                     const votes = (queue.currentTrack) ? queue.currentTrack.votes : [];
+                    const protectedTrack = (queue.currentTrack) ? queue.currentTrack.protected : false;
                     queue.currentTrack = {
-                        owner,
+                        userId,
                         track: spotifyCurrentTrack.item,
-                        votes
+                        votes,
+                        protected: protectedTrack
                     };
 
                     queue.deviceId = spotifyCurrentTrack.device.id;
@@ -604,7 +606,7 @@ class QueueService {
             if (queueDao.data.currentTrack &&
                 queueDao.data.accessToken &&
                 queueDao.data.currentTrack.track.id === trackId &&
-                queueDao.data.currentTrack.owner === user) {
+                queueDao.data.currentTrack.userId === user) {
                     QueueService.startNextTrack(passcode, user);
                     return;
             } else {
@@ -627,7 +629,8 @@ class QueueService {
             tracks.forEach(track => {
                 const item: QueueItem = {
                     track,
-                    userId: null
+                    userId: null,
+                    protected: false
                 };
                 queue.playlistTracks.push(item);
             });
@@ -688,7 +691,8 @@ class QueueService {
             
             const item: QueueItem = {
                 track,
-                userId: user
+                userId: user,
+                protected: false
             };
 
             logger.info(`Found track ${track.id}... pushing to queue...`, { user, passcode });
@@ -741,7 +745,7 @@ class QueueService {
         );
     }
 
-    public static stopPlaying(queue: Queue, accessToken: string, passcode: string, user: string) {
+    public static async stopPlaying(queue: Queue, accessToken: string, passcode: string, user: string) {
         if (QueueService.timeouts[accessToken]) {
             clearInterval(QueueService.timeouts[accessToken]);
             delete QueueService.timeouts[accessToken];
@@ -749,13 +753,32 @@ class QueueService {
 
         queue.currentTrack = null;
 
-        db.query("UPDATE queues SET data = $1, is_playing=$2 WHERE id = $3", [queue, false, passcode])
-        .then(() => {
-            logger.info(`Successfully stopped playing...`, { user, passcode });
+        const updateToDb = () => {
+            db.query("UPDATE queues SET data = $1, is_playing=$2 WHERE id = $3", [queue, false, passcode])
+            .then(() => {
+                logger.info(`Successfully stopped playing...`, { user, passcode });
+                return true;
+            }).catch(err => {
+                logger.error(`Unable to update playback state`, { user, passcode });
+                logger.error(err, { passcode });
+                return false;
+            });
+        };
+
+        SpotifyService.pause(queue.accessToken!).then(() => {
+            return updateToDb();
         }).catch(err => {
-            logger.error(`Unable to update playback state`, { user, passcode });
-            logger.error(err, { passcode });
+            if (err.response) {
+                if (err.response.status === 403 && err.response.data.error.message.indexOf("Already paused") >= 0) {
+                    return updateToDb();
+                }
+                logger.error(err.response.data.error.message, { user, passcode });
+            } else {
+                logger.error(err);
+            }
         });
+
+        return false;
     }
 
     public static startOngoingTimers() {
@@ -784,25 +807,11 @@ class QueueService {
 
     public static pauseResume(user: string, passcode: string) {
         return new Promise<boolean>((resolve, reject) => {
-            QueueService.getQueue(passcode, true).then(queueDao => {
+            QueueService.getQueue(passcode, true).then(async (queueDao) => {
                 if (queueDao.isPlaying) {
                     logger.debug(`Pausing playback...`, { user, passcode });
-                    SpotifyService.pause(queueDao.data.accessToken!).then(() => {
-                        QueueService.stopPlaying(queueDao.data, queueDao.data.accessToken!, passcode, user);
-                        resolve(false);
-                    }).catch(err => {
-                        if (err.response) {
-                            if (err.response.status === 403 && err.response.data.error.message.indexOf("Already paused") >= 0) {
-                                QueueService.stopPlaying(queueDao.data, queueDao.data.accessToken!, passcode, user);
-                                resolve(false);
-                                return;
-                            }
-                            logger.error(err.response.data.error.message, { user, passcode });
-                        } else {
-                            logger.error(err);
-                        }
-                        reject({ status: 500, message: "Unable to pause playback. Please try again later." });
-                    });
+                    const stopped = await QueueService.stopPlaying(queueDao.data, queueDao.data.accessToken!, passcode, user);
+                    resolve(!stopped);
                 } else {
                     logger.debug(`Resuming playback...`, { user, passcode });
                     if (queueDao.data.currentTrack) {
@@ -876,7 +885,7 @@ class QueueService {
             const queueDao = await QueueService.getQueue(passcode, true)
             if (queueDao.data.queue.length === 0 && queueDao.data.playlistTracks.length === 0) {
                 logger.info("No more songs in queue. Stop playing.", { user, passcode });
-                QueueService.stopPlaying(queueDao.data, queueDao.data.accessToken!, passcode, user);
+                await QueueService.stopPlaying(queueDao.data, queueDao.data.accessToken!, passcode, user);
                 return;
             }
             const queue: Queue = queueDao.data;
@@ -890,8 +899,9 @@ class QueueService {
 
             queue.currentTrack = {
                 track: queuedItem.track,
-                owner: queuedItem.userId,
-                votes: []
+                userId: queuedItem.userId,
+                votes: [],
+                protected: queuedItem.protected
             };
 
             logger.info(`Next track is ${queuedItem.track.id}`, { user, passcode });

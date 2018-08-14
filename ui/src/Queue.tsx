@@ -10,6 +10,7 @@ export interface IQueuedItem {
     track: ITrackProps;
     userId: string;
     votes: IVote[];
+    protected: boolean;
 }
 
 export interface IVote {
@@ -21,6 +22,7 @@ interface IQueueProps {
     onQueued: () => void;
     onError: (msg: string) => void;
     onSkip: () => void;
+    onProtected: () => void;
     queue: IQueuedItem[] | null;
     currentTrack: IQueuedItem | null;
     settings: ISettings | null;
@@ -46,6 +48,7 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
 
         this.removeFromQueue = this.removeFromQueue.bind(this);
         this.showContextMenu = this.showContextMenu.bind(this);
+        this.protectTrack = this.protectTrack.bind(this);
         this.hideMenu = this.hideMenu.bind(this);
         this.moveUp = this.moveUp.bind(this);
     }
@@ -97,6 +100,24 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
         });
     }
 
+    protected protectTrack(e: React.MouseEvent<HTMLElement>) {
+        e.preventDefault();
+
+        axios.post(config.backend.url + "/protectTrack", {
+            trackId: this.state.contextMenuTrack!.track.id,
+            isPlaying: this.state.contextMenuTargetPlaying
+        }).then(() => {
+            this.props.onProtected();
+            this.setState({
+                contextMenuVisible: false,
+                contextMenuTrack: null,
+                contextMenuTargetPlaying: false
+            });
+        }).catch(err => {
+            this.props.onError(err.response.data.message);
+        });
+    }
+
     protected moveUp(e: React.MouseEvent<HTMLElement>) {
         e.preventDefault();
 
@@ -119,13 +140,14 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
             return null;
         }
 
+        const menu = [];
+        const showPoints = (this.state.contextMenuTrack.userId !== this.props.user!.id) ? "(-20 pts)" : "";
         if (!this.state.contextMenuTargetPlaying) {
-            const showPoints = (this.state.contextMenuTrack.userId !== this.props.user!.id) ? "(-20 pts)" : "";
-            const menu = [
+            menu.push(
                 <a className={"dropdown-item"} key={"removeFromQueue"} href="#" onClick={this.removeFromQueue}>
                     <FontAwesomeIcon icon="trash-alt" /> Remove from queue {showPoints}
                 </a>
-            ];
+            );
             if (this.props.settings && this.props.settings.gamify) {
                 menu.push(
                     <a className={"dropdown-item"} key={"moveUp"} href="#" onClick={this.moveUp}>
@@ -133,14 +155,26 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
                     </a>
                 );
             }
-            return menu;
         } else {
-            return (
+            menu.push(
                 <a className={"dropdown-item"} key={"removeFromQueue"} href="#" onClick={this.removeFromQueue}>
-                    <FontAwesomeIcon icon="forward" /> Skip
+                    <FontAwesomeIcon icon="forward" /> Skip {showPoints}
                 </a>
             );
         }
+
+        // If gamify enabled
+        if (this.props.settings
+            && this.props.settings.gamify
+            && !this.state.contextMenuTrack.protected) {
+            menu.push(
+                <a className={"dropdown-item"} key={"protectTrack"} href="#" onClick={this.protectTrack}>
+                    <FontAwesomeIcon icon="shield-alt" /> Protect from skip (-10 pts)
+                </a>
+            );
+        }
+
+        return menu;
     }
     protected showContextMenu(targetId: string, isPlaying: boolean) {
         const track: IQueuedItem = (!isPlaying)

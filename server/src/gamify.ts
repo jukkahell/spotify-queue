@@ -20,7 +20,7 @@ export namespace Gamify {
 
             const user = queueDao.data.users[userIdx];
             if (user.points - cost >= 0) {
-                logger.info(`Reducing ${cost} points from ${user.points}`, { userId, passcode });
+                logger.info(`Reducing ${cost} points from ${user.points}`, { user: userId, passcode });
                 queueDao.data.users[userIdx].points -= cost;
                 await QueueService.updateQueueData(queueDao.data, passcode);
                 return next();
@@ -39,7 +39,7 @@ export namespace Gamify {
             const q = queueDao.data;
 
             if (isPlaying) {
-                if (q.currentTrack && q.currentTrack.owner !== user) {
+                if (q.currentTrack && q.currentTrack.userId !== user) {
                     if (q.users[userIdx].points < config.gamify.skipCost) {
                         return res.status(403).json({ 
                             message: `You don't have enough points (${q.users[userIdx].points}). ` +
@@ -47,9 +47,17 @@ export namespace Gamify {
                         });
                     }
                     logger.info(`Skipping someone else's song...`, { user, passcode });
+
+                    if (q.currentTrack.protected) {
+                        logger.info(`Track is protected from skipping...`, { user, passcode });
+                        return res.status(403).json({ 
+                            message: `Can't skip because this song is protected from skipping.`
+                        });
+                    }
+
                     queueDao.data.users[userIdx].points -= config.gamify.skipCost;
                     await QueueService.updateQueueData(queueDao.data, passcode);
-                    QueueService.skip(passcode, q.currentTrack!.owner!, trackId);
+                    QueueService.skip(passcode, q.currentTrack!.userId!, trackId);
                     return res.status(200).json({ message: "OK" });
                 }
             } else {
@@ -60,6 +68,28 @@ export namespace Gamify {
                         queueDao.data.users[userIdx].points += refund;
                         await QueueService.updateQueueData(queueDao.data, passcode);
                         return next();
+                    } else if (q.queue[i].track.id === trackId && q.queue[i].userId !== user) {
+                        // Trying to remove someone else's track
+                        if (q.users[userIdx].points < config.gamify.skipCost) {
+                            return res.status(403).json({ 
+                                message: `You don't have enough points (${q.users[userIdx].points}). ` +
+                                        `Removing a song added by someone else costs ${config.gamify.skipCost} points.` 
+                            });
+                        }
+
+                        logger.info(`Removing someone else's song...`, { user, passcode });
+
+                        if (q.queue[i].protected) {
+                            logger.info(`Track is protected from removal...`, { user, passcode });
+                            return res.status(403).json({ 
+                                message: `Can't remove because this song is protected from removal.`
+                            });
+                        }
+
+                        queueDao.data.users[userIdx].points -= config.gamify.skipCost;
+                        await QueueService.updateQueueData(queueDao.data, passcode);
+                        QueueService.removeFromQueue(passcode, q.queue[i].userId!, trackId);
+                        return res.status(200).json({ message: "OK" });
                     }
                 }
             }
@@ -95,6 +125,51 @@ export namespace Gamify {
             } else {
                 return res.status(404).json({ message: `Given track was not found from the queue.` });
             }
+        },
+        "protectTrack": async (req: express.Request, res: express.Response, next: () => any) => {
+            const passcode = req.cookies.get("passcode");
+            const user = req.cookies.get("user", { signed: true });
+            const trackId = req.body.trackId;
+            const isPlaying = req.body.isPlaying;
+            const queueDao = await QueueService.getQueue(passcode, true);
+            const q = queueDao.data;
+            const userIdx = getUser(queueDao.data, user);
+
+            if (q.users[userIdx].points < config.gamify.protectCost) {
+                return res.status(403).json({ 
+                    message: `You don't have enough points (${q.users[userIdx].points}). ` +
+                            `Protecting a song costs ${config.gamify.protectCost} points.` 
+                });
+            }
+
+            if (isPlaying) {
+                if (!q.currentTrack) {
+                    return res.status(404).json({ 
+                        message: `Can't protect currently playing track since there is nothing playing right now.` 
+                    });
+                }
+                q.currentTrack.protected = true;
+            } else {
+                if (!q.queue || q.queue.length === 0) {
+                    return res.status(404).json({ 
+                        message: `Can't protect selected song from queue since the queue is empty.` 
+                    });
+                }
+                const trackIdx = q.queue.findIndex(queuedItem => queuedItem.track.id === trackId);
+                if (trackIdx < 0) {
+                    return res.status(404).json({ 
+                        message: `Unable to find given song from the queue.` 
+                    });
+                }
+
+                q.queue[trackIdx].protected = true;
+            }
+
+            logger.info(`Protecting a song from skipping...`, { user, passcode });
+            q.users[userIdx].points -= config.gamify.protectCost;
+
+            await QueueService.updateQueueData(q, passcode);
+            return res.status(200).json({ message: "OK" });
         }
     };
 
@@ -119,11 +194,11 @@ export namespace Gamify {
             const currentTrack = queueDao.data.currentTrack;
             if (queueDao.data.settings.gamify && currentTrack) {
                 let reward = millisToPoints(currentTrack.track.duration);
-                logger.info(`Rewarding track owner ${currentTrack.owner || "-"} for ${reward} points`, { passcode });
+                logger.info(`Rewarding track owner ${currentTrack.userId || "-"} for ${reward} points`, { passcode });
                 queueDao.data.users = queueDao.data.users.map((user: User) => {
                     const queued = queueDao.data.queue.some(queuedItem => queuedItem.userId === user.id);
-                    if (queued || currentTrack.owner === user.id) {
-                        if (currentTrack.owner === user.id) {
+                    if (queued || currentTrack.userId === user.id) {
+                        if (currentTrack.userId === user.id) {
                             user.points += reward;
                             let voteCount = currentTrack.votes.reduce((sum, v) => sum += v.value, 0);
                             logger.info(`${voteCount} vote points for user`, { passcode, user: user.id });
@@ -143,7 +218,7 @@ export namespace Gamify {
     }
 
     export const express = async (req: express.Request, res: express.Response, next: () => any) => {
-        const gameEndpoints = ["/track", "/removeFromQueue", "/moveUpInQueue"];
+        const gameEndpoints = ["/track", "/removeFromQueue", "/moveUpInQueue", "/protectTrack"];
         if (gameEndpoints.includes(req.path)) {
             const passcode = req.cookies.get("passcode");
             if (passcode) {
