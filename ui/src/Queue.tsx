@@ -115,8 +115,12 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
     }
 
     protected renderContextMenu() {
+        if (!this.state.contextMenuTrack) {
+            return null;
+        }
+
         if (!this.state.contextMenuTargetPlaying) {
-            const showPoints = (this.state.contextMenuTrack!.userId !== this.props.user!.id) ? "(-20 pts)" : "";
+            const showPoints = (this.state.contextMenuTrack.userId !== this.props.user!.id) ? "(-20 pts)" : "";
             const menu = [
                 <a className={"dropdown-item"} key={"removeFromQueue"} href="#" onClick={this.removeFromQueue}>
                     <FontAwesomeIcon icon="trash-alt" /> Remove from queue {showPoints}
