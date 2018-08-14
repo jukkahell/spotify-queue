@@ -143,7 +143,9 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
         }
     }
     protected showContextMenu(targetId: string, isPlaying: boolean) {
-        const track: IQueuedItem = this.props.queue!.find(q => q.track.id === targetId)!;
+        const track: IQueuedItem = (!isPlaying)
+            ? this.props.queue!.find(q => q.track.id === targetId)!
+            : this.props.currentTrack!;
         this.setState((prevState) => ({
             contextMenuVisible: !prevState.contextMenuVisible,
             contextMenuTrack: track,
