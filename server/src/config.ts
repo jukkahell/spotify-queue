@@ -51,7 +51,7 @@ export const userCookieExpire = () => {
 };
 export const passcodeCookieExpire = () => {
     const expireDate = new Date();
-    expireDate.setTime((new Date()).getTime() + (24 * 60 * 60 * 1000));
+    expireDate.setTime((new Date()).getTime() + (30 * 24 * 60 * 60 * 1000));
     return expireDate;
 };
 
