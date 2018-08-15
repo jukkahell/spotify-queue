@@ -8,7 +8,7 @@ const port = 8001;
 const redirectUri = prod ? "backend.spotiqu.eu" : host ":" + port;
 const uiPort = prod ? 80 : 3000;
 
-const whitelist = [scheme + host + ":" + port, scheme + host + ":" + uiPort, scheme + host];
+const whitelist = [scheme + redirectUri + ":" + port, scheme + redirectUri, scheme + host + ":" + uiPort, scheme + host];
 
 export interface IConfig {
     app: {
