@@ -5,9 +5,10 @@ const prod = env.NODE_ENV === "production";
 const scheme = prod ? "https://" : "http://";
 const host = prod ? "spotiqu.eu" : "spotique.fi";
 const port = 8001;
+const redirectUri = prod ? "backend.spotiqu.eu" : host ":" + port;
 const uiPort = prod ? 80 : 3000;
 
-const whitelist = [scheme + host + ":" + port, scheme + host + ":" + uiPort, scheme + host];
+const whitelist = [scheme + redirectUri + ":" + port, scheme + redirectUri, scheme + host + ":" + uiPort, scheme + host];
 
 export interface IConfig {
     app: {
@@ -91,7 +92,7 @@ const config: IConfig = {
     },
     spotify: {
         clientId: "da6ea27d63384e858d12bcce0fac006d",
-        redirectUri: scheme + host + ":" + port + "/",
+        redirectUri: scheme + redirectUri + "/",
     },
     gamify: {
         initialPoints: 10,
