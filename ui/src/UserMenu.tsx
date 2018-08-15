@@ -8,6 +8,7 @@ import config from "./config";
 export interface IUserMenuProps {
     onError: (msg: string) => void;
     onSpotifyLogin: () => void;
+    updateUser: (username: string) => void;
     passcode: string;
     user: IUser | null;
 }
@@ -16,6 +17,8 @@ export interface IUserMenuState {
     menuOptions: string[];
     selectedMenuItem: string | null;
     dropdownVisible: boolean;
+    editUsername: boolean;
+    username: string;
 }
 
 export class UserMenu extends React.Component<IUserMenuProps, IUserMenuState> {
@@ -31,7 +34,9 @@ export class UserMenu extends React.Component<IUserMenuProps, IUserMenuState> {
                 "Login with Spotify"
             ],
             selectedMenuItem: null,
-            dropdownVisible: false
+            dropdownVisible: false,
+            editUsername: false,
+            username: (props.user) ? props.user.username : ""
         };
 
         this.selectMenuItem = this.selectMenuItem.bind(this);
@@ -39,6 +44,9 @@ export class UserMenu extends React.Component<IUserMenuProps, IUserMenuState> {
         this.logout = this.logout.bind(this);
         this.hideMenu = this.hideMenu.bind(this);
         this.isAuthorized = this.isAuthorized.bind(this);
+        this.editUsername = this.editUsername.bind(this);
+        this.updateUsername = this.updateUsername.bind(this);
+        this.handleUsernameChange = this.handleUsernameChange.bind(this);
     }
 
     public componentDidUpdate(prevProps: IUserMenuProps) {
@@ -72,16 +80,63 @@ export class UserMenu extends React.Component<IUserMenuProps, IUserMenuState> {
         }));
     }
 
+    public editUsername() {
+        this.setState({
+            editUsername: true
+        });
+    }
+
+    public handleUsernameChange(e: React.ChangeEvent<HTMLInputElement>) {
+        e.preventDefault();
+        this.setState({
+            username: e.target.value
+        });
+    }
+
+    public updateUsername(e: React.MouseEvent<HTMLElement>) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (!this.state.username || this.state.username.length === 0) {
+            this.props.onError("Username cannot be empty.");
+            return;
+        } else if (this.state.username.length > 50) {
+            this.props.onError("Username can't be longer than 50 characters.");
+            return;
+        }
+
+        this.props.updateUser(this.state.username);
+        this.setState({
+            editUsername: false
+        });
+    }
+
     public renderUserMenuOptions() {
-        return this.state.menuOptions.map((option: string, i: number) => (
+        const menu = [];
+        const username = (this.state.username) ? this.state.username : (this.props.user) ? this.props.user.username || this.props.user.id : "Username";
+        menu.push(
+            <div className="dropdown-item settingsMenuItem" key="username" id="username" onClick={this.editUsername}>
+                <FontAwesomeIcon icon="user" />
+                {this.state.editUsername ?
+                    <form className="username">
+                        <input type="text" value={username} onChange={this.handleUsernameChange} />
+                        <button onClick={this.updateUsername}><FontAwesomeIcon icon="save" /></button>
+                    </form> :
+                    <span className="settingName">{username}</span>
+                }
+            </div>
+        );
+        menu.push(this.state.menuOptions.map((option: string, i: number) => (
             <a className={"dropdown-item"} key={"usermenu-" + i} href="#" id={option} onClick={this.selectMenuItem}>
                 <FontAwesomeIcon icon={this.optionToIcon(option)} /> {option}
             </a>
-        ));
+        )));
+
+        return menu;
     }
 
     public hideMenu() {
-        this.setState((prevState) => ({
+        this.setState(() => ({
             dropdownVisible: false
         }));
     }

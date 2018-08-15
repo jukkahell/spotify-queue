@@ -139,7 +139,7 @@ export class Settings extends React.Component<IShareProps, IShareState> {
 
     public renderSettingsOptions() {
         return ([
-            <a className="dropdown-item settingsMenuItem" key="name" href="#" id="name" onClick={this.editName}>
+            <div className="dropdown-item settingsMenuItem" key="name" id="name" onClick={this.editName}>
                 <FontAwesomeIcon icon="edit" />
                 {this.state.editName ?
                     <form className="queueName">
@@ -148,7 +148,7 @@ export class Settings extends React.Component<IShareProps, IShareState> {
                     </form> :
                     <span className="settingName">{this.state.name || "Queue name"}</span>
                 }
-            </a>,
+            </div>,
             <a className="dropdown-item settingsMenuItem" key="gamify" href="#" id="gamify" onClick={this.toggleGamify}>
                 <FontAwesomeIcon icon="gamepad" />
                 <span className="settingName">Gamify</span>

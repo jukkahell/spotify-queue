@@ -75,7 +75,7 @@ class QueueService {
     public static async getUsers(passcode: string, userId: string) {
         const queueDao = await QueueService.getQueue(passcode, false);
         const users = queueDao.data.users.map((user) => { 
-            return { "id": user.id, "spotifyUserId": user.spotifyUserId, "points": user.points }
+            return { "id": user.id, "spotifyUserId": user.spotifyUserId, "username": user.username, "points": user.points }
         });
         return users;
     }
@@ -374,7 +374,8 @@ class QueueService {
                     accessToken: null,
                     refreshToken: null,
                     accessTokenAcquired: null,
-                    expiresIn: null
+                    expiresIn: null,
+                    username: spotifyUserId
                 }
             ]
         };
@@ -420,7 +421,8 @@ class QueueService {
                 accessToken: null,
                 refreshToken: null,
                 expiresIn: null,
-                accessTokenAcquired: null
+                accessTokenAcquired: null,
+                username: ""
             };
 
             if (!queue.users.find( user => user.id === userId)) {
@@ -751,8 +753,6 @@ class QueueService {
             delete QueueService.timeouts[accessToken];
         }
 
-        queue.currentTrack = null;
-
         const updateToDb = () => {
             db.query("UPDATE queues SET data = $1, is_playing=$2 WHERE id = $3", [queue, false, passcode])
             .then(() => {
@@ -814,6 +814,11 @@ class QueueService {
                     resolve(!stopped);
                 } else {
                     logger.debug(`Resuming playback...`, { user, passcode });
+                    if (!queueDao.data.deviceId) {
+                        reject({ status: 400, message: "No playback device selected. Please start Spotify and try again." });
+                        return;
+                    }
+
                     if (queueDao.data.currentTrack) {
                         SpotifyService.resume(queueDao.data.accessToken!, queueDao.data.deviceId!).then(() => {
                             QueueService.startPlaying(queueDao.data.accessToken!, passcode, user, queueDao.data.currentTrack!.track);
@@ -857,6 +862,19 @@ class QueueService {
         });
     }
 
+    public static async updateUser(passcode: string, userId: string, username: string) {
+        if (!username || username.length > 50) {
+            throw { status: 400, message: "Invalid username." };
+        }
+        
+        const queueDao = await QueueService.getQueue(passcode, true);
+        const userIdx = queueDao.data.users.findIndex(user => user.id === userId);
+        queueDao.data.users[userIdx].username = username;
+
+        await QueueService.updateQueueData(queueDao.data, passcode);
+        return queueDao.data.users[userIdx];
+    }
+
     public static async updateSettings(passcode: string, user: string, settings: Settings, updatedFields?: string[]) {
         try {
             if (!settings.name || settings.name.length > 50) {
@@ -878,7 +896,7 @@ class QueueService {
         }
     }
 
-    private static async startNextTrack(passcode: string, user: string) {
+    public static async startNextTrack(passcode: string, user: string) {
         logger.info(`Starting next track`, { user, passcode });
         try {
             await Gamify.trackEndReward(passcode);

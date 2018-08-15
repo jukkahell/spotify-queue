@@ -68,6 +68,8 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
                         duration={this.props.currentTrack.track.duration}
                         key={"current-" + this.props.currentTrack.track.id}
                         isPlaying={true}
+                        protectedTrack={this.props.currentTrack.protected}
+                        owned={this.props.user!.id === this.props.currentTrack.userId}
                         selectTrack={this.showContextMenu}/>
                     <div className={"dropdown-menu " + (this.state.contextMenuVisible ? "show" : "hide")} aria-labelledby="deviceMenuButton">
                         {this.renderContextMenu()}
@@ -216,6 +218,8 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
                         duration={queuedItem.track.duration}
                         key={i + "-" + queuedItem.track.id}
                         isPlaying={false}
+                        protectedTrack={queuedItem.protected}
+                        owned={queuedItem.userId === this.props.user!.id}
                         selectTrack={this.showContextMenu}/>
                 </div>
             </li>

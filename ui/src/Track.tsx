@@ -12,6 +12,8 @@ export interface ITrackProps {
     progress?: number;
     cover?: string;
     isPlaying: boolean;
+    protectedTrack: boolean;
+    owned: boolean;
     selectTrack: (targetId: string, isPlaying: boolean) => void;
     selectArtist?: (targetId: string,  isPlaying: boolean) => void;
 }
@@ -44,7 +46,9 @@ export class Track extends React.Component<ITrackProps> {
             artistId,
             id,
             duration,
-            isPlaying
+            isPlaying,
+            protectedTrack,
+            owned
         } = this.props;
 
         return (
@@ -52,7 +56,13 @@ export class Track extends React.Component<ITrackProps> {
                 <div className="trackInfo">
                     <a href="#" className="trackName" id={id} onClick={this.selectTrack}>
                         {name}
-                        {isPlaying ? <div className="speakerIcon"><FontAwesomeIcon icon="volume-up" /></div> : null}
+                        {isPlaying ? <div className="queuedItemIcon"><FontAwesomeIcon icon="volume-up" /></div> : null}
+                        {protectedTrack
+                            ? <div className="queuedItemIcon" title="Protected track, can't be skipped or removed">
+                                <FontAwesomeIcon icon="shield-alt" />
+                              </div>
+                            : null}
+                        {owned ? <div className="queuedItemIcon" title="Added by you"><FontAwesomeIcon icon="user" /></div> : null}
                     </a>
                     <a href={"#artist=" + artistId} className="trackArtist" id={artistId} onClick={this.selectArtist}>
                         {artist}

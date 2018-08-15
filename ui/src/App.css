@@ -287,7 +287,7 @@ button.iconButton:active, button.iconButton:hover, button.iconButton:focus {
     justify-content: center;
 }
 
-.speakerIcon {
+.queuedItemIcon {
     display: inline;
     margin-left: 8px;
 }
@@ -328,6 +328,7 @@ button.iconButton:active, button.iconButton:hover, button.iconButton:focus {
 
 .coverImageContainer {
     position: relative;
+    min-height: 380px;
 }
 
 .coverImageLayer {
@@ -457,10 +458,10 @@ button.iconButton:active, button.iconButton:hover, button.iconButton:focus {
     padding-right: 1em;
 }
 
-form.queueName > input {
-    padding-left: 1em;
+form.queueName > input, form.username > input {
+    padding-left: 0.5em;
 }
-form.queueName > button {
+form.queueName > button, form.username > button {
     background: none;
     border: none;
     padding: 0;
@@ -481,7 +482,7 @@ h1 {
 .userQueueListItem.selected {
     cursor: default;
 }
-.queueName {
+.queueName, .username {
     margin-left: 0.5em;
 }
 .selected {

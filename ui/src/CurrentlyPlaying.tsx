@@ -133,7 +133,15 @@ export class CurrentlyPlaying extends React.Component<ICurrentlyPlayingProps, IC
                 </div>
             );
         } else {
-            return null;
+            return (
+                <div className="currentlyPlaying col-md-12">
+                    <div className="coverImageContainer" onClick={this.props.onPauseResume}>
+                        <div className={"coverImageLayer visible"}>
+                            <div className="align-center w-100"><FontAwesomeIcon icon="play-circle" /></div>
+                        </div>
+                    </div>
+                </div>
+            );
         }
     }
 

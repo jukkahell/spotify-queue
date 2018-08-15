@@ -286,6 +286,8 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
                 duration={track.duration}
                 key={i + "-" + track.id}
                 isPlaying={false}
+                protectedTrack={false}
+                owned={false}
                 selectTrack={this.addToQueue} />
         )));
     }

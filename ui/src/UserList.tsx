@@ -101,7 +101,7 @@ export class UserList extends React.Component<IUserListProps, IUserListState> {
         return this.props.users.map((user: IUser, i: number) => (
             <div className={"dropdown-item"} key={"user-" + i}>
                 <div id={user.id} className={"userListItem " + (this.state.selectedUser === user.id ? "d-none" : "visible")} onClick={this.selectUser}>
-                    <span className="userId">{user.spotifyUserId || user.id}</span>
+                    <span className="userId">{user.username || user.spotifyUserId || user.id}</span>
                     <span className="points">{user.points} pts</span>
                 </div>
                 <div className={"userListContextMenu " + (this.state.selectedUser === user.id ? "visible" : "d-none")}>

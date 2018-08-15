@@ -51,6 +51,7 @@ export interface User {
     refreshToken: string | null;
     expiresIn: number | null;
     accessTokenAcquired: number | null;
+    username: string;
 }
 
 export interface QueueItem {

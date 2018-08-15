@@ -18,6 +18,7 @@ export interface IUser {
     id: string;
     points: number;
     spotifyUserId?: string;
+    username: string;
 }
 
 export interface IState {
@@ -86,6 +87,7 @@ export class App extends React.Component<{}, IState> {
         this.onProtected = this.onProtected.bind(this);
         this.onSkip = this.onSkip.bind(this);
         this.refreshData = this.refreshData.bind(this);
+        this.updateUser = this.updateUser.bind(this);
     }
 
     public componentDidMount() {
@@ -305,6 +307,7 @@ export class App extends React.Component<{}, IState> {
                         <ul>
                             <li>Add a song to queue. 1min song costs 2 points, 2min song 3 points etc.</li>
                             <li>-5 points to move your song one step forward in the queue.</li>
+                            <li>-15 points to protect a song to be skipped or removed.</li>
                             <li>-20 points to skip or remove another user's song from the queue.</li>
                         </ul>
                     </ReactTooltip>
@@ -355,7 +358,7 @@ export class App extends React.Component<{}, IState> {
                         </div>
                     </div>
                     <div className="footer fixed-bottom d-flex">
-                        <UserMenu passcode={this.state.passcode} onError={this.onError} onSpotifyLogin={this.onSpotifyLogin} user={this.state.user} />
+                        <UserMenu updateUser={this.updateUser} passcode={this.state.passcode} onError={this.onError} onSpotifyLogin={this.onSpotifyLogin} user={this.state.user} />
                         <Share passcode={this.state.passcode} onError={this.onError} />
                         <UserList onError={this.onError} isOwner={this.state.isOwner} users={this.state.users} onEdit={this.getUsers} />
                         <QueueList onError={this.onError} queues={this.state.userQueues} passcode={this.state.passcode} selectQueue={this.selectQueue} />
@@ -454,6 +457,21 @@ export class App extends React.Component<{}, IState> {
                     this.setState({
                         settings: response.data
                     });
+                }
+            }).catch(err => {
+                this.onError(err.response.data.message);
+            }
+        );
+    }
+
+    private updateUser(username: string) {
+        axios.post(config.backend.url + "/user", { username })
+            .then(response => {
+                if (response.status === 200) {
+                    this.setState({
+                        user: response.data
+                    });
+                    this.getUsers();
                 }
             }).catch(err => {
                 this.onError(err.response.data.message);

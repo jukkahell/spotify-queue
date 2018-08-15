@@ -280,11 +280,13 @@ app.post("/track", (req, res) => {
     const user = req.cookies.get("user", { signed: true });
 
     QueueService.addToQueue(user, passcode, spotifyUri).then((queue: QueueDao) => {
-        // Check playback status from spotify
         // If no song is playing
-        if (!queue.isPlaying) {
-            logger.info(`Queue ${passcode} is not playing...start it`, { user, passcode });
-            startPlaying(queue.data, passcode, user).then(() => {
+        if (!queue.data.currentTrack) {
+            logger.info(`Queue is not playing...start it`, { user, passcode });
+            if (!queue.data.deviceId) {
+                throw { status: 400, message: "No playback device selected. Please start Spotify first." };
+            }
+            QueueService.startNextTrack(passcode, user).then(() => {
                 res.status(200).json({ message: "OK" });
             }).catch(err => {
                 res.status(err.status).json({ message: err.message });
@@ -340,6 +342,18 @@ app.get("/user", async (req, res) => {
         delete user.refreshToken;
         delete user.expiresIn;
         delete user.accessTokenAcquired;
+        res.status(200).json(user);
+    } catch (err) {
+        res.status(err.status).json({ message: err.message });
+    }
+});
+
+app.post("/user", async (req, res) => {
+    try {
+        const passcode = req.cookies.get("passcode");
+        const userId = req.cookies.get("user", { signed: true });
+        const username = req.body.username;
+        const user = await QueueService.updateUser(passcode, userId, username);
         res.status(200).json(user);
     } catch (err) {
         res.status(err.status).json({ message: err.message });
@@ -494,44 +508,6 @@ app.post("/search", (req, res) => {
         res.status(500).json({ message: err });
     });
 });
-
-const startPlaying = (queue: Queue, passcode: string, user: string) => {
-    return new Promise((resolve, reject) => {
-        const deviceId = queue.deviceId;
-        if (!deviceId) {
-            return reject({ status: 404, message: "No device selected" });
-        }
-
-        logger.info(`Starting to play queue...`, { user, passcode });
-        const accessToken = queue.accessToken!;
-        const queuedItem = queue.queue.shift()!;
-        queue.currentTrack = {
-            track: queuedItem.track,
-            userId: queuedItem.userId,
-            votes: [],
-            protected: queuedItem.protected
-        };
-
-        QueueService.updateQueue(queue, true, passcode).then(() => {
-            logger.debug(`Current track set to ${queuedItem.track.id}`, { user, passcode });
-            SpotifyService.startSong(accessToken, [queuedItem.track.id], deviceId!).then(() => {
-                QueueService.startPlaying(accessToken, passcode, user, queuedItem.track);
-                logger.info(`Song successfully started.`, { user, passcode });
-                return resolve();
-            }).catch((err: any) => {
-                if (err.response.data.error.status === 404) {
-                    logger.warn(`No device selected`, { user, passcode });
-                    return reject({ status: 404, message: "Unable to start playing. Select a playback device from bottom left icon." });
-                }
-                logger.error(err.response.data.error.message, { user, passcode });
-                return reject({ status: err.response.data.error.status, message: "Unable to start playing" });
-            });
-        }).catch(err => {
-            logger.error(err, { user, passcode });
-            return reject({ status: 500, message: "Error occurred while to updating queue." });
-        });
-    });
-};
 
 QueueService.startOngoingTimers();
 
