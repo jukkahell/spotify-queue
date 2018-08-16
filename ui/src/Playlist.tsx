@@ -46,7 +46,7 @@ export class Album extends React.Component<IPlaylistProps> {
                 }
                 <a className={"playlistItem"} href={"#playlist=" + id} id={id}>
                     {name}
-                    {settings && settings.playlist === id ? <div className="speakerIcon"><FontAwesomeIcon icon="volume-up" /></div> : null}
+                    {settings && settings.playlist === id ? <div className="queuedItemIcon"><FontAwesomeIcon icon="volume-up" /></div> : null}
                 </a>
             </div>
         );
