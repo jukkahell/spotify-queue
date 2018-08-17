@@ -9,6 +9,7 @@ import Acl from "./acl";
 import { logger } from "./logger.service";
 import { Gamify } from "./gamify";
 import config from "./config";
+import YoutubeService from "./youtube.service";
 
 export interface QueueTimeout {
     [accessToken: string]: NodeJS.Timer;
@@ -501,19 +502,9 @@ class QueueService {
 
                 // Go with spotify's data if our current track equals to spotify's current track
                 const spotiquCurrenTrack = queue.currentTrack;
-                if (spotifyCurrentTrack.item) {
-                    const userId = (queue.currentTrack && queue.currentTrack.track.id === spotifyCurrentTrack.item.id) ?
-                        queue.currentTrack.userId : null;
-                    const votes = (queue.currentTrack) ? queue.currentTrack.votes : [];
-                    const protectedTrack = (queue.currentTrack) ? queue.currentTrack.protected : false;
-                    queue.currentTrack = {
-                        userId,
-                        track: spotifyCurrentTrack.item,
-                        votes,
-                        protected: protectedTrack
-                    };
-
+                if (spotifyCurrentTrack.item && spotiquCurrenTrack && spotifyCurrentTrack.item.id === spotiquCurrenTrack.track.id) {
                     queue.deviceId = spotifyCurrentTrack.device.id;
+                    queue.currentTrack!.track.progress = spotifyCurrentTrack.item.progress;
                 }
 
                 currentState.currentTrack = queue.currentTrack;
@@ -632,7 +623,8 @@ class QueueService {
                 const item: QueueItem = {
                     track,
                     userId: null,
-                    protected: false
+                    protected: false,
+                    source: "spotify"
                 };
                 queue.playlistTracks.push(item);
             });
@@ -646,7 +638,7 @@ class QueueService {
         }
     }
 
-    public static async addToQueue(user: string, passcode: string, trackUri: string) {
+    public static async addToQueue(user: string, passcode: string, trackUri: string, source: string) {
         try {
             const queueDao = await QueueService.getQueue(passcode, true);
             const queue: Queue = queueDao.data;
@@ -689,10 +681,19 @@ class QueueService {
             }
 
             logger.info(`Getting track info for ${trackUri}`, { user, passcode });
-            const track = await SpotifyService.getTrack(queue.accessToken!, trackUri);
-            
+            let track: SpotifyTrack;
+            if (source === "spotify") {
+                track = await SpotifyService.getTrack(queue.accessToken!, trackUri);
+            } else if (source === "youtube") {
+                const tracks = await YoutubeService.getTracks(trackUri);
+                track = tracks[0]!;
+            } else {
+                throw { status: 400, message: "Cannot queue because of invalid source. Must be either spotify or youtube."};
+            }
+
             const item: QueueItem = {
                 track,
+                source,
                 userId: user,
                 protected: false
             };
@@ -820,7 +821,10 @@ class QueueService {
                     }
 
                     if (queueDao.data.currentTrack) {
-                        SpotifyService.resume(queueDao.data.accessToken!, queueDao.data.deviceId!).then(() => {
+                        SpotifyService.resume(queueDao.data.accessToken!, 
+                                              [queueDao.data.currentTrack.track.id], 
+                                              queueDao.data.currentTrack.track.progress, 
+                                              queueDao.data.deviceId!).then(() => {
                             QueueService.startPlaying(queueDao.data.accessToken!, passcode, user, queueDao.data.currentTrack!.track);
                             QueueService.updateQueue(queueDao.data, true, passcode).then(() => {
                                 resolve(true);
@@ -903,6 +907,7 @@ class QueueService {
             const queueDao = await QueueService.getQueue(passcode, true)
             if (queueDao.data.queue.length === 0 && queueDao.data.playlistTracks.length === 0) {
                 logger.info("No more songs in queue. Stop playing.", { user, passcode });
+                queueDao.data.currentTrack = null;
                 await QueueService.stopPlaying(queueDao.data, queueDao.data.accessToken!, passcode, user);
                 return;
             }
@@ -919,18 +924,24 @@ class QueueService {
                 track: queuedItem.track,
                 userId: queuedItem.userId,
                 votes: [],
-                protected: queuedItem.protected
+                protected: queuedItem.protected,
+                source: queuedItem.source
             };
 
             logger.info(`Next track is ${queuedItem.track.id}`, { user, passcode });
             QueueService.updateQueue(queue, true, passcode).then(() => {
-                SpotifyService.startSong(queueDao.data.accessToken!, trackIds, queue.deviceId!).then(() => {
-                    QueueService.startPlaying(queueDao.data.accessToken!, passcode, user, queuedItem.track);
-                    logger.info(`Track ${queuedItem.track.id} successfully started.`, { user, passcode });
-                }).catch((err: any) => {
-                    logger.error(err.response.data.error.message, { user, passcode });
-                    logger.error(`Unable to start track on Spotify.`, { user, passcode });
-                });
+                if (queuedItem.source === "spotify") {
+                    SpotifyService.startSong(queueDao.data.accessToken!, trackIds, queue.deviceId!).then(() => {
+                        QueueService.startPlaying(queueDao.data.accessToken!, passcode, user, queuedItem.track);
+                        logger.info(`Track ${queuedItem.track.id} successfully started.`, { user, passcode });
+                    }).catch((err: any) => {
+                        logger.error(err.response.data.error.message, { user, passcode });
+                        logger.error(`Unable to start track on Spotify.`, { user, passcode });
+                    });
+                } else {
+                    logger.info(`YouTube track ${queuedItem.track.id} started. Client will trigger the next song.`, { user, passcode });
+                    QueueService.stopPlaying(queue, queue.accessToken!, passcode, user);
+                }
             }).catch(err => {
                 logger.error("Unable to update queue", { user, passcode });
                 logger.error(err, { user, passcode });

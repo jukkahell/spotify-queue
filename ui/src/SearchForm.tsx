@@ -260,7 +260,7 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
     }
 
     protected addToQueue(targetId: string, isPlaying: boolean) {
-        axios.post(config.backend.url + "/track", { spotifyUri: targetId })
+        axios.post(config.backend.url + "/track", { uri: targetId, source: "spotify" })
             .then(() => {
                 this.props.onQueued();
             }).catch(err => {

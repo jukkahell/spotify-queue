@@ -240,6 +240,7 @@ input.passcode {
     display: grid;
     grid-template-columns: auto 3em;
     padding-bottom: 0.7em;
+    width: 100%;
 }
 .trackArtist {
     font-size: 0.7em;
@@ -487,4 +488,38 @@ h1 {
 }
 .selected {
     color: #1ED760;
+}
+
+.spotify-tab {
+    color: #1ED760;
+}
+.youtube-tab {
+    color: red;
+}
+
+ul {
+    margin: 0;
+}
+
+.source-tab {
+    display: inline-block;
+    position: relative;
+    list-style: none;
+    padding: 6px 12px 4px;
+    cursor: pointer;
+    border-radius: 5px 5px 0 0;
+    margin-right: 2px;
+}
+
+.source-tab--selected {
+    box-shadow: 2px -1px 2px 0px rgba(0, 0, 0, 0.5);
+    z-index: 3;
+    background: #181818 linear-gradient(#525252, #353535) no-repeat;
+}
+
+.youtubeVideo {
+    display: flex;
+}
+.youtubeCover {
+    margin-right: 0.4em;
 }

@@ -1,5 +1,7 @@
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import axios from "axios";
 import * as React from "react";
+import { Tab, TabList, TabPanel, Tabs } from "react-tabs";
 import * as ReactTooltip from "react-tooltip";
 import {AlertBox, IAlert} from "./AlertBox";
 import "./App.css";
@@ -13,6 +15,7 @@ import Settings, {ISettings} from "./Settings";
 import Share from "./Share";
 import UserList from "./UserList";
 import {UserMenu} from "./UserMenu";
+import YouTubeSearchForm from "./YouTubeSearchForm";
 
 export interface IUser {
     id: string;
@@ -88,6 +91,7 @@ export class App extends React.Component<{}, IState> {
         this.onSkip = this.onSkip.bind(this);
         this.refreshData = this.refreshData.bind(this);
         this.updateUser = this.updateUser.bind(this);
+        this.youtubeEnd = this.youtubeEnd.bind(this);
     }
 
     public componentDidMount() {
@@ -334,6 +338,7 @@ export class App extends React.Component<{}, IState> {
                                     onPauseResume={this.onPauseResume}
                                     onSongEnd={this.onSongEnd}
                                     refreshData={this.refreshData}
+                                    onYouTubeTrackEnd={this.youtubeEnd}
                                     onError={this.onError} />
                             </div>
                             <div className="row">
@@ -349,12 +354,31 @@ export class App extends React.Component<{}, IState> {
                         </div>
                         <div className="col-md-8">
                             <h1>{this.state.settings ? this.state.settings.name : ""}</h1>
-                            <SearchForm settings={this.state.settings}
-                                isOwner={this.state.isOwner}
-                                user={this.state.user}
-                                onQueued={this.onQueued}
-                                onPlaylistSelected={this.onPlaylistSelected}
-                                onError={this.onError} />
+                            <Tabs selectedTabClassName="source-tab--selected" selectedTabPanelClassName="source-tab-panel--selected">
+                                <TabList className="source-tab-list">
+                                    <Tab className="source-tab spotify-tab">
+                                        <FontAwesomeIcon icon={["fab", "spotify"]} />
+                                    </Tab>
+                                    <Tab className="source-tab youtube-tab">
+                                        <FontAwesomeIcon icon={["fab", "youtube"]} />
+                                    </Tab>
+                                </TabList>
+                                <TabPanel className="source-tab-panel">
+                                    <SearchForm settings={this.state.settings}
+                                                isOwner={this.state.isOwner}
+                                                user={this.state.user}
+                                                onQueued={this.onQueued}
+                                                onPlaylistSelected={this.onPlaylistSelected}
+                                                onError={this.onError} />
+                                </TabPanel>
+                                <TabPanel className="source-tab-panel">
+                                    <YouTubeSearchForm settings={this.state.settings}
+                                                isOwner={this.state.isOwner}
+                                                user={this.state.user}
+                                                onQueued={this.onQueued}
+                                                onError={this.onError} />
+                                </TabPanel>
+                            </Tabs>
                         </div>
                     </div>
                     <div className="footer fixed-bottom d-flex">
@@ -521,6 +545,17 @@ export class App extends React.Component<{}, IState> {
                         queuedItems: null
                     });
                 }
+            }).catch(err => {
+                this.onError(err.response.data.message);
+            }
+        );
+    }
+
+    private youtubeEnd(event: any) {
+        console.log(event);
+        axios.get(config.backend.url + "/youtubeEnd")
+            .then(() => {
+                this.refreshData();
             }).catch(err => {
                 this.onError(err.response.data.message);
             }

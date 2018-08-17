@@ -212,19 +212,33 @@ class SpotifyService {
         );
     }
 
-    public static pause = (accessToken: string) => {
-        return axios.put("https://api.spotify.com/v1/me/player/pause",
-            {},
+    public static resume = (accessToken: string, ids: string[], progress: number, deviceId: string) => {
+        return axios.put(
+            "https://api.spotify.com/v1/me/player/play?device_id=" + deviceId,
+            {
+                uris: ids
+            },
             {
                 headers: {
                     "Content-Type": "text/plain",
                     "Authorization": "Bearer " + accessToken
                 }
             }
-        );
+        ).then(() => {
+            return axios.put("https://api.spotify.com/v1/me/player/seek?position_ms=" + progress,
+                {},
+                {
+                    headers: {
+                        "Content-Type": "text/plain",
+                        "Authorization": "Bearer " + accessToken
+                    }
+                }
+            );
+        });
     }
-    public static resume = (accessToken: string, deviceId: string) => {
-        return axios.put("https://api.spotify.com/v1/me/player/play?device_id=" + deviceId,
+
+    public static pause = (accessToken: string) => {
+        return axios.put("https://api.spotify.com/v1/me/player/pause",
             {},
             {
                 headers: {

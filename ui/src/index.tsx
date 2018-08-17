@@ -5,7 +5,7 @@ import {
     faCog, faDesktop, faDice, faEdit, faExchangeAlt, faForward, faGamepad, faLayerGroup,
     faLink, faMinusCircle, faMobile, faPauseCircle, faPlayCircle, faPlusCircle, faRandom,
     faSave, faSearch, faShare, faShareAlt, faShieldAlt, faSignOutAlt, faSlidersH, faThumbsDown,
-    faThumbsUp, faTimesCircle, faTrashAlt, faUndo, faUnlock, faUser, faUsers, faVolumeOff, faVolumeUp,
+    faThumbsUp, faTimesCircle, faTrashAlt, faUndo, faUnlock, faUser, faUsers, faVolumeOff, faVolumeUp
 } from "@fortawesome/free-solid-svg-icons";
 import "bootstrap/dist/css/bootstrap.min.css";
 import * as React from "react";

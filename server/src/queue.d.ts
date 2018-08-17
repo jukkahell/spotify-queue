@@ -58,4 +58,5 @@ export interface QueueItem {
     userId: string | null;
     track: SpotifyTrack;
     protected: boolean;
+    source: string;
 }

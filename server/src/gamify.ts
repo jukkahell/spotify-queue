@@ -11,22 +11,27 @@ export namespace Gamify {
         "track": async (req: express.Request, res: express.Response, next: () => any) => {
             const passcode = req.cookies.get("passcode");
             const userId = req.cookies.get("user", { signed: true });
-            const trackUri = req.body.spotifyUri;
-            const queueDao = await QueueService.getQueue(passcode, true);
-            const userIdx = getUser(queueDao.data, userId);
-            const track = await SpotifyService.getTrack(queueDao.data.accessToken!, trackUri);
-            const millis = track.duration;
-            const cost = millisToPoints(millis);
+            const trackUri = req.body.uri;
+            const source = req.body.source;
+            if (source === "spotify") {
+                const queueDao = await QueueService.getQueue(passcode, true);
+                const userIdx = getUser(queueDao.data, userId);
+                const track = await SpotifyService.getTrack(queueDao.data.accessToken!, trackUri);
+                const millis = track.duration;
+                const cost = millisToPoints(millis);
 
-            const user = queueDao.data.users[userIdx];
-            if (user.points - cost >= 0) {
-                logger.info(`Reducing ${cost} points from ${user.points}`, { user: userId, passcode });
-                queueDao.data.users[userIdx].points -= cost;
-                await QueueService.updateQueueData(queueDao.data, passcode);
+                const user = queueDao.data.users[userIdx];
+                if (user.points - cost >= 0) {
+                    logger.info(`Reducing ${cost} points from ${user.points}`, { user: userId, passcode });
+                    queueDao.data.users[userIdx].points -= cost;
+                    await QueueService.updateQueueData(queueDao.data, passcode);
+                    return next();
+                } else {
+                    logger.info(`${user.points} points is not enough to pay ${cost} points`, { user: userId, passcode });
+                    return res.status(403).json({ message: `You don't have enough points (${user.points}) to add this song. Song costs ${cost} points.` });
+                }
+            } else if (source === "youtube") {
                 return next();
-            } else {
-                logger.info(`${user.points} points is not enough to pay ${cost} points`, { user: userId, passcode });
-                return res.status(403).json({ message: `You don't have enough points (${user.points}) to add this song. Song costs ${cost} points.` });
             }
         },
         "removeFromQueue": async (req: express.Request, res: express.Response, next: () => any) => {

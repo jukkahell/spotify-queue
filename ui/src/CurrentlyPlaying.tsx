@@ -1,6 +1,7 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import axios from "axios";
 import * as React from "react";
+import YouTube from "react-youtube";
 import { IUser } from "./App";
 import config from "./config";
 import { IQueuedItem, IVote } from "./Queue";
@@ -11,6 +12,7 @@ interface ICurrentlyPlayingProps {
     onPauseResume: () => void;
     onVoted: () => void;
     refreshData: () => void;
+    onYouTubeTrackEnd: (event: any) => void;
     currentTrack: IQueuedItem | null;
     isPlaying: boolean;
     isOwner: boolean;
@@ -110,28 +112,67 @@ export class CurrentlyPlaying extends React.Component<ICurrentlyPlayingProps, IC
         );
     }
 
+    protected renderSpotifyTrack() {
+        const progress = (this.state.progress / this.props.currentTrack!.track.duration) * 100;
+        const pauseVisible = this.props.isOwner && this.props.isPlaying;
+        const resumeVisible = this.props.isOwner && !this.props.isPlaying;
+        return (
+            <div className="currentlyPlaying col-md-12">
+                <div className="coverImageContainer" onClick={this.props.onPauseResume}>
+                    <img className="coverImage" src={this.props.currentTrack!.track.cover} />
+                    <div className={"coverImageLayer " + (pauseVisible ? "visible" : "invisible")}>
+                        <div className="align-center w-100"><FontAwesomeIcon icon="pause-circle" /></div>
+                    </div>
+                    <div className={"coverImageLayer " + (resumeVisible ? "visible" : "invisible")}>
+                        <div className="align-center w-100"><FontAwesomeIcon icon="play-circle" /></div>
+                    </div>
+                </div>
+                <div className="progress">
+                    <div className="progress-bar" style={{width: progress + "%"}} role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100} />
+                </div>
+                {this.renderVoteButtons()}
+            </div>
+        );
+    }
+
+    protected renderYoutubeTrack() {
+        const autoplay: 1 | 0 = 1;
+        const controls: 0 | 1 | 2 = 0;
+        const loop: 0 | 1 = 0;
+        const showinfo: 0 | 1 = 0;
+        const disablekb: 0 | 1 = 1;
+        const modestbranding: 0 | 1 = 1;
+        const enablejsapi: 0 | 1 = 1;
+        const rel: 0 | 1 = 0;
+        const opts = {
+            height: "300",
+            width: "380",
+            key: "AIzaSyCZ9Ddpx9buS0ZU9rUcex7v2zO8unjG75U",
+            playerVars: {
+                enablejsapi,
+                autoplay,
+                controls,
+                loop,
+                origin: config.hostname,
+                showinfo,
+                disablekb,
+                modestbranding,
+                rel
+            }
+        };
+
+        return (
+            <YouTube videoId={this.props.currentTrack!.track.id} opts={opts} onEnd={this.props.onYouTubeTrackEnd} />
+        );
+    }
+
     public render() {
         if (this.props.currentTrack) {
-            const progress = (this.state.progress / this.props.currentTrack.track.duration) * 100;
-            const pauseVisible = this.props.isOwner && this.props.isPlaying;
-            const resumeVisible = this.props.isOwner && !this.props.isPlaying;
-            return (
-                <div className="currentlyPlaying col-md-12">
-                    <div className="coverImageContainer" onClick={this.props.onPauseResume}>
-                        <img className="coverImage" src={this.props.currentTrack.track.cover} />
-                        <div className={"coverImageLayer " + (pauseVisible ? "visible" : "invisible")}>
-                            <div className="align-center w-100"><FontAwesomeIcon icon="pause-circle" /></div>
-                        </div>
-                        <div className={"coverImageLayer " + (resumeVisible ? "visible" : "invisible")}>
-                            <div className="align-center w-100"><FontAwesomeIcon icon="play-circle" /></div>
-                        </div>
-                    </div>
-                    <div className="progress">
-                        <div className="progress-bar" style={{width: progress + "%"}} role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100} />
-                    </div>
-                    {this.renderVoteButtons()}
-                </div>
-            );
+            if (this.props.currentTrack.source === "youtube") {
+                return this.renderYoutubeTrack();
+            } else {
+                return this.renderSpotifyTrack();
+            }
         } else {
             return (
                 <div className="currentlyPlaying col-md-12">

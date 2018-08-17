@@ -14,6 +14,7 @@ export interface ITrackProps {
     isPlaying: boolean;
     protectedTrack: boolean;
     owned: boolean;
+    source?: "youtube" | "spotify";
     selectTrack: (targetId: string, isPlaying: boolean) => void;
     selectArtist?: (targetId: string,  isPlaying: boolean) => void;
 }
@@ -48,7 +49,8 @@ export class Track extends React.Component<ITrackProps> {
             duration,
             isPlaying,
             protectedTrack,
-            owned
+            owned,
+            source
         } = this.props;
 
         return (
@@ -57,6 +59,11 @@ export class Track extends React.Component<ITrackProps> {
                     <a href="#" className="trackName" id={id} onClick={this.selectTrack}>
                         {name}
                         {isPlaying ? <div className="queuedItemIcon"><FontAwesomeIcon icon="volume-up" /></div> : null}
+                        {source
+                            ? source  === "youtube"
+                                ? <div className="queuedItemIcon"><FontAwesomeIcon icon={["fab", "youtube"]} /></div>
+                                : <div className="queuedItemIcon"><FontAwesomeIcon icon={["fab", "spotify"]} /></div>
+                            : null}
                         {protectedTrack
                             ? <div className="queuedItemIcon" title="Protected track, can't be skipped or removed">
                                 <FontAwesomeIcon icon="shield-alt" />

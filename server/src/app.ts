@@ -9,14 +9,17 @@ import * as Keygrip from "keygrip";
 import { env } from "process";
 import * as randomstring from "randomstring";
 import config, { passcodeCookieExpire, userCookieExpire } from "./config";
-import {Queue, QueueDao, Settings} from "./queue";
+import { Queue, Settings, QueueDao } from "./queue";
 import QueueService from "./queue.service";
 import secrets from "./secrets";
-import {SpotifySearchQuery} from "./spotify";
+import { SpotifySearchQuery } from "./spotify";
 import { logger } from "./logger.service";
 import SpotifyService from "./spotify.service";
 import Acl, { AuthResult } from "./acl";
 import Gamify from "./gamify";
+import { YoutubeSearchQuery } from "./youtube";
+import * as youtubeSearch from "youtube-search";
+import YoutubeService from "./youtube.service";
 
 const keys = secrets.cookie.signKeys;
 const keygrip = Keygrip(keys, "sha256");
@@ -275,11 +278,12 @@ app.delete("/removeFromQueue", (req, res) => {
 });
 
 app.post("/track", (req, res) => {
-    const spotifyUri = req.body.spotifyUri;
+    const uri = req.body.uri;
+    const source = req.body.source;
     const passcode = req.cookies.get("passcode");
     const user = req.cookies.get("user", { signed: true });
 
-    QueueService.addToQueue(user, passcode, spotifyUri).then((queue: QueueDao) => {
+    QueueService.addToQueue(user, passcode, uri, source).then((queue: QueueDao) => {
         // If no song is playing
         if (!queue.data.currentTrack) {
             logger.info(`Queue is not playing...start it`, { user, passcode });
@@ -506,6 +510,47 @@ app.post("/search", (req, res) => {
         });
     }).catch(err => {
         res.status(500).json({ message: err });
+    });
+});
+
+app.get("/youtubeEnd", (req, res) => {
+    const passcode = req.cookies.get("passcode");
+    const user = req.cookies.get("user", { signed: true });
+    QueueService.startNextTrack(passcode, user);
+    res.status(200).json({ message: "OK" });
+});
+
+app.post("/youtubeSearch", async (req, res) => {
+    const query: YoutubeSearchQuery = {
+        q: req.body.q,
+        limit: req.body.limit
+    };
+
+    var opts= {
+        maxResults: query.limit,
+        key: secrets.youtube.key,
+        type: "video",
+        videoSyndicated: "true",
+        videoEmbeddable: "true",
+        videoCategoryId: "10"
+      };
+ 
+    await youtubeSearch(query.q, opts, async (err, results) => {
+        if (err) {
+            const passcode = req.cookies.get("passcode");
+            const user = req.cookies.get("user", { signed: true });
+            logger.error(`Unable to search from YouTube`, [passcode, user]);
+            logger.error(err);
+            throw { status: 500, message: "Error occurred while searching from YouTube. Please try again." };
+        }
+
+        if (!results) {
+            return res.status(404).json([]);
+        }
+       
+        const ids = results!.map(v => v.id);
+        const videos = await YoutubeService.getTracks(ids.join(","));
+        return res.status(200).json(videos);
     });
 });
 

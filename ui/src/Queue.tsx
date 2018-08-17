@@ -11,6 +11,7 @@ export interface IQueuedItem {
     userId: string;
     votes: IVote[];
     protected: boolean;
+    source: "spotify" | "youtube";
 }
 
 export interface IVote {
@@ -68,6 +69,7 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
                         duration={this.props.currentTrack.track.duration}
                         key={"current-" + this.props.currentTrack.track.id}
                         isPlaying={true}
+                        source={this.props.currentTrack.source}
                         protectedTrack={this.props.currentTrack.protected}
                         owned={this.props.user!.id === this.props.currentTrack.userId}
                         selectTrack={this.showContextMenu}/>
@@ -218,6 +220,7 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
                         duration={queuedItem.track.duration}
                         key={i + "-" + queuedItem.track.id}
                         isPlaying={false}
+                        source={queuedItem.source}
                         protectedTrack={queuedItem.protected}
                         owned={queuedItem.userId === this.props.user!.id}
                         selectTrack={this.showContextMenu}/>
