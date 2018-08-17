@@ -147,7 +147,6 @@ export class CurrentlyPlaying extends React.Component<ICurrentlyPlayingProps, IC
         const opts = {
             height: "300",
             width: "380",
-            key: "AIzaSyCZ9Ddpx9buS0ZU9rUcex7v2zO8unjG75U",
             playerVars: {
                 enablejsapi,
                 autoplay,
