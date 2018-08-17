@@ -12,7 +12,7 @@ interface ICurrentlyPlayingProps {
     onPauseResume: () => void;
     onVoted: () => void;
     refreshData: () => void;
-    onYouTubeTrackEnd: (event: any) => void;
+    onYouTubeTrackEnd: () => void;
     currentTrack: IQueuedItem | null;
     isPlaying: boolean;
     isOwner: boolean;
@@ -29,6 +29,10 @@ interface ICurrentlyPlayingState {
 export class CurrentlyPlaying extends React.Component<ICurrentlyPlayingProps, ICurrentlyPlayingState> {
 
     private progressInterval: NodeJS.Timer;
+    private youtubeProgressInterval: NodeJS.Timer;
+    private YT_END = 0;
+    private YT_PLAYING = 1;
+    private YT_PAUSED = 2;
 
     public constructor(props: ICurrentlyPlayingProps) {
         super(props);
@@ -41,6 +45,7 @@ export class CurrentlyPlaying extends React.Component<ICurrentlyPlayingProps, IC
 
         this.voteUp = this.voteUp.bind(this);
         this.voteDown = this.voteDown.bind(this);
+        this.onStateChange = this.onStateChange.bind(this);
     }
 
     public componentDidMount() {
@@ -136,6 +141,7 @@ export class CurrentlyPlaying extends React.Component<ICurrentlyPlayingProps, IC
     }
 
     protected renderYoutubeTrack() {
+        const progress = (this.state.progress / this.props.currentTrack!.track.duration) * 100;
         const autoplay: 1 | 0 = 1;
         const controls: 0 | 1 | 2 = 0;
         const loop: 0 | 1 = 0;
@@ -145,8 +151,8 @@ export class CurrentlyPlaying extends React.Component<ICurrentlyPlayingProps, IC
         const enablejsapi: 0 | 1 = 1;
         const rel: 0 | 1 = 0;
         const opts = {
-            height: "300",
-            width: "380",
+            height: "380px",
+            width: "100%",
             playerVars: {
                 enablejsapi,
                 autoplay,
@@ -161,7 +167,13 @@ export class CurrentlyPlaying extends React.Component<ICurrentlyPlayingProps, IC
         };
 
         return (
-            <YouTube videoId={this.props.currentTrack!.track.id} opts={opts} onEnd={this.props.onYouTubeTrackEnd} />
+            <div className="currentlyPlaying col-md-12">
+                <YouTube videoId={this.props.currentTrack!.track.id} opts={opts} onStateChange={this.onStateChange} />
+                <div className="progress">
+                    <div className="progress-bar" style={{width: progress + "%"}} role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100} />
+                </div>
+                {this.renderVoteButtons()}
+            </div>
         );
     }
 
@@ -182,6 +194,16 @@ export class CurrentlyPlaying extends React.Component<ICurrentlyPlayingProps, IC
                     </div>
                 </div>
             );
+        }
+    }
+
+    private onStateChange(event: any) {
+        if (event.data === this.YT_PLAYING) {
+            this.startYoutubeProgress(event.target);
+        } else if (event.data === this.YT_PAUSED) {
+            clearInterval(this.youtubeProgressInterval);
+        } else if (event.data === this.YT_END) {
+            this.props.onYouTubeTrackEnd();
         }
     }
 
@@ -208,6 +230,15 @@ export class CurrentlyPlaying extends React.Component<ICurrentlyPlayingProps, IC
                 this.props.onSongEnd();
             }
         }, 500);
+    }
+
+    private startYoutubeProgress(player: any) {
+        this.youtubeProgressInterval = setInterval(() => {
+            const playerCurrentTime = player.getCurrentTime() * 1000;
+            this.setState(() => ({
+                progress: playerCurrentTime
+            }));
+        }, 1000);
     }
 }
 

@@ -551,8 +551,7 @@ export class App extends React.Component<{}, IState> {
         );
     }
 
-    private youtubeEnd(event: any) {
-        console.log(event);
+    private youtubeEnd() {
         axios.get(config.backend.url + "/youtubeEnd")
             .then(() => {
                 this.refreshData();
