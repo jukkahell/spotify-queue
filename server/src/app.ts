@@ -277,13 +277,13 @@ app.delete("/removeFromQueue", (req, res) => {
     }
 });
 
-app.post("/track", (req, res, next) => {
+app.post("/track", async (req, res, next) => {
     const uri = req.body.uri;
     const source = req.body.source;
     const passcode = req.cookies.get("passcode");
     const user = req.cookies.get("user", { signed: true });
 
-    QueueService.addToQueue(user, passcode, uri, source).then((queue: QueueDao) => {
+    await QueueService.addToQueue(user, passcode, uri, source).then((queue: QueueDao) => {
         // If no song is playing
         if (!queue.data.currentTrack) {
             logger.info(`Queue is not playing...start it`, { user, passcode });
