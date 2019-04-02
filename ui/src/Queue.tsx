@@ -28,6 +28,7 @@ interface IQueueProps {
     currentTrack: IQueuedItem | null;
     settings: ISettings | null;
     user: IUser | null;
+    isOwner: boolean;
 }
 
 interface IQueueState {
@@ -145,7 +146,11 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
         }
 
         const menu = [];
-        const showPoints = (this.props.settings!.gamify && this.state.contextMenuTrack.userId !== this.props.user!.id) ? "(-20 pts)" : "";
+        const playlistTrackForOwner = this.state.contextMenuTrack.userId === null && this.props.isOwner;
+        const showPoints =
+            (this.props.settings!.gamify && this.state.contextMenuTrack.userId !== this.props.user!.id && !playlistTrackForOwner)
+            ? "(-20 pts)"
+            : "";
         if (this.props.settings!.gamify || this.state.contextMenuTrack.userId === this.props.user!.id) {
             if (!this.state.contextMenuTargetPlaying) {
                 menu.push(

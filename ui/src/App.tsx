@@ -344,6 +344,7 @@ export class App extends React.Component<{}, IState> {
                             <div className="row">
                                 <Queue currentTrack={this.state.currentTrack}
                                     queue={this.state.queuedItems}
+                                    isOwner={this.state.isOwner}
                                     onSkip={this.onSkip}
                                     onProtected={this.onProtected}
                                     settings={this.state.settings}
