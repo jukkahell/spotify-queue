@@ -20,7 +20,7 @@ export namespace Gamify {
             if (isPlaying) {
                 // No cost for track owner and queue owner if track is from playlist
                 if (!q.currentTrack || q.currentTrack.userId === user || (q.owner === user && q.currentTrack.userId === null)) {
-                    return;
+                    return next();
                 }
                 if (q.users[userIdx].points < config.gamify.skipCost) {
                     return res.status(403).json({ 
