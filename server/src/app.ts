@@ -32,7 +32,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(Cookies.express(keygrip));
 app.use(Acl.authFilter);
 app.use(Acl.adminFilter);
-app.use(Gamify.express);
+app.use(Gamify.pre);
 
 const options = env.NODE_ENV === "production" ? {
     key: fs.readFileSync(secrets.certPath + "privkey.pem"),
@@ -277,7 +277,7 @@ app.delete("/removeFromQueue", (req, res) => {
     }
 });
 
-app.post("/track", (req, res) => {
+app.post("/track", (req, res, next) => {
     const uri = req.body.uri;
     const source = req.body.source;
     const passcode = req.cookies.get("passcode");
@@ -293,14 +293,15 @@ app.post("/track", (req, res) => {
             QueueService.startNextTrack(passcode, user).then(() => {
                 res.status(200).json({ message: "OK" });
             }).catch(err => {
-                res.status(err.status).json({ message: err.message });
+                return res.status(err.status).json({ message: err.message });
             });
         } else {
             res.status(200).json({ message: "OK" });
         }
     }).catch(err => {
-        res.status(500).json({ message: err.message });
+        return res.status(500).json({ message: err.message });
     });
+    return next();
 });
 
 app.post("/pauseResume", (req, res) => {
@@ -568,6 +569,7 @@ app.use((error: any, request: express.Request, response: express.Response, next:
             message: error.message || error
         });
 });
+app.use(Gamify.post);
 
 app.get("*", (request: express.Request, response: express.Response) => response.status(404).send());
 

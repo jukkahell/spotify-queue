@@ -7,33 +7,7 @@ import config from "./config";
 
 export namespace Gamify {
 
-    const methods = {
-        "track": async (req: express.Request, res: express.Response, next: () => any) => {
-            const passcode = req.cookies.get("passcode");
-            const userId = req.cookies.get("user", { signed: true });
-            const trackUri = req.body.uri;
-            const source = req.body.source;
-            if (source === "spotify") {
-                const queueDao = await QueueService.getQueue(passcode, true);
-                const userIdx = getUser(queueDao.data, userId);
-                const track = await SpotifyService.getTrack(queueDao.data.accessToken!, trackUri);
-                const millis = track.duration;
-                const cost = millisToPoints(millis);
-
-                const user = queueDao.data.users[userIdx];
-                if (user.points - cost >= 0) {
-                    logger.info(`Reducing ${cost} points from ${user.points}`, { user: userId, passcode });
-                    queueDao.data.users[userIdx].points -= cost;
-                    await QueueService.updateQueueData(queueDao.data, passcode);
-                    return next();
-                } else {
-                    logger.info(`${user.points} points is not enough to pay ${cost} points`, { user: userId, passcode });
-                    return res.status(403).json({ message: `You don't have enough points (${user.points}) to add this song. Song costs ${cost} points.` });
-                }
-            } else if (source === "youtube") {
-                return next();
-            }
-        },
+    const preMethods = {
         "removeFromQueue": async (req: express.Request, res: express.Response, next: () => any) => {
             const passcode = req.cookies.get("passcode");
             const user = req.cookies.get("user", { signed: true });
@@ -178,6 +152,35 @@ export namespace Gamify {
         }
     };
 
+    const postMethods = {
+        "track": async (req: express.Request, res: express.Response, next: () => any) => {
+            const passcode = req.cookies.get("passcode");
+            const userId = req.cookies.get("user", { signed: true });
+            const trackUri = req.body.uri;
+            const source = req.body.source;
+            if (source === "spotify") {
+                const queueDao = await QueueService.getQueue(passcode, true);
+                const userIdx = getUser(queueDao.data, userId);
+                const track = await SpotifyService.getTrack(queueDao.data.accessToken!, trackUri);
+                const millis = track.duration;
+                const cost = millisToPoints(millis);
+
+                const user = queueDao.data.users[userIdx];
+                if (user.points - cost >= 0) {
+                    logger.info(`Reducing ${cost} points from ${user.points}`, { user: userId, passcode });
+                    queueDao.data.users[userIdx].points -= cost;
+                    await QueueService.updateQueueData(queueDao.data, passcode);
+                    return next();
+                } else {
+                    logger.info(`${user.points} points is not enough to pay ${cost} points`, { user: userId, passcode });
+                    return res.status(403).json({ message: `You don't have enough points (${user.points}) to add this song. Song costs ${cost} points.` });
+                }
+            } else if (source === "youtube") {
+                return next();
+            }
+        },
+    };
+
     const getUser = (queue: Queue, userId: string) => {
         const userIdx = queue.users.findIndex(user => user.id === userId);
         if (userIdx < 0) {
@@ -190,6 +193,35 @@ export namespace Gamify {
     const millisToPoints = (millis: number) => {
         const minutes = Math.floor(millis / 60000);
         return minutes + 1;
+    }
+
+    export const refundPoints = async (user: string, passcode: string) => {
+        try {
+            const queueDao = await QueueService.getQueue(passcode, true);
+            const currentTrack = queueDao.data.currentTrack;
+            if (queueDao.data.settings.gamify && currentTrack) {
+                let reward = millisToPoints(currentTrack.track.duration);
+                logger.info(`Rewarding track owner ${currentTrack.userId || "-"} for ${reward} points`, { passcode });
+                queueDao.data.users = queueDao.data.users.map((user: User) => {
+                    const queued = queueDao.data.queue.some(queuedItem => queuedItem.userId === user.id);
+                    if (queued || currentTrack.userId === user.id) {
+                        if (currentTrack.userId === user.id) {
+                            user.points += reward;
+                            let voteCount = currentTrack.votes.reduce((sum, v) => sum += v.value, 0);
+                            logger.info(`${voteCount} vote points for user`, { passcode, user: user.id });
+                            user.points += voteCount;
+                        } else {
+                            user.points += 1;
+                        }
+                    }
+                    return user;
+                });
+                await QueueService.updateQueueData(queueDao.data, passcode);
+            }
+        } catch (err) {
+            logger.error("Error while giving gamify points for users.", { passcode });
+            logger.error(err);
+        }
     }
 
     export const trackEndReward = async (passcode: string) => {
@@ -222,8 +254,8 @@ export namespace Gamify {
         }
     }
 
-    export const express = async (req: express.Request, res: express.Response, next: () => any) => {
-        const gameEndpoints = ["/track", "/removeFromQueue", "/moveUpInQueue", "/protectTrack"];
+    export const pre = async (req: express.Request, res: express.Response, next: () => any) => {
+        const gameEndpoints = ["/removeFromQueue", "/moveUpInQueue", "/protectTrack"];
         if (gameEndpoints.includes(req.path)) {
             const passcode = req.cookies.get("passcode");
             if (passcode) {
@@ -231,7 +263,23 @@ export namespace Gamify {
                 if (!queueDao.data.settings.gamify) {
                     return next();
                 } else {
-                    return methods[req.path.substr(1)](req, res, next);
+                    return preMethods[req.path.substr(1)](req, res, next);
+                }
+            }
+        }
+        return next();
+    }
+
+    export const post = async (req: express.Request, res: express.Response, next: () => any) => {
+        const gameEndpoints = ["/track"];
+        if (gameEndpoints.includes(req.path)) {
+            const passcode = req.cookies.get("passcode");
+            if (passcode) {
+                const queueDao = await QueueService.getQueue(passcode, false);
+                if (!queueDao.data.settings.gamify) {
+                    return next();
+                } else {
+                    return postMethods[req.path.substr(1)](req, res, next);
                 }
             }
         }
