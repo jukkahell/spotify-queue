@@ -195,35 +195,6 @@ export namespace Gamify {
         return minutes + 1;
     }
 
-    export const refundPoints = async (user: string, passcode: string) => {
-        try {
-            const queueDao = await QueueService.getQueue(passcode, true);
-            const currentTrack = queueDao.data.currentTrack;
-            if (queueDao.data.settings.gamify && currentTrack) {
-                let reward = millisToPoints(currentTrack.track.duration);
-                logger.info(`Rewarding track owner ${currentTrack.userId || "-"} for ${reward} points`, { passcode });
-                queueDao.data.users = queueDao.data.users.map((user: User) => {
-                    const queued = queueDao.data.queue.some(queuedItem => queuedItem.userId === user.id);
-                    if (queued || currentTrack.userId === user.id) {
-                        if (currentTrack.userId === user.id) {
-                            user.points += reward;
-                            let voteCount = currentTrack.votes.reduce((sum, v) => sum += v.value, 0);
-                            logger.info(`${voteCount} vote points for user`, { passcode, user: user.id });
-                            user.points += voteCount;
-                        } else {
-                            user.points += 1;
-                        }
-                    }
-                    return user;
-                });
-                await QueueService.updateQueueData(queueDao.data, passcode);
-            }
-        } catch (err) {
-            logger.error("Error while giving gamify points for users.", { passcode });
-            logger.error(err);
-        }
-    }
-
     export const trackEndReward = async (passcode: string) => {
         // TODO: Give reward for active users. Based on recent activity.
         try {

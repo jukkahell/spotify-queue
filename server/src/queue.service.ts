@@ -653,7 +653,6 @@ class QueueService {
 
                 logger.info(`${duplicateCount}/${queue.settings.maxDuplicateTracks} duplicate songs in queue...`, { passcode, user });
                 if (duplicateCount >= queue.settings.maxDuplicateTracks) {
-                    await Gamify.refundPoints(user, passcode);
                     throw { 
                         status: 403, 
                         message: `Queuing failed. Max duplicate song count is set to ${queue.settings.maxDuplicateTracks}.` 

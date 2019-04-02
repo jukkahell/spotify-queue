@@ -283,7 +283,8 @@ app.post("/track", async (req, res, next) => {
     const passcode = req.cookies.get("passcode");
     const user = req.cookies.get("user", { signed: true });
 
-    await QueueService.addToQueue(user, passcode, uri, source).then((queue: QueueDao) => {
+    try {
+        const queue = await QueueService.addToQueue(user, passcode, uri, source);
         // If no song is playing
         if (!queue.data.currentTrack) {
             logger.info(`Queue is not playing...start it`, { user, passcode });
@@ -298,9 +299,9 @@ app.post("/track", async (req, res, next) => {
         } else {
             res.status(200).json({ message: "OK" });
         }
-    }).catch(err => {
+    } catch (err) {
         return res.status(500).json({ message: err.message });
-    });
+    };
     return next();
 });
 
