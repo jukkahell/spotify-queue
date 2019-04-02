@@ -18,27 +18,29 @@ export namespace Gamify {
             const q = queueDao.data;
 
             if (isPlaying) {
-                if (q.currentTrack && q.currentTrack.userId !== user) {
-                    if (q.users[userIdx].points < config.gamify.skipCost) {
-                        return res.status(403).json({ 
-                            message: `You don't have enough points (${q.users[userIdx].points}). ` +
-                                    `Skipping a song added by someone else costs ${config.gamify.skipCost} points.` 
-                        });
-                    }
-                    logger.info(`Skipping someone else's song...`, { user, passcode });
-
-                    if (q.currentTrack.protected) {
-                        logger.info(`Track is protected from skipping...`, { user, passcode });
-                        return res.status(403).json({ 
-                            message: `Can't skip because this song is protected from skipping.`
-                        });
-                    }
-
-                    queueDao.data.users[userIdx].points -= config.gamify.skipCost;
-                    await QueueService.updateQueueData(queueDao.data, passcode);
-                    QueueService.skip(passcode, q.currentTrack!.userId!, trackId);
-                    return res.status(200).json({ message: "OK" });
+                // No cost for track owner and queue owner if track is from playlist
+                if (!q.currentTrack || q.currentTrack.userId === user || (q.owner === user && q.currentTrack.userId === null)) {
+                    return;
                 }
+                if (q.users[userIdx].points < config.gamify.skipCost) {
+                    return res.status(403).json({ 
+                        message: `You don't have enough points (${q.users[userIdx].points}). ` +
+                                `Skipping a song added by someone else costs ${config.gamify.skipCost} points.` 
+                    });
+                }
+                logger.info(`Skipping someone else's song...`, { user, passcode });
+
+                if (q.currentTrack.protected) {
+                    logger.info(`Track is protected from skipping...`, { user, passcode });
+                    return res.status(403).json({ 
+                        message: `Can't skip because this song is protected from skipping.`
+                    });
+                }
+
+                queueDao.data.users[userIdx].points -= config.gamify.skipCost;
+                await QueueService.updateQueueData(queueDao.data, passcode);
+                QueueService.skip(passcode, q.currentTrack!.userId!, trackId);
+                return res.status(200).json({ message: "OK" });
             } else {
                 for (let i = q.queue.length - 1; i >= 0; --i) {
                     if (q.queue[i].track.id === trackId && q.queue[i].userId === user) {
