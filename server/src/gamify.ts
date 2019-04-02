@@ -18,8 +18,8 @@ export namespace Gamify {
             const q = queueDao.data;
 
             if (isPlaying) {
-                // No cost for track owner and queue owner if track is from playlist
-                if (!q.currentTrack || q.currentTrack.userId === user || (q.owner === user && q.currentTrack.userId === null)) {
+                // No cost for track owner
+                if (!q.currentTrack || q.currentTrack.userId === user) {
                     return next();
                 }
                 if (q.users[userIdx].points < config.gamify.skipCost) {
@@ -37,7 +37,9 @@ export namespace Gamify {
                     });
                 }
 
-                queueDao.data.users[userIdx].points -= config.gamify.skipCost;
+                if (q.owner !== user || q.currentTrack.userId !== null) {
+                    queueDao.data.users[userIdx].points -= config.gamify.skipCost;
+                }
                 await QueueService.updateQueueData(queueDao.data, passcode);
                 QueueService.skip(passcode, q.currentTrack!.userId!, trackId);
                 return res.status(200).json({ message: "OK" });
