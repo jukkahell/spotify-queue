@@ -94,9 +94,10 @@ export class CurrentlyPlaying extends React.Component<ICurrentlyPlayingProps, IC
 
         let voteDisabled = false;
         let voteDisabledTitle = "";
-        if (this.props.user && this.props.currentTrack.votes.some(v => v.userId === this.props.user!.id)) {
-            voteDisabled = true;
-            voteDisabledTitle = "Already voted";
+        let alreadyVoted = null;
+        const vote = this.props.currentTrack.votes.find(v => v.userId === this.props.user!.id);
+        if (this.props.user && vote) {
+            alreadyVoted = vote;
         } else if (this.props.user && this.props.currentTrack.userId === this.props.user.id) {
             voteDisabled = true;
             voteDisabledTitle = "Can't vote own songs";
@@ -106,11 +107,15 @@ export class CurrentlyPlaying extends React.Component<ICurrentlyPlayingProps, IC
         this.props.currentTrack.votes.forEach((v: IVote) => voteCount += v.value);
         return (
             <div className="voteButtons">
-                <button disabled={voteDisabled} title={voteDisabledTitle} type="submit" className="btn btn-primary voteButton up" id={this.props.currentTrack.track.id} onClick={this.voteUp}>
+                <button disabled={voteDisabled} title={voteDisabledTitle} type="submit"
+                  className={"btn btn-primary voteButton " + (alreadyVoted && alreadyVoted.value === 1 ? "voted" : "up")}
+                  id={this.props.currentTrack.track.id} onClick={this.voteUp}>
                     <FontAwesomeIcon icon="thumbs-up" />
                 </button>
                 <div className="voteCount">{voteCount > 0 ? "+" : ""}{voteCount}</div>
-                <button disabled={voteDisabled} title={voteDisabledTitle} type="submit" className="btn btn-primary voteButton down" id={this.props.currentTrack.track.id} onClick={this.voteDown}>
+                <button disabled={voteDisabled} title={voteDisabledTitle} type="submit"
+                  className={"btn btn-primary voteButton " + (alreadyVoted && alreadyVoted.value === -1 ? "voted" : "down")}
+                  id={this.props.currentTrack.track.id} onClick={this.voteDown}>
                     <FontAwesomeIcon icon="thumbs-down" />
                 </button>
             </div>

@@ -4,7 +4,7 @@ import { env } from "process";
 const prod = env.NODE_ENV === "production";
 const scheme = prod ? "https://" : "http://";
 const host = prod ? "spotiqu.eu" : "spotique.fi";
-const port = 7999;
+const port = prod ? 7999 : 8001;
 const redirectUri = prod ? "backend.spotiqu.eu" : host + ":" + port;
 const uiPort = prod ? 80 : 3000;
 

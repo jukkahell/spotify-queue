@@ -49,16 +49,6 @@ export class UserMenu extends React.Component<IUserMenuProps, IUserMenuState> {
         this.handleUsernameChange = this.handleUsernameChange.bind(this);
     }
 
-    public componentDidUpdate(prevProps: IUserMenuProps) {
-        if (prevProps.user !== this.props.user) {
-            if (this.props.user && this.props.user.spotifyUserId) {
-                this.setState({
-                    menuOptions: ["Logout"]
-                });
-            }
-        }
-    }
-
     public selectMenuItem(e: React.MouseEvent<HTMLElement>) {
         switch (e.currentTarget.id) {
             case "Logout":

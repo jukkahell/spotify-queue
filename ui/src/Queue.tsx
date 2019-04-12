@@ -12,6 +12,7 @@ export interface IQueuedItem {
     votes: IVote[];
     protected: boolean;
     source: "spotify" | "youtube";
+    playlistTrack: boolean;
 }
 
 export interface IVote {
@@ -146,7 +147,7 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
         }
 
         const menu = [];
-        const playlistTrackForOwner = this.state.contextMenuTrack.userId === null && this.props.isOwner;
+        const playlistTrackForOwner = this.state.contextMenuTrack.playlistTrack && this.props.isOwner;
         const showPoints =
             (this.props.settings!.gamify && this.state.contextMenuTrack.userId !== this.props.user!.id && !playlistTrackForOwner)
             ? "(-20 pts)"

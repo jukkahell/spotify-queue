@@ -310,6 +310,10 @@ button.iconButton:active, button.iconButton:hover, button.iconButton:focus {
     background-color: #dd0d0d;
     border-color: #dd0d0d;
 }
+.voteButton.voted {
+  background-color: #525252;
+  border-color: #525252;
+}
 .voteButton.down:hover {
     background-color: #ed0d0d!important;
 }

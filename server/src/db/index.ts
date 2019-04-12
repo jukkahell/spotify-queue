@@ -9,4 +9,4 @@ const pool = new Pool({
     port: 5433,
 });
 
-export const query = (text: string, params: any[]) => pool.query(text, params);
+export const query = (text: string, params?: any[]) => pool.query(text, params);

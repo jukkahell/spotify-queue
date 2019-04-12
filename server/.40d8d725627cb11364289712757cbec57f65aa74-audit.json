@@ -1,0 +1,19 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 14
+    },
+    "auditLog": ".40d8d725627cb11364289712757cbec57f65aa74-audit.json",
+    "files": [
+        {
+            "date": 1554940237875,
+            "name": "spotiqu-2019-04-11.log",
+            "hash": "962f97cb673c55d9e122858f3f166c21"
+        },
+        {
+            "date": 1555016709312,
+            "name": "spotiqu-2019-04-12.log",
+            "hash": "6494d16e20bc428c558d067b64889c95"
+        }
+    ]
+}

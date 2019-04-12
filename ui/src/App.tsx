@@ -480,7 +480,8 @@ export class App extends React.Component<{}, IState> {
             .then(response => {
                 if (response.status === 200) {
                     this.setState({
-                        settings: response.data
+                        settings: response.data,
+                        playlistId: response.data.playlist
                     });
                 }
             }).catch(err => {
@@ -524,8 +525,7 @@ export class App extends React.Component<{}, IState> {
                 if (response.status === 200) {
                     this.setState({
                         currentTrack: response.data.currentTrack,
-                        isPlaying: response.data.isSpotiquPlaying,
-                        playlistId: response.data.playlistId
+                        isPlaying: response.data.isSpotiquPlaying
                     });
                 }
             }).catch(err => {
