@@ -219,9 +219,9 @@ app.put("/device", async (req, res) => {
 
 app.get("/queue", async (req, res) => {
   const passcode = req.cookies.get("passcode");
-
+  const userId = req.cookies.get("user", { signed: true });
   try {
-    const tracks = await QueueService.getTracks(passcode, false);
+    const tracks = await QueueService.getTracks(passcode, userId, false);
     if (tracks.length === 0) {
       res.status(204).json({ message: "No messages in queue" });
       return;
@@ -250,6 +250,44 @@ app.get("/currentlyPlaying", async (req, res) => {
   } catch(err) {
     res.status(err.status).json({ message: err.message});
   }
+});
+
+app.get("/favorites", async (req, res) => {
+  const userId = req.cookies.get("user", { signed: true });
+  const passcode = req.cookies.get("passcode");
+  try {
+    const favorites = await QueueService.getFavorites(passcode, userId);
+    res.status(200).json(favorites);
+  } catch (err) {
+    res.status(err.status).json({ message: err.message });
+  }
+});
+
+app.post("/addToFavorites", (req, res) => {
+  const passcode = req.cookies.get("passcode");
+  const user = req.cookies.get("user", { signed: true });
+  const trackId = req.body.trackId;
+  const source = req.body.source;
+
+  logger.info(`Adding ${trackId} to favorites`, { user, passcode });
+  QueueService.addToFavorites(passcode, user, trackId, source).then(() => {
+    res.status(200).json({ msg: "OK" });
+  }).catch(err => {
+    res.status(err.status).json({ message: err.message });
+  });
+});
+
+app.post("/removeFromFavorites", (req, res) => {
+  const passcode = req.cookies.get("passcode");
+  const user = req.cookies.get("user", { signed: true });
+  const trackId = req.body.trackId;
+
+  logger.info(`Removing ${trackId} from favorites`, { user, passcode });
+  QueueService.removeFromFavorites(passcode, user, trackId).then(() => {
+    res.status(200).json({ msg: "OK" });
+  }).catch(err => {
+    res.status(err.status).json({ message: err.message });
+  });
 });
 
 app.delete("/removeFromQueue", (req, res) => {
@@ -437,10 +475,17 @@ app.get("/playlist", async (req, res) => {
   const passcode = req.cookies.get("passcode");
   const playlistId = req.query.id;
   try {
-    const queue = await QueueService.getQueue(req.cookies.get("passcode"));
-    SpotifyService.getPlaylistTracks(queue.accessToken!, queue.owner, playlistId, user, passcode).then(tracks => {
-      res.status(200).json({ tracks });
-    });
+    const favorites = await QueueService.getFavorites(passcode, user);
+    if (playlistId === "favorites") {
+      res.status(200).json({ tracks: favorites });
+    } else if (playlistId === "top") {
+      const top = await QueueService.getTop(passcode, user);
+      res.status(200).json({ tracks: top });
+    } else {
+      const queue = await QueueService.getQueue(passcode);
+      const tracks = await SpotifyService.getPlaylistTracks(queue.accessToken!, queue.owner, playlistId, user, passcode);
+      res.status(200).json({ tracks: await QueueService.markFavorites(passcode, user, tracks) });
+    }
   } catch(err) {
     res.status(err.status).json({ message: err.message });
   }
@@ -463,37 +508,51 @@ app.put("/queuePlaylist", async (req, res) => {
   }
 });
 
-app.get("/selectAlbum", (req, res) => {
+app.put("/queueFavorites", async (req, res) => {
   const user = req.cookies.get("user", { signed: true });
   const passcode = req.cookies.get("passcode");
-
-  QueueService.getAccessToken(req.cookies.get("passcode")).then(accessToken => {
-    SpotifyService.getAlbum(accessToken, req.query.id, user, passcode).then(albums => {
-      res.status(200).json(albums);
-    });
-  }).catch(err => {
-    res.status(err.status).json({ message: err.message });
-  });
-});
-
-app.get("/selectArtist", (req, res) => {
-  const user = req.cookies.get("user", { signed: true });
-  const passcode = req.cookies.get("passcode");
-
-  QueueService.getAccessToken(req.cookies.get("passcode")).then(accessToken => {
-    SpotifyService.getArtistTopTracks(accessToken, req.query.id, user, passcode).then((tracks: any) => {
-      SpotifyService.getArtistAlbums(accessToken, req.query.id, user, passcode).then((albums: any) => {
-        res.status(200).json({ tracks, albums });
-      });
+  try {
+    QueueService.addFavoritesToPlaylistQueue(user, passcode).then(() => {
+      res.status(200).json({ message: "OK" });
     }).catch(err => {
       res.status(err.status).json({ message: err.message });
     });
-  }).catch(err => {
-    res.status(500).json({ message: err });
-  });
+  } catch (err) {
+    res.status(err.status).json({ message: err.message });
+  }
 });
 
-app.post("/search", (req, res) => {
+app.get("/selectAlbum", async (req, res) => {
+  const user = req.cookies.get("user", { signed: true });
+  const passcode = req.cookies.get("passcode");
+
+  try {
+    const accessToken = await QueueService.getAccessToken(req.cookies.get("passcode"));
+    const albumTracks = await SpotifyService.getAlbum(accessToken, req.query.id, user, passcode);
+    res.status(200).json(await QueueService.markFavorites(passcode, user, albumTracks));
+  } catch(err) {
+    res.status(err.status).json({ message: err.message });
+  }
+});
+
+app.get("/selectArtist", async (req, res) => {
+  const user = req.cookies.get("user", { signed: true });
+  const passcode = req.cookies.get("passcode");
+
+  try {
+    const accessToken = await QueueService.getAccessToken(req.cookies.get("passcode"));
+    const tracks = await SpotifyService.getArtistTopTracks(accessToken, req.query.id, user, passcode);
+    const albums = await SpotifyService.getArtistAlbums(accessToken, req.query.id, user, passcode);
+    res.status(200).json({ 
+      tracks: await QueueService.markFavorites(passcode, user, tracks),
+      albums 
+    });
+  } catch(err) {
+    res.status(err.status || 500).json({ message: err });
+  }
+});
+
+app.post("/search", async (req, res) => {
   const passcode = req.cookies.get("passcode");
   const user = req.cookies.get("user", { signed: true });
 
@@ -504,15 +563,14 @@ app.post("/search", (req, res) => {
     limit: req.body.limit
   };
 
-  QueueService.getAccessToken(passcode).then(accessToken => {
-    SpotifyService.search(user, passcode, accessToken, query).then(results => {
-      res.status(200).json(results);
-    }).catch(err => {
-      res.status(err.status).json({ message: err.message });
-    });
-  }).catch(err => {
+  try {
+    const accessToken = await QueueService.getAccessToken(passcode);
+    const searchResults = await SpotifyService.search(user, passcode, accessToken, query);
+    searchResults.tracks = await QueueService.markFavorites(passcode, user, searchResults.tracks);
+    res.status(200).json(searchResults);
+  } catch(err) {
     res.status(500).json({ message: err });
-  });
+  }
 });
 
 app.get("/youtubeEnd", (req, res) => {
@@ -538,9 +596,9 @@ app.post("/youtubeSearch", async (req, res) => {
   };
 
   await youtubeSearch(query.q, opts, async (err, results) => {
+    const passcode = req.cookies.get("passcode");
+    const user = req.cookies.get("user", { signed: true });
     if (err) {
-      const passcode = req.cookies.get("passcode");
-      const user = req.cookies.get("user", { signed: true });
       logger.error(`Unable to search from YouTube`, [passcode, user]);
       logger.error(err);
       throw { status: 500, message: "Error occurred while searching from YouTube. Please try again." };
@@ -551,7 +609,10 @@ app.post("/youtubeSearch", async (req, res) => {
     }
 
     const ids = results!.map(v => v.id);
-    const videos = await YoutubeService.getTracks(ids.join(","));
+    let videos = await YoutubeService.getTracks(ids.join(","));
+    if (videos) {
+      videos = await QueueService.markFavorites(passcode, user, videos!);
+    }
     return res.status(200).json(videos);
   });
 });

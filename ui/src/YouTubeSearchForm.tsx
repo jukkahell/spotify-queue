@@ -17,6 +17,7 @@ interface IYouTubeSearchFormProps {
     user: IUser | null;
     onQueued: () => void;
     onError: (msg: string) => void;
+    onToggleFromFavorites: (trackId: string, source: string, isFavorite: boolean) => void;
 }
 
 interface IYouTubeSearchFormState {
@@ -143,7 +144,9 @@ export class SearchForm extends React.Component<IYouTubeSearchFormProps, IYouTub
                     isPlaying={false}
                     protectedTrack={false}
                     owned={false}
-                    selectTrack={this.addToQueue} />
+                    selectTrack={this.addToQueue}
+                    isFavorite={track.isFavorite}
+                    toggleFromFavorites={this.props.onToggleFromFavorites} />
             </div>
         )));
     }

@@ -18,7 +18,8 @@ export class Share extends React.Component<IShareProps, IShareState> {
     public constructor(props: IShareProps) {
         super(props);
 
-        const shareOptions = ["Copy link"];
+        const url = "https://spotiqu.eu/#join:" + this.props.passcode;
+        const shareOptions = [url, `Copy link`];
         const navigator: any = window.navigator;
         if (navigator.share) {
             shareOptions.push("Choose app");

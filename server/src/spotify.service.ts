@@ -6,12 +6,6 @@ import { logger } from "./logger.service";
 import config from "./config";
 import secrets from "./secrets";
 
-export interface SearchTrack {
-  id: string;
-  name: string;
-  artist: string;
-  duration: number;
-}
 export interface SearchAlbum {
   id: string;
   name: string;
@@ -21,11 +15,13 @@ export interface SearchArtist {
   id: string;
   name: string;
 }
-export class SearchResults {
-  public tracks: SearchTrack[];
-  public albums: SearchAlbum[];
-  public artists: SearchArtist[];
+export interface SearchResults {
+  tracks: SpotifyTrack[];
+  albums: SearchAlbum[];
+  artists: SearchArtist[];
 }
+
+const currentlyRefreshing: any = {};
 
 class SpotifyService {
   private static readonly redirectUri = config.spotify.redirectUri;
@@ -45,9 +41,11 @@ class SpotifyService {
   public static isAuthorized = async (passcode: string, user: string, tokenAcquired: number, expiresIn: number, refreshToken: string) => {
     try {
       // Refresh it 300 seconds before it goes old to prevent expirations
-      if ((getCurrentSeconds() + 300) - tokenAcquired >= expiresIn) {
+      if ((getCurrentSeconds() + 300) - tokenAcquired >= expiresIn && !currentlyRefreshing[passcode]) {
+        currentlyRefreshing[passcode] = 1;
         logger.info("Getting refresh token...", { user, passcode });
         const response: any = await SpotifyService.refreshAccessToken(refreshToken);
+        delete currentlyRefreshing[passcode];
         return response.data;
       } else {
         return undefined;
@@ -87,7 +85,9 @@ class SpotifyService {
         duration: trackResponse.data.duration_ms,
         cover: trackResponse.data.album.images[1].url,
         name: trackResponse.data.name,
-        progress: 0
+        progress: 0,
+        isFavorite: false,
+        source: "spotify",
       };
       return track;
     }).catch(err => {
@@ -115,7 +115,9 @@ class SpotifyService {
               id: response.data.item.uri,
               artistId: response.data.item.artists[0].id,
               name: response.data.item.name,
-              progress: response.data.progress_ms
+              progress: response.data.progress_ms,
+              isFavorite: false,
+              source: "spotify",
             };
           }
           const track: SpotifyCurrentTrack = {
@@ -182,7 +184,9 @@ class SpotifyService {
             id: i.track.uri,
             duration: i.track.duration_ms,
             progress: 0,
-            cover: i.track.album.images[1].url
+            source: "spotify",
+            cover: i.track.album.images[1].url,
+            isFavorite: false,
           };
         });
         resolve(tracks);
@@ -266,20 +270,22 @@ class SpotifyService {
   }
 
   public static getArtistTopTracks = (accessToken: string, id: string, user: string, passcode: string) => {
-    return new Promise((resolve, reject) => {
+    return new Promise<SpotifyTrack[]>((resolve, reject) => {
       axios.get("https://api.spotify.com/v1/artists/" + id + "/top-tracks?country=FI", {
         headers: {
           "Content-Type": "text/plain",
           "Authorization": "Bearer " + accessToken
         }
       }).then(response => {
-        const topTracks = response.data.tracks.map((i: any) => {
+        const topTracks: SpotifyTrack[] = response.data.tracks.map((i: any) => {
           return {
             artist: i.artists[0].name,
             name: i.name,
             id: i.uri,
             artistId: i.artists[0].id,
-            duration: i.duration_ms
+            duration: i.duration_ms,
+            isFavorite: false,
+            source: "spotify",
           };
         });
         resolve(topTracks);
@@ -323,7 +329,7 @@ class SpotifyService {
   }
 
   public static getAlbum = (accessToken: string, id: string, user: string, passcode: string) => {
-    return new Promise((resolve, reject) => {
+    return new Promise<SpotifyTrack[]>((resolve, reject) => {
       axios.get("https://api.spotify.com/v1/albums/" + id, {
         headers: {
           "Content-Type": "text/plain",
@@ -352,14 +358,18 @@ class SpotifyService {
   }
 
   public static search = (user: string, passcode: string, accessToken: string, query: SpotifySearchQuery) => {
-    return new Promise((resolve, reject) => {
+    return new Promise<SearchResults>((resolve, reject) => {
       axios.get("https://api.spotify.com/v1/search?" + Querystring.stringify(query), {
         headers: {
           "Content-Type": "text/plain",
           "Authorization": "Bearer " + accessToken
         }
       }).then(response => {
-        const results = new SearchResults();
+        const results: SearchResults = {
+          tracks: [],
+          albums: [],
+          artists: [],
+        };
         if (query.type.indexOf("track") >= 0) {
           results.tracks = response.data.tracks.items.map((i: any) => {
             return {
@@ -367,12 +377,13 @@ class SpotifyService {
               artistId: i.artists[0].id,
               name: i.name,
               id: i.uri,
-              duration: i.duration_ms
+              duration: i.duration_ms,
+              isFavorite: false,
+              source: "spotify",
             };
           });
-        } else {
-          results.tracks = [];
         }
+        
         if (query.type.indexOf("album") >= 0) {
           results.albums = response.data.albums.items.map((album: any) => {
             return {
@@ -382,9 +393,8 @@ class SpotifyService {
               id: album.id
             };
           });
-        } else {
-          results.albums = [];
         }
+
         if (query.type.indexOf("artist") >= 0) {
           results.artists = response.data.artists.items.map((artist: any) => {
             return {
@@ -392,9 +402,8 @@ class SpotifyService {
               id: artist.id
             };
           });
-        } else {
-          results.artists = [];
         }
+        
         resolve(results);
       }).catch(err => {
         if (err.response) {

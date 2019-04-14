@@ -7,6 +7,7 @@ import { ISettings } from "./Settings";
 import Track, { ITrackProps } from "./Track";
 
 export interface IQueuedItem {
+    id: string;
     track: ITrackProps;
     userId: string;
     votes: IVote[];
@@ -25,6 +26,7 @@ interface IQueueProps {
     onError: (msg: string) => void;
     onSkip: () => void;
     onProtected: () => void;
+    onToggleFromFavorites: (trackId: string, source: string, isFavorite: boolean) => void;
     queue: IQueuedItem[] | null;
     currentTrack: IQueuedItem | null;
     settings: ISettings | null;
@@ -74,7 +76,9 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
                         source={this.props.currentTrack.source}
                         protectedTrack={this.props.currentTrack.protected}
                         owned={this.props.user!.id === this.props.currentTrack.userId}
-                        selectTrack={this.showContextMenu}/>
+                        isFavorite={this.props.currentTrack.track.isFavorite}
+                        selectTrack={this.showContextMenu}
+                        toggleFromFavorites={this.props.onToggleFromFavorites} />
                     <div className={"dropdown-menu " + (this.state.contextMenuVisible ? "show" : "hide")} aria-labelledby="deviceMenuButton">
                         {this.renderContextMenu()}
                     </div>
@@ -88,7 +92,7 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
 
         axios.delete(config.backend.url + "/removeFromQueue", {
             data: {
-                trackId: this.state.contextMenuTrack!.track.id,
+                trackId: this.state.contextMenuTrack!.id,
                 isPlaying: this.state.contextMenuTargetPlaying
             }
         }).then(() => {
@@ -110,7 +114,7 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
         e.preventDefault();
 
         axios.post(config.backend.url + "/protectTrack", {
-            trackId: this.state.contextMenuTrack!.track.id,
+            trackId: this.state.contextMenuTrack!.id,
             isPlaying: this.state.contextMenuTargetPlaying
         }).then(() => {
             this.props.onProtected();
@@ -128,7 +132,7 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
         e.preventDefault();
 
         axios.post(config.backend.url + "/moveUpInQueue", {
-            trackId: this.state.contextMenuTrack!.track.id
+            trackId: this.state.contextMenuTrack!.id
         }).then(() => {
             this.props.onQueued();
             this.setState({
@@ -147,6 +151,7 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
         }
 
         const menu = [];
+
         const playlistTrackForOwner = this.state.contextMenuTrack.playlistTrack && this.props.isOwner;
         const showPoints =
             (this.props.settings!.gamify && this.state.contextMenuTrack.userId !== this.props.user!.id && !playlistTrackForOwner)
@@ -215,8 +220,9 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
             return null;
         }
 
-        return this.props.queue.map((queuedItem, i) => (
-            <li key={"queue-" + i}>
+        let totalDuration = this.props.currentTrack ? this.props.currentTrack.track.duration : 0;
+        return this.props.queue.map((queuedItem, i) => {
+            const element = <li key={"queue-" + i}>
                 <div className="dropup">
                     <Track
                         name={queuedItem.track.name}
@@ -229,10 +235,15 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
                         source={queuedItem.source}
                         protectedTrack={queuedItem.protected}
                         owned={queuedItem.userId === this.props.user!.id}
-                        selectTrack={this.showContextMenu}/>
+                        isFavorite={queuedItem.track.isFavorite}
+                        selectTrack={this.showContextMenu}
+                        totalDuration={totalDuration}
+                        toggleFromFavorites={this.props.onToggleFromFavorites} />
                 </div>
-            </li>
-        ));
+            </li>;
+            totalDuration += queuedItem.track.duration;
+            return element;
+        });
     }
 
     public render() {

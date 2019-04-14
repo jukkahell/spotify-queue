@@ -90,9 +90,6 @@ class Acl {
               authResponse.expires_in, authResponse.refresh_token);
               await Acl.saveUserAccessToken(passcode, userId, authResponse.access_token,
               authResponse.expires_in, authResponse.refresh_token);
-          } else {
-            await Acl.saveUserAccessToken(passcode, userId, authResponse.access_token,
-              authResponse.expires_in, authResponse.refresh_token);
           }
         }
         const isOwner = queue.owner === userId;
@@ -159,20 +156,17 @@ class Acl {
       if (Acl.excludeEndpointsFromAuth.includes(req.path)) {
         return next();
       } else if (Acl.visitorAuthRequired.includes(req.path) || (settings && settings.spotifyLogin)) {
-        Acl.isVisitorAuthorized(passcode, user).then(() => {
-          return next();
-        }).catch(err => {
-          return res.status(err.status).json({ message: err.message });
-        });
+        await Acl.isVisitorAuthorized(passcode, user);
+        return next();
       } else {
-        Acl.isAuthorized(passcode, user).then(() => {
-          return next();
-        }).catch(err => {
-          return res.status(err.status).json({ message: err.message });
-        });
+        await Acl.isAuthorized(passcode, user);
+        return next();
       }
     } catch (err) {
       logger.error(err);
+      if (err.status && err.message) {
+        return res.status(err.status).json({ message: err.message });
+      }
       return res.status(500).json({ message: "Unable to authorize user. Please try again later." });
     }
   }

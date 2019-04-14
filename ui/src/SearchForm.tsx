@@ -22,6 +22,7 @@ interface ISearchFormProps {
     onQueued: () => void;
     onPlaylistSelected: () => void;
     onError: (msg: string) => void;
+    onToggleFromFavorites: (trackId: string, source: string, isFavorite: boolean) => void;
 }
 
 interface ISearchFormState {
@@ -67,6 +68,7 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
         this.showMoreTracks = this.showMoreTracks.bind(this);
         this.submitForm = this.submitForm.bind(this);
         this.clearSearch = this.clearSearch.bind(this);
+        this.toggleFavorite = this.toggleFavorite.bind(this);
         this.hashSearch();
     }
 
@@ -78,6 +80,11 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
     public componentWillUnmount() {
         window.removeEventListener("hashchange", this.hashSearch, false);
         document.removeEventListener("scroll", this.searchFormScrolled, false);
+    }
+
+    public async toggleFavorite(trackId: string, source: string, isFavorite: boolean) {
+      await this.props.onToggleFromFavorites(trackId, source, isFavorite);
+      this.hashSearch();
     }
 
     public searchFormScrolled() {
@@ -157,7 +164,7 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
         }
 
         const playlists = [
-            (<h4 key="playlists">Playlists</h4>)
+            (<h4 key="playlists">Playlists</h4>),
         ];
         return playlists.concat(this.state.playlists.map((playlist, i) => (
             <Playlist
@@ -199,6 +206,16 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
                 this.props.onError(err.response.data.message);
             }
         );
+    }
+
+    protected queueFavorites() {
+      axios.put(config.backend.url + "/queueFavorites")
+          .then(() => {
+              this.props.onPlaylistSelected();
+          }).catch(err => {
+              this.props.onError(err.response.data.message);
+          }
+      );
     }
 
     protected queuePlaylist(id: string) {
@@ -288,7 +305,10 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
                 isPlaying={false}
                 protectedTrack={false}
                 owned={false}
-                selectTrack={this.addToQueue} />
+                isFavorite={track.isFavorite}
+                selectTrack={this.addToQueue}
+                source={track.source}
+                toggleFromFavorites={this.toggleFavorite} />
         )));
     }
 
@@ -333,6 +353,9 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
         if (this.props.user && this.props.user.spotifyUserId) {
             axios.get(config.backend.url + "/playlists")
                 .then(response => {
+                    const playlists = response.data;
+                    playlists.unshift({ id: "top", name: "Top songs on " + this.props.settings!.name });
+                    playlists.unshift({ id: "favorites", name: "My Spotiqu favorites" });
                     this.setState({
                         tracks: [],
                         albums: [],

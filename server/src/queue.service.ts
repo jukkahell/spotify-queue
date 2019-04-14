@@ -36,14 +36,14 @@ class QueueService {
     }
   }
 
-  public static async getFullQueue(passcode: string): Promise<FullQueue> {
+  public static async getFullQueue(passcode: string, userId?: string): Promise<FullQueue> {
     try {
       const queue: Queue = await QueueService.getQueue(passcode);
       const settings = await QueueService.getSettings(passcode);
       const users = await QueueService.getUsers(passcode);
-      const currentTrack = await QueueService.getCurrentTrack(passcode);
-      const playlistTracks = await QueueService.getTracks(passcode, true);
-      const tracks = await QueueService.getTracks(passcode, false);
+      const currentTrack = await QueueService.getCurrentTrack(passcode, userId);
+      const playlistTracks = await QueueService.getTracks(passcode, userId, true);
+      const tracks = await QueueService.getTracks(passcode, userId, false);
       return {
         settings,
         users,
@@ -83,8 +83,17 @@ class QueueService {
     };
   }
 
-  public static async getUser(passcode: string, userId: string): Promise<User> {
+  public static async findUser(passcode: string, userId: string): Promise<User | null> {
     logger.debug(`Find user...`, { user: userId, passcode });
+    try {
+      return await this.getUser(passcode, userId);
+    } catch (err) {
+      return null;
+    }
+  }
+
+  public static async getUser(passcode: string, userId: string): Promise<User> {
+    logger.debug(`Get user...`, { user: userId, passcode });
     const query = "SELECT u.*, uq.points, uq.karma FROM users u JOIN user_queues uq ON u.id = uq.user_id WHERE (u.id = $1 OR u.spotify_user_id = $1) AND uq.passcode = $2";
     const users = await db.query(query, [userId, passcode]);
     if (users && users.rowCount === 1) {
@@ -200,12 +209,18 @@ class QueueService {
     };
   }
 
-  public static async getTracks(passcode: string, isPlaylistTrack: boolean) {
+  public static async getTracks(passcode: string, userId: string | undefined, isPlaylistTrack: boolean): Promise<CurrentTrack[]> {
     try {
       const query = "SELECT * FROM tracks WHERE passcode = $1 AND playlist_track = $2 AND currently_playing = false ORDER BY timestamp ASC";
       logger.debug(`Getting playlist tracks...`, { passcode });
       const trackRows: QueryResult = await db.query(query, [passcode, isPlaylistTrack]);
-      return trackRows.rows.map(t => QueueService.mapTrack(t));
+      const tracks: TrackDao[] = trackRows.rows;
+      return Promise.all(
+        tracks.map(async t => {
+          const isFavorite = await QueueService.isFavorite(passcode, userId, t.track_uri);
+          return QueueService.mapTrack(t, isFavorite);
+        })
+      );
     } catch (err) {
       logger.error("Error occurred while fetching playlist tracks from database", { passcode });
       logger.error(err, { passcode });
@@ -213,13 +228,15 @@ class QueueService {
     }
   }
 
-  public static async getCurrentTrack(passcode: string): Promise<CurrentTrack | null> {
+  public static async getCurrentTrack(passcode: string, userId?: string): Promise<CurrentTrack | null> {
     let query = "SELECT * FROM tracks WHERE passcode = $1 AND currently_playing = true";
     try {
       logger.debug(`Getting current track...`, { passcode });
       const trackRow: QueryResult = await db.query(query, [passcode]);
       if (trackRow.rowCount === 1) {
-        return QueueService.mapTrack(trackRow.rows[0]);
+        const track: TrackDao = trackRow.rows[0];
+        const isFavorite = await QueueService.isFavorite(passcode, userId, track.track_uri);
+        return QueueService.mapTrack(track, isFavorite);
       } else {
         return null;
       }
@@ -285,12 +302,14 @@ class QueueService {
     }
 
     try {
-      const queueDao = await QueueService.getQueue(passcode);
-      if (!queueDao) {
+      const queue = await QueueService.getQueue(passcode);
+      if (!queue) {
         throw { status: 404, message: "Queue not found with the given passcode" };
+      } else if (!queue.isPlaying) {
+        throw { status: 403, message: "Cannot vote if the queue is not playing." };
       }
 
-      const currentTrack = await QueueService.getCurrentTrack(passcode);
+      const currentTrack = await QueueService.getCurrentTrack(passcode, user);
       if (!currentTrack) {
         throw { status: 404, message: "Current song not found. Vote not added." };
       } else if (currentTrack.userId === user) {
@@ -311,11 +330,11 @@ class QueueService {
       const voteSum = votes.reduce((sum, v) => sum + v.value, 0);
       if (voteSum <= -settings.skipThreshold) {
         logger.info(`Got downvote form ${Math.abs(voteSum)}/${settings.skipThreshold} users. Skipping this song...`, { user, passcode });
-        QueueService.startNextTrack(passcode, user);
+        QueueService.startNextTrack(passcode, user, currentTrack);
       }
     } catch(err) {
       logger.error(err);
-      throw { status: 500, message: "Error occurred when tried to save the vote" };
+      throw { status: err.status || 500, message: err.message || "Error occurred while trying to save the vote" };
     }
   }
 
@@ -491,14 +510,16 @@ class QueueService {
         user = await QueueService.findUserBySpotifyId(spotifyUserId);
         // UserId has changed. Update to current and remove the old user.
         if (user.id !== userId) {
-          logger.info(`Found existing user with spotify id ${spotifyUserId}...remove old user and user current instead.`, { passcode, user: userId });
+          logger.info(`Found existing user with spotify id ${spotifyUserId}...remove old user and use current instead.`, { passcode, user: userId });
           const oldUser = await QueueService.getUser(passcode, user.id);
           user.points += (oldUser.points - config.gamify.initialPoints);
           user.karma += oldUser.karma;
-          db.query("DELETE FROM users WHERE id = $1", [user.id]);
-          await db.query("DELETE FROM user_queues WHERE user_id = $1 AND passcode = $2", [user.id, passcode]);
-          await db.query("UPDATE user_queues SET user_id = $1 WHERE user_id = $2", [userId, user.id]);
-          await db.query("UPDATE user_queues SET points = $1, karma = $2 WHERE user_id = $3", [user.points, user.karma, userId]);
+          db.query("DELETE FROM users WHERE id = $1", [oldUser.id]);
+          await db.query("DELETE FROM user_queues WHERE user_id = $1 AND passcode = $2", [oldUser.id, passcode]);
+          await db.query("UPDATE user_queues SET points = $1, karma = $2, user_id = $3 WHERE user_id = $4", [oldUser.points, oldUser.karma, userId, oldUser.id]);
+          await db.query("UPDATE queue SET owner = $1 WHERE owner = $2", [userId, oldUser.id]);
+          await db.query("UPDATE users SET username = $1 WHERE id = $2", [oldUser.username, userId]);
+          await db.query("UPDATE tracks SET user_id = $1 WHERE user_id = $2", [userId, oldUser.id]);
         }
         user.id = userId;
       } catch (err) {
@@ -548,18 +569,29 @@ class QueueService {
     try {
       const queue = await QueueService.getQueue(passcode);
       const users = await QueueService.getUsers(passcode);
+      let user = await QueueService.findUser(passcode, userId);
       // Check if queue is active
       if (!queue.accessToken) {
         const isOwner = queue.owner === userId;
-        logger.debug(`Queue is not active. Not allowed to join. Is owner: ${isOwner}.`, { user: userId, passcode });
-        throw { status: 403, message: "Queue not active. The owner needs to reactivate it.", isOwner };
+        if (!isOwner) {
+          logger.debug(`Queue is not active. Not allowed to join. Is owner: ${isOwner}.`, { user: userId, passcode });
+          throw { status: 403, message: "Queue not active. The owner needs to reactivate it.", isOwner };
+        }
+
+        if (user && user.accessToken) {
+          queue.accessToken = user.accessToken;
+          queue.refreshToken = user.refreshToken!;
+          queue.accessTokenAcquired = user.accessTokenAcquired!;
+          queue.expiresIn = user.expiresIn!;
+          QueueService.activateQueue(queue);
+          return true;
+        } else {
+          throw { status: 403, message: "Queue not active. Try again after logging in with Spotify.", isOwner };
+        }
       }
       logger.info(`User joining to queue`, { user: userId, passcode });
 
-      let user: User;
-      try {
-        user = await QueueService.getUser(passcode, userId);
-      } catch (err) {
+      if (!user) {
         user = {
           id: userId,
           spotifyUserId: null,
@@ -626,11 +658,11 @@ class QueueService {
     await db.query(query, [user.accessToken, user.refreshToken, user.accessTokenAcquired, user.expiresIn, user.id]);
   }
 
-  public static mapTrack(trackDao: TrackDao): CurrentTrack {
+  public static mapTrack(trackDao: TrackDao, isFavorite: boolean): CurrentTrack {
     return {
       id: trackDao.id,
       userId: trackDao.user_id,
-      track: trackDao.data,
+      track: { ...trackDao.data, isFavorite },
       trackUri: trackDao.data.id,
       protected: trackDao.protected,
       source: trackDao.source,
@@ -649,8 +681,84 @@ class QueueService {
     };
   }
 
+  public static async getTop(passcode: string, userId: string): Promise<SpotifyTrack[]> {
+    try {
+      logger.info(`Getting top songs...`, { passcode, user: userId });
+      const tracks = await db.query("SELECT * FROM history WHERE passcode = $1 ORDER BY votes DESC, times_played DESC LIMIT 50", [passcode]);
+      if (tracks.rowCount > 0) {
+        return tracks.rows.map(t => ({ ...t.data, isFavorite: true }));
+      }
+      return [];
+    } catch (err) {
+      throw { status: 500, message: err };
+    }
+  }
+
+  public static async getFavorites(passcode: string, userId: string): Promise<SpotifyTrack[]> {
+    try {
+      const tracks = await db.query("SELECT * FROM favorites WHERE passcode = $1 AND user_id = $2", [passcode, userId]);
+      if (tracks.rowCount > 0) {
+        const spotifyTracks = tracks.rows.map(t => QueueService.mapTrack(t, true));
+        return spotifyTracks.map(t => ({ ...t.track, isFavorite: true }));
+      }
+      return [];
+    } catch (err) {
+      throw { status: 500, message: err };
+    }
+  }
+
+  public static async markFavorites(passcode: string, userId: string, tracks: SpotifyTrack[]): Promise<SpotifyTrack[]> {
+    return Promise.all(
+      tracks.map(async (t) => {
+        const isFavorite = await QueueService.isFavorite(passcode, userId, t.id);
+        return { ...t, isFavorite }
+      })
+    );
+  }
+  public static async isFavorite(passcode: string, userId: string | undefined, trackId: string): Promise<boolean> {
+    if (!userId) {
+      return false;
+    }
+    const favorites = await QueueService.getFavorites(passcode, userId);
+    return favorites.some(f => f.id === trackId);
+  }
+
+  public static async addToFavorites(passcode: string, userId: string, trackUri: string, source: string) {
+    let track: SpotifyTrack;
+    if (source === "spotify") {
+      const queue = await QueueService.getQueue(passcode);
+      track = await SpotifyService.getTrack(queue.accessToken!, trackUri);
+    } else if (source === "youtube") {
+      const tracks = await YoutubeService.getTracks(trackUri);
+      track = tracks[0]!;
+    } else {
+      throw { status: 400, message: "Cannot queue because of invalid source. Must be either spotify or youtube." };
+    }
+
+    track.isFavorite = true;
+
+    const query = `
+      INSERT INTO 
+        favorites (
+          passcode, user_id, track_uri, data, source
+        ) 
+      VALUES (
+        $1, $2, $3, $4, $5
+      )
+      ON CONFLICT DO NOTHING`;
+    await db.query(query, [passcode, userId, trackUri, track, source]);
+  }
+
+  public static async removeFromFavorites(passcode: string, userId: string, trackUri: string) {
+    await db.query("DELETE FROM favorites WHERE passcode = $1 AND user_id = $2 AND track_uri = $3", [passcode, userId, trackUri]);
+  }
+
   public static async removeFromQueue(passcode: string, userId: string, trackId: string) {
     try {
+      const queue = await QueueService.getQueue(passcode);
+      if (!queue.isPlaying) {
+        throw { status: 403, message: "Can't remove when the queue is not playing." };
+      }
       const query = "DELETE FROM tracks WHERE id = $1 AND user_id = $2 AND currently_playing = false RETURNING id";
       const deletedRows = await db.query(query, [trackId, userId]);
 
@@ -659,26 +767,29 @@ class QueueService {
       }
     } catch (err) {
       logger.error(err, { user: userId, passcode });
-      throw { status: 500, message: err.message };
+      throw { status: err.status || 500, message: err.message };
     }
   }
 
   public static async skip(passcode: string, userId: string, trackId: string) {
     try {
       const queue = await QueueService.getQueue(passcode);
-      const currentTrack = await QueueService.getCurrentTrack(passcode);
+      if (!queue.isPlaying) {
+        throw { status: 403, message: "Can't skip when the queue is not playing." };
+      }
+      const currentTrack = await QueueService.getCurrentTrack(passcode, userId);
       if (currentTrack &&
         queue.accessToken &&
-        currentTrack.track.id === trackId &&
+        currentTrack.id === trackId &&
         currentTrack.userId === userId) {
-        QueueService.startNextTrack(passcode, userId);
+        QueueService.startNextTrack(passcode, userId, currentTrack);
         return;
       } else {
         throw { status: 404, message: "Cannot skip current song. Only own songs can be skipped." };
       }
     } catch (err) {
       logger.error(err, { user: userId, passcode });
-      throw { status: 500, message: err.message };
+      throw { status: err.status || 500, message: err.message };
     }
   }
 
@@ -715,9 +826,14 @@ class QueueService {
     }
   }
 
+  public static async addFavoritesToPlaylistQueue(userId: string, passcode: string) {
+    const favorites = await QueueService.getFavorites(passcode, userId);
+    await QueueService.addToPlaylistQueue(userId, passcode, favorites, "favorites");
+  }
+
   public static async addToQueue(userId: string, passcode: string, trackUri: string, source: string): Promise<FullQueue> {
     try {
-      const queue = await QueueService.getFullQueue(passcode);
+      const queue = await QueueService.getFullQueue(passcode, userId);
       const settings = queue.settings;
       if (settings.maxDuplicateTracks) {
         const duplicateCountQuery = "SELECT COUNT(*) as count FROM tracks WHERE currently_playing = false AND playlist_track = false AND track_uri = $1 AND passcode = $2";
@@ -896,8 +1012,8 @@ class QueueService {
           throw { status: 400, message: "No playback device selected. Please start Spotify and try again." };
         }
 
-        const tracks = await QueueService.getTracks(passcode, false);
-        const currentTrack = await QueueService.getCurrentTrack(passcode);
+        const tracks = await QueueService.getTracks(passcode, user, false);
+        const currentTrack = await QueueService.getCurrentTrack(passcode, user);
         if (currentTrack) {
           try {
             await SpotifyService.resume(queue.accessToken!, [currentTrack.track.id], currentTrack.progress, queue.deviceId!);
@@ -919,7 +1035,7 @@ class QueueService {
             throw { status: 500, message: "Unable to resume playback. Please try again later." };
           }
         } else if (tracks.length > 0) {
-          QueueService.startNextTrack(passcode, user);
+          QueueService.startNextTrack(passcode, user, currentTrack);
         } else {
           logger.info(`Current track not found and queue empty. Unable to resume.`, { user, passcode });
           throw { status: 500, message: "Spotify didn't start playing. Please try again later." };
@@ -978,11 +1094,22 @@ class QueueService {
     }
   }
 
-  public static async startNextTrack(passcode: string, user: string) {
+  public static async startNextTrack(passcode: string, user: string, endedTrack?: CurrentTrack | null) {
     logger.info(`Starting next track`, { user, passcode });
     try {
       await Gamify.trackEndReward(passcode);
-      const queue = await QueueService.getFullQueue(passcode);
+      const queue = await QueueService.getFullQueue(passcode, user);
+      // Save history data
+      if (endedTrack) {
+        const votes = await QueueService.getTrackVotes(endedTrack.id);
+        const insertHistoryQuery = `
+        INSERT INTO 
+          history (passcode, track_uri, data, source, votes) 
+        VALUES ($1, $2, $3, $4, $5) 
+        ON CONFLICT (passcode, track_uri) 
+        DO UPDATE SET votes = history.votes + EXCLUDED.votes, times_played = history.times_played + 1`;
+        await db.query(insertHistoryQuery, [passcode, endedTrack.trackUri, endedTrack.track, endedTrack.source, votes.reduce((sum, v) => sum + v.value, 0)]);
+      }
       // Delete finished track
       await db.query("DELETE FROM tracks WHERE currently_playing = true AND passcode = $1", [passcode]);
       if (queue.tracks.length === 0 && queue.playlistTracks.length === 0) {
@@ -1041,11 +1168,11 @@ class QueueService {
       // We can start next if spotify isn't playing anymore
       if (!currentState.isSpotifyPlaying && currentState.isSpotiquPlaying) {
         logger.info(`Track was already over...starting next`, { user: userId, passcode });
-        QueueService.startNextTrack(passcode, "-");
+        QueueService.startNextTrack(passcode, "-", currentState.currentTrack);
       } else if (timeLeft < 5000) {
         logger.info(`Less than 5 secs left...initiating timer to start the next song...`, { user: userId, passcode });
         // Start new song after timeLeft and check for that song's duration
-        setTimeout(() => QueueService.startNextTrack(passcode, "-"), timeLeft - 1000);
+        setTimeout(() => QueueService.startNextTrack(passcode, "-", currentState.currentTrack), timeLeft - 1000);
       } else {
         // If there's still time, check for progress again after a while
         const seconds = Math.round(timeLeft / 1000);
@@ -1079,7 +1206,7 @@ class QueueService {
       await Acl.isAuthorized(passcode, queue.owner);
 
       const settings = await QueueService.getSettings(passcode);
-      const currentTrack = await QueueService.getCurrentTrack(passcode);
+      const currentTrack = await QueueService.getCurrentTrack(passcode, userId);
       if (currentTrack) {
         currentTrack.votes = await QueueService.getTrackVotes(currentTrack.id);
       }

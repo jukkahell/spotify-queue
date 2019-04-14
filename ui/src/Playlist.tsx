@@ -10,7 +10,7 @@ export interface IPlaylistProps {
     addToQueue: (id: string) => void;
 }
 
-export class Album extends React.Component<IPlaylistProps> {
+export class Playlist extends React.Component<IPlaylistProps> {
 
     public constructor(props: IPlaylistProps) {
         super(props);
@@ -53,4 +53,4 @@ export class Album extends React.Component<IPlaylistProps> {
     }
 }
 
-export default Album;
+export default Playlist;

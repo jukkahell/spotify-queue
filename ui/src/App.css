@@ -236,9 +236,12 @@ input.passcode {
     text-align: right;
     color: #a0a0a0;
 }
+.estimatedPlayTime {
+    font-size: 0.6em;
+}
 .trackItem {
     display: grid;
-    grid-template-columns: auto 3em;
+    grid-template-columns: 1.4em auto 3em;
     padding-bottom: 0.7em;
     width: 100%;
 }

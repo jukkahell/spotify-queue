@@ -5,16 +5,16 @@
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "1.2.17",
     "@fortawesome/free-brands-svg-icons": "5.8.1",
+    "@fortawesome/free-regular-svg-icons": "5.8.1",
     "@fortawesome/free-solid-svg-icons": "5.8.1",
     "@fortawesome/react-fontawesome": "0.1.4",
-    "@types/react-tabs": "2.3.1",
-    "@types/react-tooltip": "3.9.2",
-    "@types/react-youtube": "7.6.1",
     "@types/jest": "24.0.11",
     "@types/node": "11.13.0",
     "@types/react": "16.8.10",
     "@types/react-dom": "16.8.3",
-    "typescript": "3.4.1",
+    "@types/react-tabs": "2.3.1",
+    "@types/react-tooltip": "3.9.2",
+    "@types/react-youtube": "7.6.1",
     "axios": "0.18.0",
     "bootstrap": "4.3.1",
     "react": "16.8.6",
@@ -22,7 +22,8 @@
     "react-scripts-ts": "3.1.0",
     "react-tabs": "3.0.0",
     "react-tooltip": "3.10.0",
-    "react-youtube": "7.9.0"
+    "react-youtube": "7.9.0",
+    "typescript": "3.4.1"
   },
   "scripts": {
     "start": "react-scripts-ts start",
@@ -30,7 +31,5 @@
     "test": "react-scripts-ts test --env=jsdom",
     "eject": "react-scripts-ts eject"
   },
-  "devDependencies": {
-    
-  }
+  "devDependencies": {}
 }

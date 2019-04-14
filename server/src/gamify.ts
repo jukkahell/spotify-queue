@@ -17,6 +17,10 @@ export namespace Gamify {
       const userIdx = getUser(queue, userId);
       const user = queue.users[userIdx];
 
+      if (!queue.isPlaying) {
+        return next();
+      }
+
       if (isPlaying) {
         // No cost for track owner
         if (!queue.currentTrack || queue.currentTrack.userId === userId) {
@@ -85,10 +89,10 @@ export namespace Gamify {
         const user = queue.users[userIdx];
         let alreadyFirst = false;
         for (let i = 0; i < queue.tracks.length; i++) {
-          if (queue.tracks[i].track.id === trackId && i == 0) {
+          if (queue.tracks[i].id === trackId && i == 0) {
             alreadyFirst = true;
             break;
-          } else if (queue.tracks[i].track.id === trackId) {
+          } else if (queue.tracks[i].id === trackId) {
             if (user.points < config.gamify.moveUpCost) {
               return res.status(403).json({ message: `You don't have enough points (${user.points}). Moving costs ${config.gamify.moveUpCost} points.` });
             }
@@ -139,7 +143,7 @@ export namespace Gamify {
             message: `Can't protect selected song from queue since the queue is empty.`
           });
         }
-        const trackIdx = queue.tracks.findIndex(queuedItem => queuedItem.track.id === trackId);
+        const trackIdx = queue.tracks.findIndex(queuedItem => queuedItem.id === trackId);
         if (trackIdx < 0) {
           return res.status(404).json({
             message: `Unable to find given song from the queue.`

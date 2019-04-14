@@ -6,6 +6,8 @@ export interface SpotifyTrack {
     progress: number;
     artist: string;
     cover: string;
+    isFavorite: boolean;
+    source: string;
 }
 
 export interface SpotifyCurrentTrack {

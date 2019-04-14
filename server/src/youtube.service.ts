@@ -17,7 +17,7 @@ class YoutubeService {
                 throw { status: 404, message: "No videos found with given ids." };
             }
 
-            const videos = response.data.items.map((item: google.youtube_v3.Schema$Video) => {
+            let videos = response.data.items.map((item: google.youtube_v3.Schema$Video) => {
                 if (item.contentDetails && item.snippet) {
                     const duration = moment.duration(item.contentDetails.duration).asMilliseconds();
                     if (!duration) {
@@ -31,13 +31,15 @@ class YoutubeService {
                         name: item.snippet.title!,
                         cover: (item.snippet.thumbnails && item.snippet.thumbnails.default) ? item.snippet.thumbnails.default.url! : "",
                         duration,
-                        progress: 0
+                        progress: 0,
+                        isFavorite: false,
+                        source: "youtube",
                     };
                     return track;
                 } else {
                     return null;
                 }
-            }).filter(item => item !== null);
+            }).filter(item => item !== null) as SpotifyTrack[];
 
             if (!videos || videos.length === 0) {
                 throw { status: 404, message: "No videos found from YouTube." };
