@@ -92,6 +92,16 @@ class QueueService {
     }
   }
 
+  public static async findUserById(id: string): Promise<User | null> {
+    logger.debug(`Find user by id...`, { user: id });
+    const query = "SELECT * FROM users u WHERE id = $1";
+    const users = await db.query(query, [id]);
+    if (users && users.rowCount === 1) {
+      return QueueService.mapUserDao(users.rows[0]);
+    }
+    return null;
+  }
+
   public static async getUser(passcode: string, userId: string): Promise<User> {
     logger.debug(`Get user...`, { user: userId, passcode });
     const query = "SELECT u.*, uq.points, uq.karma FROM users u JOIN user_queues uq ON u.id = uq.user_id WHERE (u.id = $1 OR u.spotify_user_id = $1) AND uq.passcode = $2";
@@ -159,13 +169,13 @@ class QueueService {
   }
 
   public static async getUserQueues(passcode: string, user: string) {
-    let query = "SELECT s.name, s.passcode FROM user_queues uq JOIN settings s ON s.passcode = uq.passcode WHERE uq.user_id = $1";
+    let query = "SELECT s.name, s.passcode, q.owner FROM user_queues uq JOIN settings s ON s.passcode = uq.passcode JOIN queue q ON q.id = s.passcode WHERE uq.user_id = $1";
     try {
       logger.debug(`Getting user's queues...`, { user, passcode });
       const result: QueryResult = await db.query(query, [user]);
       if (result.rowCount > 0) {
         return result.rows.map(row => {
-          return { "name": row.name, "passcode": row.passcode }
+          return { "name": row.name, "passcode": row.passcode, "owner": row.owner }
         });
       } else {
         return [];
@@ -338,7 +348,7 @@ class QueueService {
     }
   }
 
-  public static async create(code: string) {
+  public static async create(code: string, orReactivate: boolean) {
     let accessToken: string;
     let refreshToken: string;
     let expiresIn: number;
@@ -346,7 +356,7 @@ class QueueService {
     logger.debug(`Creating new queue...`);
 
     try {
-      const tokenResponse = await SpotifyService.getToken(code, "create");
+      const tokenResponse = await SpotifyService.getToken(code, orReactivate ? "createOrReactivate" : "create");
       accessToken = tokenResponse.data.access_token;
       refreshToken = tokenResponse.data.refresh_token;
       expiresIn = tokenResponse.data.expires_in;
@@ -366,7 +376,7 @@ class QueueService {
 
       // Check if QueueService user already has a queue
       const queue = await QueueService.getQueueBySpotifyId(spotifyUserId);
-      if (queue) {
+      if (queue && orReactivate) {
         queue.refreshToken = refreshToken;
         queue.expiresIn = expiresIn;
         queue.accessTokenAcquired = getCurrentSeconds();
@@ -569,7 +579,7 @@ class QueueService {
     try {
       const queue = await QueueService.getQueue(passcode);
       const users = await QueueService.getUsers(passcode);
-      let user = await QueueService.findUser(passcode, userId);
+      let user = await QueueService.findUserById(userId);
       // Check if queue is active
       if (!queue.accessToken) {
         const isOwner = queue.owner === userId;
@@ -612,6 +622,34 @@ class QueueService {
     }
   }
 
+  public static async leave(passcode: string, userId: string) {
+    await db.query("DELETE FROM user_queues WHERE passcode =$1 AND user_id = $2", [passcode, userId]);
+    const userQueues = await QueueService.getUserQueues(passcode, userId);
+    const owned = userQueues.find(q => q.owner === userId);
+    return owned
+      ? { passcode: owned.passcode, isOwner: true }
+      : userQueues.length > 0
+        ? { passcode: userQueues[0].passcode, isOwner: false }
+        : null;
+  }
+
+  public static async remove(passcode: string, userId: string) {
+    await db.query("DELETE FROM user_queues WHERE passcode =$1 AND user_id = $2", [passcode, userId]);
+    await db.query("DELETE FROM tracks WHERE passcode = $1", [passcode]);
+    await db.query("DELETE FROM track_votes WHERE passcode = $1", [passcode]);
+    await db.query("DELETE FROM history WHERE passcode = $1", [passcode]);
+    await db.query("DELETE FROM favorites WHERE passcode = $1", [passcode]);
+    await db.query("DELETE FROM settings WHERE passcode = $1", [passcode]);
+    await db.query("DELETE FROM queue WHERE id = $1", [passcode]);
+    const userQueues = await QueueService.getUserQueues(passcode, userId);
+    const owned = userQueues.find(q => q.owner === userId);
+    return owned
+      ? { passcode: owned.passcode, isOwner: true }
+      : userQueues.length > 0
+        ? { passcode: userQueues[0].passcode, isOwner: false }
+        : null;
+  }
+
   public static async addUserToQueue(user: User, queue: Queue, users: User[]) {
     if (!users.find(u => user.id === u.id)) {
       logger.info(`User not yet part of queue...adding`, { user: user.id, passcode: queue.passcode });
@@ -632,6 +670,10 @@ class QueueService {
   }
 
   public static async logout(passcode: string, userId: string) {
+    // Needed if user removes her last queue and logout happens.
+    if (!passcode || passcode === "") {
+      return;
+    }
     try {
       const queue = await QueueService.getQueue(passcode);
       // Inactivate queue if logged out user is the owner
@@ -1259,7 +1301,7 @@ class QueueService {
         return currentState;
       } catch (err) {
         if (err.status === 404) {
-          throw { status: 404, message: "" }
+          throw { status: 204, message: "" }
         }
 
         logger.warn("Unable to get track progress from Spotify...mobile device?", { user: userId, passcode });

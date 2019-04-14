@@ -38,7 +38,7 @@ export interface IState {
   settings: ISettings | null;
   user: IUser | null;
   users: IUser[] | null;
-  userQueues: IUserQueue[] | null;
+  userQueues: IUserQueue[];
 }
 
 export class App extends React.Component<{}, IState> {
@@ -61,7 +61,7 @@ export class App extends React.Component<{}, IState> {
       settings: null,
       user: null,
       users: null,
-      userQueues: null,
+      userQueues: [],
     };
 
     this.createQueue = this.createQueue.bind(this);
@@ -94,6 +94,9 @@ export class App extends React.Component<{}, IState> {
     this.refreshData = this.refreshData.bind(this);
     this.updateUser = this.updateUser.bind(this);
     this.youtubeEnd = this.youtubeEnd.bind(this);
+    this.leaveQueue = this.leaveQueue.bind(this);
+    this.logout = this.logout.bind(this);
+    this.removeQueue = this.removeQueue.bind(this);
   }
 
   public componentDidMount() {
@@ -127,6 +130,55 @@ export class App extends React.Component<{}, IState> {
           reactivate: true,
         });
       });
+  }
+
+  protected leaveQueue() {
+    axios
+      .post(config.backend.url + "/leaveQueue")
+      .then(response => {
+        if (response.data.passcode) {
+          this.setState({
+            responseMsg: null,
+            passcode: response.data.passcode,
+            isOwner: response.data.isOwner,
+          });
+          this.isAuthorized();
+        } else {
+          this.logout();
+        }
+      })
+      .catch(err => {
+        this.onError(err.response.data.message);
+      });
+  }
+
+  protected removeQueue() {
+    axios
+      .post(config.backend.url + "/removeQueue")
+      .then(response => {
+        if (response.data.passcode) {
+          this.setState({
+            responseMsg: null,
+            passcode: response.data.passcode,
+            isOwner: response.data.isOwner,
+          });
+          this.isAuthorized();
+        } else {
+          this.logout();
+        }
+      })
+      .catch(err => {
+        this.onError(err.response.data.message);
+      });
+  }
+
+  protected logout() {
+    axios.get(config.backend.url + "/logout")
+    .then(resp => {
+        window.location.replace("/");
+    }).catch(err => {
+        this.onError(err.response.data.message);
+    });
   }
 
   protected isAuthorized() {
@@ -184,8 +236,9 @@ export class App extends React.Component<{}, IState> {
     this.authInterval = setInterval(this.isAuthorized, 2000);
   }
 
-  protected createQueue() {
-    this.authorize(config.backend.url + "/create");
+  protected createQueue(e: React.MouseEvent<HTMLElement>, passcode?: string) {
+    const endpoint = passcode === "createNew" ? "/create" : "/createOrReactivate";
+    this.authorize(config.backend.url + endpoint);
   }
 
   protected reactivate() {
@@ -457,13 +510,15 @@ export class App extends React.Component<{}, IState> {
             </div>
           </div>
           <div className="footer fixed-bottom d-flex">
-            <UserMenu
-              updateUser={this.updateUser}
-              passcode={this.state.passcode}
-              onError={this.onError}
-              onSpotifyLogin={this.onSpotifyLogin}
-              user={this.state.user}
-            />
+            {this.state.user ? (
+              <UserMenu
+                updateUser={this.updateUser}
+                passcode={this.state.passcode}
+                onError={this.onError}
+                onSpotifyLogin={this.onSpotifyLogin}
+                user={this.state.user}
+              />
+            ) : null}
             <Share passcode={this.state.passcode} onError={this.onError} />
             <UserList
               onError={this.onError}
@@ -475,7 +530,11 @@ export class App extends React.Component<{}, IState> {
               onError={this.onError}
               queues={this.state.userQueues}
               passcode={this.state.passcode}
+              isOwner={this.state.isOwner}
               selectQueue={this.selectQueue}
+              createQueue={this.createQueue}
+              leaveQueue={this.leaveQueue}
+              removeQueue={this.removeQueue}
             />
             {this.state.isOwner ? <DeviceSelect onError={this.onError} /> : null}
             {this.state.isOwner && this.state.settings ? (
@@ -498,7 +557,7 @@ export class App extends React.Component<{}, IState> {
                 <div className="col-md-3">
                   <button type="submit" className="btn btn-primary w-100" onClick={this.createQueue}>
                     Create/Restore Queue
-                                    </button>
+                  </button>
                 </div>
               </div>
               <div className="Divider">
@@ -589,8 +648,10 @@ export class App extends React.Component<{}, IState> {
       .get(config.backend.url + "/userQueues")
       .then(response => {
         if (response.status === 200) {
+          const userQueues: IUserQueue[] = response.data;
+          userQueues.push({ passcode: "createNew", name: "Create new queue", owner: "" });
           this.setState({
-            userQueues: response.data,
+            userQueues,
           });
         }
       })

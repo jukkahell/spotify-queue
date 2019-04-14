@@ -41,9 +41,22 @@ const options = env.NODE_ENV === "production" ? {
 
 const server = env.NODE_ENV === "production" ? https.createServer(options, app) : http.createServer(app);
 
+app.get("/createOrReactivate", async (req, res) => {
+  try {
+    const queue = await QueueService.create(req.query.code, true);
+    config.passcodeCookieOptions.expires = passcodeCookieExpire();
+    config.userCookieOptions.expires = userCookieExpire();
+    req.cookies.set("user", queue.owner, config.userCookieOptions);
+    req.cookies.set("passcode", queue.passcode, config.passcodeCookieOptions);
+    res.status(200).send("<script>window.close();</script>");
+  } catch (err) {
+    res.status(err.status).send(err.message);
+  }
+});
+
 app.get("/create", async (req, res) => {
   try {
-    const queue = await QueueService.create(req.query.code);
+    const queue = await QueueService.create(req.query.code, false);
     config.passcodeCookieOptions.expires = passcodeCookieExpire();
     config.userCookieOptions.expires = userCookieExpire();
     req.cookies.set("user", queue.owner, config.userCookieOptions);
@@ -232,6 +245,46 @@ app.get("/queue", async (req, res) => {
     });
   } catch(err) {
     res.status(500).json({ message: err.message });
+  }
+});
+
+app.post("/leaveQueue", async (req, res) => {
+  const passcode = req.cookies.get("passcode");
+  const userId = req.cookies.get("user", { signed: true });
+  try {
+    const newQueue = await QueueService.leave(passcode, userId);
+    if (!newQueue) {
+      logger.info(`Leaving queue ${passcode}. New queue not found.`, { passcode });
+      req.cookies.set("passcode", "", config.passcodeCookieOptions);
+      res.status(204).json({});
+      return;
+    }
+    logger.info(`Leaving queue ${passcode}. New queue:`, { passcode, user: userId });
+    logger.info(newQueue);
+    req.cookies.set("passcode", newQueue.passcode, config.passcodeCookieOptions);
+    res.status(200).json({ passcode: newQueue.passcode, isOwner: newQueue.isOwner });
+  } catch(err) {
+    res.status(err.status || 500).json({ message: err.message });
+  }
+});
+
+app.post("/removeQueue", async (req, res) => {
+  const passcode = req.cookies.get("passcode");
+  const userId = req.cookies.get("user", { signed: true });
+  try {
+    const newQueue = await QueueService.remove(passcode, userId);
+    if (!newQueue) {
+      logger.info(`Removed queue ${passcode}. New queue not found.`, { passcode });
+      req.cookies.set("passcode", "", config.passcodeCookieOptions);
+      res.status(204).json({});
+      return;
+    }
+    logger.info(`Removed queue ${passcode}. New queue:`, { passcode, user: userId });
+    logger.info(newQueue);
+    req.cookies.set("passcode", newQueue.passcode, config.passcodeCookieOptions);
+    res.status(200).json({ passcode: newQueue.passcode, isOwner: newQueue.isOwner });
+  } catch(err) {
+    res.status(err.status || 500).json({ message: err.message });
   }
 });
 

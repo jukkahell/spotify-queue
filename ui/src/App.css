@@ -466,10 +466,10 @@ button.iconButton:active, button.iconButton:hover, button.iconButton:focus {
     padding-right: 1em;
 }
 
-form.queueName > input, form.username > input {
+form.queueName > input, form.username > input, form.joinCode > input {
     padding-left: 0.5em;
 }
-form.queueName > button, form.username > button {
+form.queueName > button, form.username > button, form.joinCode > button {
     background: none;
     border: none;
     padding: 0;

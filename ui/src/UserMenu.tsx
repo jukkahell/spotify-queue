@@ -10,7 +10,7 @@ export interface IUserMenuProps {
     onSpotifyLogin: () => void;
     updateUser: (username: string) => void;
     passcode: string;
-    user: IUser | null;
+    user: IUser;
 }
 
 export interface IUserMenuState {
@@ -36,7 +36,7 @@ export class UserMenu extends React.Component<IUserMenuProps, IUserMenuState> {
             selectedMenuItem: null,
             dropdownVisible: false,
             editUsername: false,
-            username: (props.user) ? props.user.username : ""
+            username: props.user.username || props.user.spotifyUserId || props.user.id
         };
 
         this.selectMenuItem = this.selectMenuItem.bind(this);
@@ -103,16 +103,15 @@ export class UserMenu extends React.Component<IUserMenuProps, IUserMenuState> {
 
     public renderUserMenuOptions() {
         const menu = [];
-        const username = (this.state.username) ? this.state.username : (this.props.user) ? this.props.user.username || this.props.user.id : "Username";
         menu.push(
             <div className="dropdown-item settingsMenuItem" key="username" id="username" onClick={this.editUsername}>
                 <FontAwesomeIcon icon="user" />
                 {this.state.editUsername ?
                     <form className="username">
-                        <input type="text" value={username} onChange={this.handleUsernameChange} />
+                        <input type="text" value={this.state.username} onChange={this.handleUsernameChange} />
                         <button onClick={this.updateUsername}><FontAwesomeIcon icon="save" /></button>
                     </form> :
-                    <span className="settingName">{username}</span>
+                    <span className="settingName">{this.state.username}</span>
                 }
             </div>
         );
@@ -152,12 +151,12 @@ export class UserMenu extends React.Component<IUserMenuProps, IUserMenuState> {
     }
 
     private logout() {
-        axios.get(config.backend.url + "/logout")
-        .then(resp => {
-            window.location.replace("/");
-        }).catch(err => {
-            this.props.onError(err.response.data.message);
-        });
+      axios.get(config.backend.url + "/logout")
+      .then(resp => {
+          window.location.replace("/");
+      }).catch(err => {
+          this.props.onError(err.response.data.message);
+      });
     }
 
     private loginWithSpotify() {
