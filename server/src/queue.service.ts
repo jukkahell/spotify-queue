@@ -728,7 +728,8 @@ class QueueService {
       logger.info(`Getting top songs...`, { passcode, user: userId });
       const tracks = await db.query("SELECT * FROM history WHERE passcode = $1 ORDER BY votes DESC, times_played DESC LIMIT 50", [passcode]);
       if (tracks.rowCount > 0) {
-        return tracks.rows.map(t => ({ ...t.data, isFavorite: true }));
+        const top: SpotifyTrack[] = tracks.rows.map(t => (t.data));
+        return await QueueService.markFavorites(passcode, userId, top);
       }
       return [];
     } catch (err) {
