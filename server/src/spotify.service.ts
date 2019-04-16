@@ -51,6 +51,7 @@ class SpotifyService {
         return undefined;
       }
     } catch (err) {
+      delete currentlyRefreshing[passcode];
       if (err.response) {
         err = err.response.data.error.message;
       }
