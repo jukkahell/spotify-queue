@@ -12,9 +12,9 @@ export interface AuthResult {
 
 class Acl {
 
-  private static excludeEndpointsFromAuth = ["/join", "/create", "/createOrReactivate", "/reactivate", "/isAuthorized", "/queue", "/currentlyPlaying", "/logout", "/visitorAuth", "/userQueues", "/leaveQueue"];
+  private static excludeEndpointsFromAuth = ["/join", "/create", "/createOrReactivate", "/reactivate", "/isAuthorized", "/queue", "/currentlyPlaying", "/logout", "/visitorAuth"];
   private static endpointsRequireOwnerPerm = ["/device", "/pauseResume", "/selectPlaylist", "/updateSettings", "/queuePlaylist", "/removeUser", "/resetPoints", "/removeQueue"];
-  private static visitorAuthRequired = ["/playlists"];
+  private static visitorAuthRequired = ["/playlists", "/playlist"];
 
   public static async saveAccessToken(passcode: string, userId: string, accessToken: string, expiresIn: number, refreshToken?: string) {
     const queue = await QueueService.getQueue(passcode);

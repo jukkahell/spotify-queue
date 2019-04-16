@@ -196,29 +196,28 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
     )));
   }
 
-  protected selectPlaylist(id: string) {
-    axios.get(config.backend.url + "/playlists")
-      .then(response => {
-        const playlists = response.data;
-        playlists.unshift({ id: "top", name: "Top songs on " + this.props.settings!.name });
-        playlists.unshift({ id: "favorites", name: "My Spotiqu favorites" });
-        axios.get(config.backend.url + "/playlist?id=" + id)
-          .then(response => {
-            const playlist = playlists.find((p: IPlaylistProps) => p.id === id);
-            const title = playlist ? playlist.name : "";
-            this.setState({
-              tracks: response.data.tracks,
-              artists: [],
-              albums: [],
-              playlists: [],
-              title,
-            });
-          }).catch(err => {
-            this.props.onError(err.response.data.message);
-          });
-      }).catch(err => {
-        this.props.onError(err.response.data.message);
+  protected async selectPlaylist(id: string) {
+    try {
+      const playlists = this.props.user && this.props.user.spotifyUserId ? (await axios.get(config.backend.url + "/playlists")).data : [];
+      const playlistName = this.props.settings ? this.props.settings.name : "this queue";
+      playlists.unshift({ id: "top", name: "Top songs on " + playlistName });
+      playlists.unshift({ id: "favorites", name: "My Spotiqu favorites" });
+      const path = ["top", "favorites"].includes(id)
+        ? `/${id}`
+        : "/playlist?id=" + id;
+      const trackResponse = await axios.get(config.backend.url + path);
+      const playlist = playlists.find((p: IPlaylistProps) => p.id === id);
+      const title = playlist ? playlist.name : "";
+      this.setState({
+        tracks: trackResponse.data.tracks,
+        artists: [],
+        albums: [],
+        playlists: [],
+        title,
       });
+    } catch (err) {
+      this.props.onError(err && err.response && err.response.data && err.response.data.message);
+    }
   }
 
   protected queueFavorites() {
@@ -360,8 +359,8 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
 
   public getPlaylists() {
     const queueName = this.props.settings ? this.props.settings.name : "this queue";
-    const top: IPlaylistProps = { id: "top", name: "Top songs on " + queueName, isOwner: false, settings: null, addToQueue: () => {} };
-    const favorites: IPlaylistProps = { id: "favorites", name: "My Spotiqu favorites", isOwner: false, settings: null, addToQueue: () => {} };
+    const top: IPlaylistProps = { id: "top", name: "Top songs on " + queueName, isOwner: false, settings: null, addToQueue: () => this.props.onQueued };
+    const favorites: IPlaylistProps = { id: "favorites", name: "My Spotiqu favorites", isOwner: false, settings: null, addToQueue: () => this.props.onQueued };
     if (this.props.user && this.props.user.spotifyUserId) {
       axios.get(config.backend.url + "/playlists")
         .then(response => {

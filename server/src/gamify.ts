@@ -201,29 +201,32 @@ export namespace Gamify {
     return minutes + 1;
   }
 
-  export const trackEndReward = async (passcode: string) => {
-    // TODO: Give reward for active users. Based on recent activity.
+  export const trackEndReward = async (queue: FullQueue, passcode: string, votes: number) => {
+    const currentTrack = queue.currentTrack;
+    if (!currentTrack || currentTrack.playlistTrack || !currentTrack.userId) {
+      return;
+    }
+
     try {
-      const queue = await QueueService.getFullQueue(passcode);
-      const currentTrack = queue.currentTrack;
-      if (queue.settings.gamify && currentTrack) {
-        let reward = millisToPoints(currentTrack.track.duration);
-        logger.info(`Rewarding track owner ${currentTrack.userId || "-"} for ${reward} points`, { passcode });
+      if (queue.settings.gamify) {
+        const spotifyCurrentTrack = await SpotifyService.currentlyPlaying(queue.accessToken!, currentTrack.userId, passcode);
+        const progress = spotifyCurrentTrack.item && spotifyCurrentTrack.item.id === currentTrack.track.id ? spotifyCurrentTrack.item.progress : 0;
+        logger.info(`Played ${progress}/${currentTrack.track.duration} of the song. Give reward.`, { passcode });
+        let reward = millisToPoints(progress);
+        logger.info(`Rewarding track owner ${currentTrack.userId} for ${reward} points`, { passcode });
         queue.users.forEach(async (user: User) => {
-          const queued = queue.tracks.some(queuedItem => queuedItem.userId === user.id);
-          if (queued || currentTrack.userId === user.id) {
+          if (!currentTrack.playlistTrack) {
             if (currentTrack.userId === user.id) {
-              currentTrack.votes = await QueueService.getTrackVotes(currentTrack.id);
-              let voteCount = currentTrack.votes.reduce((sum, v) => sum += v.value, 0);
-              logger.info(`${voteCount} vote points for user`, { passcode, user: user.id });
-              QueueService.addPoints(passcode, user.id, reward + voteCount);
-              QueueService.addKarma(passcode, user.id, voteCount);
+              logger.info(`${votes} vote points for user`, { passcode, user: user.id });
+              QueueService.addPoints(passcode, user.id, reward + votes);
+              QueueService.addKarma(passcode, user.id, votes);
             } else {
               QueueService.addPoints(passcode, user.id, 1);
             }
           }
-          return user;
         });
+      } else if (currentTrack && currentTrack.userId) {
+        QueueService.addKarma(passcode, currentTrack.userId, votes);
       }
     } catch (err) {
       logger.error("Error while giving gamify points for users.", { passcode });

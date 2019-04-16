@@ -220,7 +220,8 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
             return null;
         }
 
-        let totalDuration = this.props.currentTrack ? this.props.currentTrack.track.duration : 0;
+        const progress = this.props.currentTrack && this.props.currentTrack.track.progress ? this.props.currentTrack.track.progress : 0;
+        let totalDuration = this.props.currentTrack ? this.props.currentTrack.track.duration - progress : 0;
         return this.props.queue.map((queuedItem, i) => {
             const element = <li key={"queue-" + i}>
                 <div className="dropup">

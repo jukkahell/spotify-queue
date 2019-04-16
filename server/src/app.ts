@@ -305,12 +305,23 @@ app.get("/currentlyPlaying", async (req, res) => {
   }
 });
 
+app.get("/top", async (req, res) => {
+  const userId = req.cookies.get("user", { signed: true });
+  const passcode = req.cookies.get("passcode");
+  try {
+    const top = await QueueService.getTop(passcode, userId);
+    res.status(200).json({ tracks: top });
+  } catch (err) {
+    res.status(err.status).json({ message: err.message });
+  }
+});
+
 app.get("/favorites", async (req, res) => {
   const userId = req.cookies.get("user", { signed: true });
   const passcode = req.cookies.get("passcode");
   try {
     const favorites = await QueueService.getFavorites(passcode, userId);
-    res.status(200).json(favorites);
+    res.status(200).json({ tracks: favorites });
   } catch (err) {
     res.status(err.status).json({ message: err.message });
   }
@@ -528,17 +539,9 @@ app.get("/playlist", async (req, res) => {
   const passcode = req.cookies.get("passcode");
   const playlistId = req.query.id;
   try {
-    const favorites = await QueueService.getFavorites(passcode, user);
-    if (playlistId === "favorites") {
-      res.status(200).json({ tracks: favorites });
-    } else if (playlistId === "top") {
-      const top = await QueueService.getTop(passcode, user);
-      res.status(200).json({ tracks: top });
-    } else {
-      const queue = await QueueService.getQueue(passcode);
-      const tracks = await SpotifyService.getPlaylistTracks(queue.accessToken!, queue.owner, playlistId, user, passcode);
-      res.status(200).json({ tracks: await QueueService.markFavorites(passcode, user, tracks) });
-    }
+    const queue = await QueueService.getQueue(passcode);
+    const tracks = await SpotifyService.getPlaylistTracks(queue.accessToken!, queue.owner, playlistId, user, passcode);
+    res.status(200).json({ tracks: await QueueService.markFavorites(passcode, user, tracks) });
   } catch(err) {
     res.status(err.status).json({ message: err.message });
   }
@@ -550,7 +553,11 @@ app.put("/queuePlaylist", async (req, res) => {
   const playlistId = req.body.id;
   try {
     const queueDao = await QueueService.getQueue(req.cookies.get("passcode"));
-    const tracks = await SpotifyService.getPlaylistTracks(queueDao.accessToken!, queueDao.owner, playlistId, user, passcode);
+    const tracks = playlistId === "top"
+      ? await QueueService.getTop(passcode, user)
+      : playlistId === "favorites"
+        ? await QueueService.getFavorites(passcode, user)
+        : await SpotifyService.getPlaylistTracks(queueDao.accessToken!, queueDao.owner, playlistId, user, passcode);
     QueueService.addToPlaylistQueue(user, passcode, tracks, playlistId).then(() => {
       res.status(200).json({ message: "OK" });
     }).catch(err => {

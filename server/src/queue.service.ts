@@ -270,9 +270,9 @@ class QueueService {
     db.query(query, [trackId, passcode]);
   }
 
-  public static async getTrackVotes(trackId: string) {
-    const trackVotesQuery = "SELECT * FROM track_votes WHERE track_id = $1";
-    const trackVotesRows = await db.query(trackVotesQuery, [trackId]);
+  public static async getTrackVotes(passcode: string, trackId: string) {
+    const trackVotesQuery = "SELECT * FROM track_votes WHERE passcode = $1 AND track_id = $2";
+    const trackVotesRows = await db.query(trackVotesQuery, [passcode, trackId]);
     if (trackVotesRows && trackVotesRows.rowCount > 0) {
       return trackVotesRows.rows.map(QueueService.mapTrackVote);
     }
@@ -335,7 +335,7 @@ class QueueService {
       await db.query(query, [passcode, value, user, currentTrack.id]);
 
       // Skip the song if enough downvotes
-      const votes = await QueueService.getTrackVotes(currentTrack.id);
+      const votes = await QueueService.getTrackVotes(passcode, currentTrack.id);
       const settings = await QueueService.getSettings(passcode);
       const voteSum = votes.reduce((sum, v) => sum + v.value, 0);
       if (voteSum <= -settings.skipThreshold) {
@@ -727,7 +727,7 @@ class QueueService {
   public static async getTop(passcode: string, userId: string): Promise<SpotifyTrack[]> {
     try {
       logger.info(`Getting top songs...`, { passcode, user: userId });
-      const tracks = await db.query("SELECT * FROM history WHERE passcode = $1 ORDER BY votes DESC, times_played DESC LIMIT 50", [passcode]);
+      const tracks = await db.query("SELECT * FROM history WHERE passcode = $1 ORDER BY votes DESC, times_played DESC LIMIT 100", [passcode]);
       if (tracks.rowCount > 0) {
         const top: SpotifyTrack[] = tracks.rows.map(t => (t.data));
         return await QueueService.markFavorites(passcode, userId, top);
@@ -1141,19 +1141,24 @@ class QueueService {
   public static async startNextTrack(passcode: string, user: string, endedTrack?: CurrentTrack | null) {
     logger.info(`Starting next track`, { user, passcode });
     try {
-      await Gamify.trackEndReward(passcode);
       const queue = await QueueService.getFullQueue(passcode, user);
       // Save history data
       if (endedTrack) {
-        const votes = await QueueService.getTrackVotes(endedTrack.id);
-        const insertHistoryQuery = `
-        INSERT INTO 
-          history (passcode, track_uri, data, source, votes) 
-        VALUES ($1, $2, $3, $4, $5) 
-        ON CONFLICT (passcode, track_uri) 
-        DO UPDATE SET votes = history.votes + EXCLUDED.votes, times_played = history.times_played + 1`;
-        await db.query(insertHistoryQuery, [passcode, endedTrack.trackUri, endedTrack.track, endedTrack.source, votes.reduce((sum, v) => sum + v.value, 0)]);
+        if (endedTrack.userId) {
+          const votes = endedTrack.votes.reduce((sum, v) => sum + v.value, 0);
+          await Gamify.trackEndReward(queue, passcode, votes);
+
+          const insertHistoryQuery = `
+          INSERT INTO 
+            history (passcode, track_uri, data, source, votes) 
+          VALUES ($1, $2, $3, $4, $5) 
+          ON CONFLICT (passcode, track_uri) 
+          DO UPDATE SET votes = history.votes + EXCLUDED.votes, times_played = history.times_played + 1`;
+          await db.query(insertHistoryQuery, [passcode, endedTrack.trackUri, endedTrack.track, endedTrack.source, votes]);
+        }
+        db.query("DELETE FROM track_votes WHERE passcode = $1 AND track_id = $2", [passcode, endedTrack.id]);
       }
+
       // Delete finished track
       await db.query("DELETE FROM tracks WHERE currently_playing = true AND passcode = $1", [passcode]);
       if (queue.tracks.length === 0 && queue.playlistTracks.length === 0) {
@@ -1252,7 +1257,7 @@ class QueueService {
       const settings = await QueueService.getSettings(passcode);
       const currentTrack = await QueueService.getCurrentTrack(passcode, userId);
       if (currentTrack) {
-        currentTrack.votes = await QueueService.getTrackVotes(currentTrack.id);
+        currentTrack.votes = await QueueService.getTrackVotes(passcode, currentTrack.id);
       }
 
       const currentState: CurrentState = {
