@@ -359,7 +359,8 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
   }
 
   public getPlaylists() {
-    const top: IPlaylistProps = { id: "top", name: "Top songs on " + this.props.settings!.name, isOwner: false, settings: null, addToQueue: () => {} };
+    const queueName = this.props.settings ? this.props.settings.name : "this queue";
+    const top: IPlaylistProps = { id: "top", name: "Top songs on " + queueName, isOwner: false, settings: null, addToQueue: () => {} };
     const favorites: IPlaylistProps = { id: "favorites", name: "My Spotiqu favorites", isOwner: false, settings: null, addToQueue: () => {} };
     if (this.props.user && this.props.user.spotifyUserId) {
       axios.get(config.backend.url + "/playlists")
