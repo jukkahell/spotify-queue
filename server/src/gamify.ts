@@ -220,7 +220,8 @@ export namespace Gamify {
               logger.info(`${votes} vote points for user`, { passcode, user: user.id });
               QueueService.addPoints(passcode, user.id, reward + votes);
               QueueService.addKarma(passcode, user.id, votes);
-            } else {
+            } else if (queue.tracks.some(t => t.userId === user.id)) {
+              // Give points only if user has queued something
               QueueService.addPoints(passcode, user.id, 1);
             }
           }
