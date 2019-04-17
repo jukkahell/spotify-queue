@@ -527,7 +527,7 @@ class QueueService {
           db.query("DELETE FROM users WHERE id = $1", [oldUser.id]);
           await db.query("DELETE FROM user_queues WHERE user_id = $1 AND passcode = $2", [oldUser.id, passcode]);
           await db.query("UPDATE user_queues SET user_id = $1 WHERE user_id = $2", [userId, oldUser.id]);
-          await db.query("UPDATE user_queues SET points = $1, karma = $2 WHERE user_id = $3", [oldUser.points, oldUser.karma, oldUser.id]);
+          await db.query("UPDATE user_queues SET points = $1, karma = $2 WHERE user_id = $3", [user.points, user.karma, userId]);
           await db.query("UPDATE queue SET owner = $1 WHERE owner = $2", [userId, oldUser.id]);
           await db.query("UPDATE users SET username = $1 WHERE id = $2", [oldUser.username, userId]);
           await db.query("UPDATE tracks SET user_id = $1 WHERE user_id = $2", [userId, oldUser.id]);
