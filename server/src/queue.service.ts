@@ -524,16 +524,18 @@ class QueueService {
           const oldUser = await QueueService.getUser(passcode, user.id);
           user.points += (oldUser.points - config.gamify.initialPoints);
           user.karma += oldUser.karma;
+          logger.info(`User ${user.id} old points was ${user.points}, old karma was ${user.karma}`, { passcode, user: userId });
           db.query("DELETE FROM users WHERE id = $1", [oldUser.id]);
           await db.query("DELETE FROM user_queues WHERE user_id = $1 AND passcode = $2", [oldUser.id, passcode]);
           await db.query("UPDATE user_queues SET user_id = $1 WHERE user_id = $2", [userId, oldUser.id]);
-          await db.query("UPDATE user_queues SET points = $1, karma = $2 WHERE user_id = $3", [user.points, user.karma, userId]);
+          await db.query("UPDATE user_queues SET points = $1, karma = $2 WHERE user_id = $3 AND passcode = $4", [user.points, user.karma, userId, passcode]);
           await db.query("UPDATE queue SET owner = $1 WHERE owner = $2", [userId, oldUser.id]);
           await db.query("UPDATE users SET username = $1 WHERE id = $2", [oldUser.username, userId]);
           await db.query("UPDATE tracks SET user_id = $1 WHERE user_id = $2", [userId, oldUser.id]);
         }
         user.id = userId;
       } catch (err) {
+        logger.error(err);
         user = await QueueService.getUser(passcode, userId);
       }
       
