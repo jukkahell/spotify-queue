@@ -515,43 +515,43 @@ class QueueService {
       const spotifyUserId = spotifyUser.data.id;
       logger.debug(`Found spotify userId ${spotifyUserId}...saving data for the visitor`, { user: userId, passcode });
 
-      let user: User;
+      let realUser: User;
       try {
-        user = await QueueService.findUserBySpotifyId(spotifyUserId);
-        // UserId has changed. Update to current and remove the old user.
-        if (user.id !== userId) {
+        realUser = await QueueService.findUserBySpotifyId(spotifyUserId);
+        // UserId has changed. Update points to old user and remove current.
+        if (realUser.id !== userId) {
           logger.info(`Found existing user with spotify id ${spotifyUserId}...remove old user and use current instead.`, { passcode, user: userId });
-          const oldUser = await QueueService.getUser(passcode, user.id);
-          user.points += (oldUser.points - config.gamify.initialPoints);
-          user.karma += oldUser.karma;
-          logger.info(`User ${user.id} old points was ${user.points}, old karma was ${user.karma}`, { passcode, user: userId });
-          db.query("DELETE FROM users WHERE id = $1", [oldUser.id]);
-          await db.query("DELETE FROM user_queues WHERE user_id = $1 AND passcode = $2", [oldUser.id, passcode]);
-          await db.query("UPDATE user_queues SET user_id = $1 WHERE user_id = $2", [userId, oldUser.id]);
-          await db.query("UPDATE user_queues SET points = $1, karma = $2 WHERE user_id = $3 AND passcode = $4", [user.points, user.karma, userId, passcode]);
-          await db.query("UPDATE queue SET owner = $1 WHERE owner = $2", [userId, oldUser.id]);
-          await db.query("UPDATE users SET username = $1 WHERE id = $2", [oldUser.username, userId]);
-          await db.query("UPDATE tracks SET user_id = $1 WHERE user_id = $2", [userId, oldUser.id]);
+          const wrongUser = await QueueService.getUser(passcode, userId);
+          realUser.points += (wrongUser.points - config.gamify.initialPoints);
+          realUser.karma += wrongUser.karma;
+          logger.info(`User ${realUser.id} old points was ${realUser.points}, old karma was ${realUser.karma}`, { passcode, user: userId });
+          db.query("DELETE FROM users WHERE id = $1", [wrongUser.id]);
+          await db.query("DELETE FROM user_queues WHERE user_id = $1 AND passcode = $2", [wrongUser.id, passcode]);
+          await db.query("UPDATE user_queues SET user_id = $1 WHERE user_id = $2", [realUser.id, wrongUser.id]);
+          await db.query("UPDATE user_queues SET points = $1, karma = $2 WHERE user_id = $3 AND passcode = $4", [realUser.points, realUser.karma, realUser.id, passcode]);
+          await db.query("UPDATE queue SET owner = $1 WHERE owner = $2", [realUser.id, wrongUser.id]);
+          await db.query("UPDATE tracks SET user_id = $1 WHERE user_id = $2", [realUser, wrongUser.id]);
         }
-        user.id = userId;
+        realUser.id = userId;
       } catch (err) {
         logger.error(err);
-        user = await QueueService.getUser(passcode, userId);
+        const spotifyUser = await QueueService.findUserBySpotifyId(spotifyUserId);
+        realUser = spotifyUser || await QueueService.getUser(passcode, userId);
       }
       
-      if (!user) {
+      if (!realUser) {
         throw { status: 401, message: "User not in queue." };
       }
 
-      user.spotifyUserId = spotifyUserId;
-      user.accessToken = tokenResponse.data.access_token;
-      user.refreshToken = tokenResponse.data.refresh_token;
-      user.expiresIn = tokenResponse.data.expires_in;
-      user.accessTokenAcquired = getCurrentSeconds();
+      realUser.spotifyUserId = spotifyUserId;
+      realUser.accessToken = tokenResponse.data.access_token;
+      realUser.refreshToken = tokenResponse.data.refresh_token;
+      realUser.expiresIn = tokenResponse.data.expires_in;
+      realUser.accessTokenAcquired = getCurrentSeconds();
 
       const updateUserQuery = "UPDATE users SET spotify_user_id = $1, access_token = $2, refresh_token = $3, expires_in = $4, access_token_acquired = $5 WHERE id = $6";
-      db.query(updateUserQuery, [user.spotifyUserId, user.accessToken, user.refreshToken, user.expiresIn, user.accessTokenAcquired, userId]);
-      return user;
+      db.query(updateUserQuery, [realUser.spotifyUserId, realUser.accessToken, realUser.refreshToken, realUser.expiresIn, realUser.accessTokenAcquired, userId]);
+      return realUser;
     } catch (err) {
       if (err.response) {
         err = err.response.data.error.message;
