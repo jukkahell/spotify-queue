@@ -97,12 +97,17 @@ export class App extends React.Component<{}, IState> {
     this.leaveQueue = this.leaveQueue.bind(this);
     this.logout = this.logout.bind(this);
     this.removeQueue = this.removeQueue.bind(this);
+    this.goHome = this.goHome.bind(this);
   }
 
   public componentDidMount() {
     if (!this.state.passcode) {
       this.isAuthorized();
     }
+  }
+
+  protected goHome() {
+    window.location.hash = "";
   }
 
   protected joinQueue() {
@@ -473,6 +478,9 @@ export class App extends React.Component<{}, IState> {
             </div>
             <div className="col-md-8">
               <h1>{this.state.settings ? this.state.settings.name : ""}</h1>
+              <div className="homeIcon" onClick={this.goHome}>
+                  <FontAwesomeIcon icon="home" />
+              </div>
               <Tabs
                 selectedTabClassName="source-tab--selected"
                 selectedTabPanelClassName="source-tab-panel--selected"

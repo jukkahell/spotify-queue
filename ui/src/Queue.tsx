@@ -35,9 +35,9 @@ interface IQueueProps {
 }
 
 interface IQueueState {
-    contextMenuVisible: boolean;
-    contextMenuTrack: IQueuedItem | null;
-    contextMenuTargetPlaying: boolean;
+  contextMenuId: string | null;
+  contextMenuTrack: IQueuedItem | null;
+  contextMenuTargetPlaying: boolean;
 }
 
 export class Queue extends React.Component<IQueueProps, IQueueState> {
@@ -46,9 +46,9 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
         super(props);
 
         this.state = {
-            contextMenuVisible: false,
-            contextMenuTrack: null,
-            contextMenuTargetPlaying: false
+          contextMenuId: null,
+          contextMenuTrack: null,
+          contextMenuTargetPlaying: false,
         };
 
         this.removeFromQueue = this.removeFromQueue.bind(this);
@@ -68,7 +68,8 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
                     <Track
                         name={this.props.currentTrack.track.name}
                         artist={this.props.currentTrack.track.artist}
-                        id={this.props.currentTrack.track.id}
+                        id={this.props.currentTrack.id}
+                        trackId={this.props.currentTrack.track.id}
                         artistId={this.props.currentTrack.track.artistId}
                         duration={this.props.currentTrack.track.duration}
                         key={"current-" + this.props.currentTrack.track.id}
@@ -79,7 +80,7 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
                         isFavorite={this.props.currentTrack.track.isFavorite}
                         selectTrack={this.showContextMenu}
                         toggleFromFavorites={this.props.onToggleFromFavorites} />
-                    <div className={"dropdown-menu " + (this.state.contextMenuVisible ? "show" : "hide")} aria-labelledby="deviceMenuButton">
+                    <div className={"dropdown-menu " + (this.state.contextMenuId === this.props.currentTrack.id ? "show" : "hide")} aria-labelledby="deviceMenuButton">
                         {this.renderContextMenu()}
                     </div>
                 </div>
@@ -101,9 +102,9 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
                 this.props.onSkip();
             }
             this.setState({
-                contextMenuVisible: false,
-                contextMenuTrack: null,
-                contextMenuTargetPlaying: false
+              contextMenuId: null,
+              contextMenuTrack: null,
+              contextMenuTargetPlaying: false
             });
         }).catch(err => {
             this.props.onError(err.response.data.message);
@@ -119,9 +120,9 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
         }).then(() => {
             this.props.onProtected();
             this.setState({
-                contextMenuVisible: false,
-                contextMenuTrack: null,
-                contextMenuTargetPlaying: false
+              contextMenuId: null,
+              contextMenuTrack: null,
+              contextMenuTargetPlaying: false
             });
         }).catch(err => {
             this.props.onError(err.response.data.message);
@@ -136,9 +137,9 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
         }).then(() => {
             this.props.onQueued();
             this.setState({
-                contextMenuVisible: false,
-                contextMenuTrack: null,
-                contextMenuTargetPlaying: false
+              contextMenuId: null,
+              contextMenuTrack: null,
+              contextMenuTargetPlaying: false
             });
         }).catch(err => {
             this.props.onError(err.response.data.message);
@@ -199,19 +200,19 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
     }
     protected showContextMenu(targetId: string, isPlaying: boolean) {
         const track: IQueuedItem = (!isPlaying)
-            ? this.props.queue!.find(q => q.track.id === targetId)!
+            ? this.props.queue!.find(q => q.id === targetId)!
             : this.props.currentTrack!;
-        this.setState((prevState) => ({
-            contextMenuVisible: !prevState.contextMenuVisible,
+        this.setState(() => ({
+            contextMenuId: targetId,
             contextMenuTrack: track,
-            contextMenuTargetPlaying: isPlaying
+            contextMenuTargetPlaying: isPlaying,
         }));
     }
     protected hideMenu() {
         this.setState(() => ({
-            contextMenuVisible: false,
-            contextMenuTrack: null,
-            contextMenuTargetPlaying: false
+          contextMenuId: null,
+          contextMenuTrack: null,
+          contextMenuTargetPlaying: false
         }));
     }
 
@@ -223,12 +224,13 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
         const progress = this.props.currentTrack && this.props.currentTrack.track.progress ? this.props.currentTrack.track.progress : 0;
         let totalDuration = this.props.currentTrack ? this.props.currentTrack.track.duration - progress : 0;
         return this.props.queue.map((queuedItem, i) => {
-            const element = <li key={"queue-" + i}>
+            const element = <li className="queuedTrack" key={"queue-" + i}>
                 <div className="dropup">
                     <Track
                         name={queuedItem.track.name}
                         artist={queuedItem.track.artist}
-                        id={queuedItem.track.id}
+                        id={queuedItem.id}
+                        trackId={queuedItem.track.id}
                         artistId={queuedItem.track.artistId}
                         duration={queuedItem.track.duration}
                         key={i + "-" + queuedItem.track.id}
@@ -240,6 +242,9 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
                         selectTrack={this.showContextMenu}
                         totalDuration={totalDuration}
                         toggleFromFavorites={this.props.onToggleFromFavorites} />
+                </div>
+                <div className={"dropdown-menu " + (this.state.contextMenuId === queuedItem.id ? "show" : "hide")} aria-labelledby="deviceMenuButton">
+                    {this.renderContextMenu()}
                 </div>
             </li>;
             totalDuration += queuedItem.track.duration;
@@ -254,7 +259,7 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
                     {this.renderCurrentTrack()}
                     {this.renderTracks()}
                 </ol>
-                <div className={"menuOverlay " + (this.state.contextMenuVisible ? "visible" : "hidden")} onClick={this.hideMenu}/>
+                <div className={"menuOverlay " + (this.state.contextMenuId ? "visible" : "hidden")} onClick={this.hideMenu}/>
             </div>
         );
     }

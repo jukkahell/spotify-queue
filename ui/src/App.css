@@ -4,7 +4,7 @@ html {
 
 body {
     height: 100vh;
-    background: #181818 linear-gradient(#393939, #181818) no-repeat fixed;
+    background: #181818 linear-gradient(#131313, #181818) no-repeat fixed;
     background-size: cover;
     font-size: 1em;
     color: white;
@@ -16,7 +16,7 @@ body {
 }
 
 .mainContent {
-    margin-bottom: 40px;
+    margin-bottom: 3em;
 }
 
 .loginContainer {
@@ -164,6 +164,13 @@ input.search {
     width: 100%;
 }
 
+li.queuedTrack {
+  position: relative;
+}
+li.queuedTrack > .dropdown-menu {
+  bottom: 100%;
+  top: initial;
+}
 .queuedTracks {
     margin-top: 0.5em;
 }
@@ -287,7 +294,7 @@ button.iconButton:active, button.iconButton:hover, button.iconButton:focus {
 }
 
 .footer {
-    background-color: #282828;
+    background-color: #212121;
     justify-content: center;
 }
 
@@ -504,8 +511,19 @@ h1 {
     color: red;
 }
 
+.homeIcon {
+  display: inline-block;
+  position: absolute;
+  padding: 6px 12px 4px;
+  cursor: pointer;
+}
+
 ul {
     margin: 0;
+}
+
+.source-tab-list {
+  margin-bottom: -16px;
 }
 
 .source-tab {

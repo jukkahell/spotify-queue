@@ -8,6 +8,7 @@ export interface ITrackProps {
     name: string;
     artist: string;
     id: string;
+    trackId: string;
     artistId: string;
     duration: number;
     totalDuration?: number;
@@ -47,7 +48,7 @@ export class Track extends React.Component<ITrackProps> {
 
     public toggleFromFavorites(e: React.MouseEvent<HTMLElement>) {
         e.preventDefault();
-        this.props.toggleFromFavorites(this.props.id, this.props.source!, this.props.isFavorite);
+        this.props.toggleFromFavorites(this.props.trackId, this.props.source!, this.props.isFavorite);
     }
 
     public render() {
