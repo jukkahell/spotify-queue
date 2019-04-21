@@ -136,6 +136,7 @@ app.get("/isAuthorized", (req, res) => {
 
   Acl.isAuthorized(req.cookies.get("passcode"), req.cookies.get("user", { signed: true })).then((authResult: AuthResult) => {
     config.passcodeCookieOptions.expires = passcodeCookieExpire();
+    config.userCookieOptions.expires = userCookieExpire();
     req.cookies.set("passcode", req.cookies.get("passcode"), config.passcodeCookieOptions);
     req.cookies.set("user", req.cookies.get("user"), config.userCookieOptions);
     res.status(200).json(authResult);

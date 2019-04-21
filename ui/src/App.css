@@ -8,7 +8,7 @@ body {
     background-size: cover;
     font-size: 1em;
     color: white;
-    font-family: "Montserrat","Helvetica Neue",Helvetica,Arial,sans-serif !important;
+    font-family: "Montserrat", "Helvetica Neue", Helvetica, Arial, sans-serif !important;
 }
 
 #root {
@@ -51,25 +51,29 @@ body {
 }
 
 @keyframes App-logo-spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 a {
     cursor: pointer;
-    color: #A0A0A0;
+    color: #a0a0a0;
 }
 a:hover {
-    color: #F2F2F2;
+    color: #f2f2f2;
     text-decoration: none;
 }
 a.showMore {
-    color: #A0A0A0;
+    color: #a0a0a0;
     font-size: 0.8em;
     text-transform: uppercase;
 }
 a.showMore:hover {
-    color: #F2F2F2;
+    color: #f2f2f2;
     text-decoration: underline !important;
 }
 .btn {
@@ -82,28 +86,41 @@ a.showMore:hover {
     outline: none;
     box-shadow: none;
     border: none;
-    background-color: #1ED760;
+    background-color: #1ed760;
 }
 .btn:active {
-    color: #BAC5BE !important;
+    color: #bac5be !important;
     outline: none !important;
     border: none !important;
     box-shadow: none !important;
-    background-color: #14833B !important;
+    background-color: #14833b !important;
 }
 
 .btn-primary {
-    background-color: #1DB954;
-    border-color: #1DB954;
+    background-color: #1db954;
+    border-color: #1db954;
 }
 .btn-primary:hover {
-    background-color: #1ED760;
-    border-color: #1ED760;
+    background-color: #1ed760;
+    border-color: #1ed760;
     font-weight: bold;
 }
 
 img.coverImage {
     width: 100%;
+}
+
+@media (max-width: 770px) {
+    img.coverImage {
+        width: 70%;
+        min-width: 250px;
+    }
+}
+@media (max-width: 380px) {
+    img.coverImage {
+        width: 70%;
+        min-width: 250px;
+    }
 }
 
 .currentlyPlaying {
@@ -127,7 +144,7 @@ input.search {
     left: 1em;
     position: absolute;
     top: 1.7em;
-    color: #BAC5BE;
+    color: #bac5be;
     z-index: 10;
 }
 
@@ -143,7 +160,7 @@ input.search {
 }
 
 .progress-bar {
-    background-color: #1DB954;
+    background-color: #1db954;
 }
 
 .searchResults {
@@ -165,11 +182,11 @@ input.search {
 }
 
 li.queuedTrack {
-  position: relative;
+    position: relative;
 }
 li.queuedTrack > .dropdown-menu {
-  bottom: 100%;
-  top: initial;
+    bottom: 100%;
+    top: initial;
 }
 .queuedTracks {
     margin-top: 0.5em;
@@ -218,7 +235,7 @@ input.passcode {
 }
 .dropdown-item.active {
     background-color: #282828;
-    color: #1DB954;
+    color: #1db954;
     cursor: default;
 }
 .dropdown-item:hover {
@@ -227,17 +244,17 @@ input.passcode {
 }
 .dropdown-item.active:hover {
     background-color: #333333;
-    color: #1DB954;
+    color: #1db954;
 }
 .dropdown-item:focus {
     background-color: #333333;
     color: white;
 }
 .playlistItem.active {
-    color: #1ED760;
+    color: #1ed760;
 }
 .currentTrack a {
-    color: #1ED760;
+    color: #1ed760;
 }
 .trackDuration {
     text-align: right;
@@ -271,25 +288,29 @@ button.footerMenu {
     padding: 0;
     font-size: 1.5em;
     height: 1.5em;
-    color: #B3B3B3;
+    color: #b3b3b3;
 }
-button.footerMenu:active, button.footerMenu:hover, button.footerMenu:focus {
-    background-color: transparent!important;
+button.footerMenu:active,
+button.footerMenu:hover,
+button.footerMenu:focus {
+    background-color: transparent !important;
     border: none;
-    color: #FEFEFE;
+    color: #fefefe;
     box-shadow: none !important;
 }
 
 button.iconButton {
     background: none;
-    color: #B3B3B3;
+    color: #b3b3b3;
     border: none;
     cursor: pointer;
 }
-button.iconButton:active, button.iconButton:hover, button.iconButton:focus {
-    background-color: transparent!important;
+button.iconButton:active,
+button.iconButton:hover,
+button.iconButton:focus {
+    background-color: transparent !important;
     border: none;
-    color: #FEFEFE;
+    color: #fefefe;
     box-shadow: none !important;
 }
 
@@ -312,8 +333,8 @@ button.iconButton:active, button.iconButton:hover, button.iconButton:focus {
 }
 .voteButton {
     width: 40%;
-    font-size: 1.0em;
-    color: #B3B3B3;
+    font-size: 1em;
+    color: #b3b3b3;
 }
 
 .voteButton.down {
@@ -321,18 +342,19 @@ button.iconButton:active, button.iconButton:hover, button.iconButton:focus {
     border-color: #dd0d0d;
 }
 .voteButton.voted {
-  background-color: #525252;
-  border-color: #525252;
+    background-color: #525252;
+    border-color: #525252;
 }
 .voteButton.down:hover {
-    background-color: #ed0d0d!important;
+    background-color: #ed0d0d !important;
 }
 .voteButton.down:active {
-    background: #b80f0f!important;
+    background: #b80f0f !important;
 }
-.voteButton:disabled,.voteButton:disabled:hover {
-    background: grey!important;
-    border-color: grey!important;
+.voteButton:disabled,
+.voteButton:disabled:hover {
+    background: grey !important;
+    border-color: grey !important;
 }
 
 .voteCount {
@@ -343,7 +365,17 @@ button.iconButton:active, button.iconButton:hover, button.iconButton:focus {
 
 .coverImageContainer {
     position: relative;
-    min-height: 380px;
+}
+
+@media (max-width: 770px) {
+    .coverImageContainer {
+        min-height: 250px;
+    }
+}
+@media (max-width: 380px) {
+    .coverImageContainer {
+        min-height: 250px;
+    }
 }
 
 .coverImageLayer {
@@ -401,7 +433,7 @@ button.iconButton:active, button.iconButton:hover, button.iconButton:focus {
     cursor: default;
 }
 .userPoints.positive {
-    color: #1DB954;
+    color: #1db954;
 }
 .userPoints.negative {
     color: red;
@@ -417,17 +449,17 @@ button.iconButton:active, button.iconButton:hover, button.iconButton:focus {
 .addPlaylistToQueue {
     margin-right: 5px;
     cursor: pointer;
-    color: #A0A0A0;
+    color: #a0a0a0;
 }
 .addPlaylistToQueue.active {
-    color: #1ED760;
+    color: #1ed760;
 }
 
 @media (max-width: 770px) {
     .settingsDropdown {
         left: 0;
         position: fixed;
-        bottom: 35px!important;
+        bottom: 35px !important;
     }
 }
 @media (max-width: 370px) {
@@ -444,7 +476,7 @@ button.iconButton:active, button.iconButton:hover, button.iconButton:focus {
     .usersDropdown {
         left: 0;
         position: fixed;
-        bottom: 35px!important;
+        bottom: 35px !important;
     }
 }
 @media (max-width: 460px) {
@@ -473,10 +505,14 @@ button.iconButton:active, button.iconButton:hover, button.iconButton:focus {
     padding-right: 1em;
 }
 
-form.queueName > input, form.username > input, form.joinCode > input {
+form.queueName > input,
+form.username > input,
+form.joinCode > input {
     padding-left: 0.5em;
 }
-form.queueName > button, form.username > button, form.joinCode > button {
+form.queueName > button,
+form.username > button,
+form.joinCode > button {
     background: none;
     border: none;
     padding: 0;
@@ -486,6 +522,7 @@ form.queueName > button, form.username > button, form.joinCode > button {
 }
 
 h1 {
+    font-size: 2rem;
     margin: 0;
 }
 
@@ -497,25 +534,26 @@ h1 {
 .userQueueListItem.selected {
     cursor: default;
 }
-.queueName, .username {
+.queueName,
+.username {
     margin-left: 0.5em;
 }
 .selected {
-    color: #1ED760;
+    color: #1ed760;
 }
 
 .spotify-tab {
-    color: #1ED760;
+    color: #1ed760;
 }
 .youtube-tab {
     color: red;
 }
 
 .homeIcon {
-  display: inline-block;
-  position: absolute;
-  padding: 6px 12px 4px;
-  cursor: pointer;
+    display: inline-block;
+    position: absolute;
+    padding: 6px 12px 4px;
+    cursor: pointer;
 }
 
 ul {
@@ -523,7 +561,7 @@ ul {
 }
 
 .source-tab-list {
-  margin-bottom: -16px;
+    margin-bottom: -16px;
 }
 
 .source-tab {

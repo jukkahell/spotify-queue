@@ -158,7 +158,7 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
             (this.props.settings!.gamify && this.state.contextMenuTrack.userId !== this.props.user!.id && !playlistTrackForOwner)
             ? "(-20 pts)"
             : "";
-        if (this.props.settings!.gamify || this.state.contextMenuTrack.userId === this.props.user!.id) {
+        if (this.props.settings!.gamify || this.state.contextMenuTrack.userId === this.props.user!.id || playlistTrackForOwner) {
             if (!this.state.contextMenuTargetPlaying) {
                 menu.push(
                     <a className={"dropdown-item"} key={"removeFromQueue"} href="#" onClick={this.removeFromQueue}>

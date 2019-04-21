@@ -88,8 +88,8 @@ class Acl {
           if (userId === queue.owner) {
             await Acl.saveAccessToken(passcode, userId, authResponse.access_token,
               authResponse.expires_in, authResponse.refresh_token);
-              await Acl.saveUserAccessToken(passcode, userId, authResponse.access_token,
-              authResponse.expires_in, authResponse.refresh_token);
+            await Acl.saveUserAccessToken(passcode, userId, authResponse.access_token,
+            authResponse.expires_in, authResponse.refresh_token);
           }
         }
         const isOwner = queue.owner === userId;
