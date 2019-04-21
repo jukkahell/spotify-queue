@@ -318,9 +318,8 @@ app.get("/top", async (req, res) => {
 
 app.get("/favorites", async (req, res) => {
   const userId = req.cookies.get("user", { signed: true });
-  const passcode = req.cookies.get("passcode");
   try {
-    const favorites = await QueueService.getFavorites(passcode, userId);
+    const favorites = await QueueService.getFavorites(userId);
     res.status(200).json({ tracks: favorites });
   } catch (err) {
     res.status(err.status).json({ message: err.message });
@@ -556,7 +555,7 @@ app.put("/queuePlaylist", async (req, res) => {
     const tracks = playlistId === "top"
       ? await QueueService.getTop(passcode, user)
       : playlistId === "favorites"
-        ? await QueueService.getFavorites(passcode, user)
+        ? await QueueService.getFavorites(user)
         : await SpotifyService.getPlaylistTracks(queueDao.accessToken!, queueDao.owner, playlistId, user, passcode);
     QueueService.addToPlaylistQueue(user, passcode, tracks, playlistId).then(() => {
       res.status(200).json({ message: "OK" });

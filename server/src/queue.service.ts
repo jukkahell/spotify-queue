@@ -641,7 +641,6 @@ class QueueService {
     await db.query("DELETE FROM tracks WHERE passcode = $1", [passcode]);
     await db.query("DELETE FROM track_votes WHERE passcode = $1", [passcode]);
     await db.query("DELETE FROM history WHERE passcode = $1", [passcode]);
-    await db.query("DELETE FROM favorites WHERE passcode = $1", [passcode]);
     await db.query("DELETE FROM settings WHERE passcode = $1", [passcode]);
     await db.query("DELETE FROM queue WHERE id = $1", [passcode]);
     const userQueues = await QueueService.getUserQueues(passcode, userId);
@@ -740,9 +739,9 @@ class QueueService {
     }
   }
 
-  public static async getFavorites(passcode: string, userId: string): Promise<SpotifyTrack[]> {
+  public static async getFavorites(userId: string): Promise<SpotifyTrack[]> {
     try {
-      const tracks = await db.query("SELECT * FROM favorites WHERE passcode = $1 AND user_id = $2", [passcode, userId]);
+      const tracks = await db.query("SELECT * FROM favorites WHERE user_id = $1", [userId]);
       if (tracks.rowCount > 0) {
         const spotifyTracks = tracks.rows.map(t => QueueService.mapTrack(t, true));
         return spotifyTracks.map(t => ({ ...t.track, isFavorite: true }));
@@ -765,7 +764,7 @@ class QueueService {
     if (!userId) {
       return false;
     }
-    const favorites = await QueueService.getFavorites(passcode, userId);
+    const favorites = await QueueService.getFavorites(userId);
     return favorites.some(f => f.id === trackId);
   }
 
@@ -786,13 +785,13 @@ class QueueService {
     const query = `
       INSERT INTO 
         favorites (
-          passcode, user_id, track_uri, data, source
+          user_id, track_uri, data, source
         ) 
       VALUES (
         $1, $2, $3, $4, $5
       )
       ON CONFLICT DO NOTHING`;
-    await db.query(query, [passcode, userId, trackUri, track, source]);
+    await db.query(query, [userId, trackUri, track, source]);
   }
 
   public static async removeFromFavorites(passcode: string, userId: string, trackUri: string) {
@@ -873,7 +872,7 @@ class QueueService {
   }
 
   public static async addFavoritesToPlaylistQueue(userId: string, passcode: string) {
-    const favorites = await QueueService.getFavorites(passcode, userId);
+    const favorites = await QueueService.getFavorites(userId);
     await QueueService.addToPlaylistQueue(userId, passcode, favorites, "favorites");
   }
 

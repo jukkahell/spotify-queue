@@ -19,7 +19,7 @@
     "bootstrap": "4.3.1",
     "react": "16.8.6",
     "react-dom": "16.8.6",
-    "react-scripts-ts": "3.1.0",
+    "react-scripts-ts": "^4.0.8",
     "react-tabs": "3.0.0",
     "react-tooltip": "3.10.0",
     "react-youtube": "7.9.0",
@@ -31,5 +31,11 @@
     "test": "react-scripts-ts test --env=jsdom",
     "eject": "react-scripts-ts eject"
   },
-  "devDependencies": {}
+  "devDependencies": {},
+  "browserslist": [
+    ">0.2%",
+    "not dead",
+    "not ie <= 11",
+    "not op_mini all"
+  ]
 }
