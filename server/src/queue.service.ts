@@ -804,8 +804,8 @@ class QueueService {
       if (!queue.isPlaying) {
         throw { status: 403, message: "Can't remove when the queue is not playing." };
       }
-      const query = "DELETE FROM tracks WHERE id = $1 AND user_id = $2 AND currently_playing = false RETURNING id";
-      const deletedRows = await db.query(query, [trackId, userId]);
+      const query = "DELETE FROM tracks WHERE id = $1 AND currently_playing = false RETURNING id";
+      const deletedRows = await db.query(query, [trackId]);
 
       if (deletedRows.rowCount === 0) {
         throw { status: 404, message: "Cannot remove selected song. Only own queued songs can be removed." };

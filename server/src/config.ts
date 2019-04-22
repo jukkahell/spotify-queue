@@ -42,7 +42,8 @@ export interface IConfig {
         initialPoints: number;
         skipCost: number;
         moveUpCost: number;
-        protectCost: number;
+        protectCostPerMinute: number;
+        skipCostPerMinute: number;
     }
 }
 
@@ -98,7 +99,8 @@ const config: IConfig = {
         initialPoints: 10,
         skipCost: 20,
         moveUpCost: 5,
-        protectCost: 10
+        protectCostPerMinute: 5,
+        skipCostPerMinute: 5
     }
 };
 

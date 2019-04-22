@@ -69,7 +69,7 @@ export class Track extends React.Component<ITrackProps> {
             <div className={this.props.className + (isPlaying ? " currentTrack " : "") + " trackItem"}>
                 <div className="toggleFavorite">
                     {this.toggleFromFavorites
-                      ? <a className={"favorited"} href="#" onClick={this.toggleFromFavorites}>
+                      ? <a className={"favorited"} href="#" onClick={this.toggleFromFavorites} title={isFavorite ? "Remove from favorites" : "Add to favorites"}>
                           <FontAwesomeIcon icon={[isFavorite ? "fas" : "far", "star"]} />
                         </a>
                       : null}

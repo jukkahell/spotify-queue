@@ -91,6 +91,7 @@ export class App extends React.Component<{}, IState> {
     this.onRemovedFromFavorites = this.onRemovedFromFavorites.bind(this);
     this.onProtected = this.onProtected.bind(this);
     this.onSkip = this.onSkip.bind(this);
+    this.onRemove = this.onRemove.bind(this);
     this.refreshData = this.refreshData.bind(this);
     this.updateUser = this.updateUser.bind(this);
     this.youtubeEnd = this.youtubeEnd.bind(this);
@@ -279,15 +280,17 @@ export class App extends React.Component<{}, IState> {
   }
 
   protected onQueued() {
-    this.getQueue();
-    this.getUser();
-    if (!this.state.isPlaying) {
-      // Give some time for spotify to catch up
-      setTimeout(this.getCurrentTrack, 500);
-    }
+    // Give some time for spotify to catch up
+    setTimeout(() => {
+      this.getCurrentTrack();
+      this.getQueue();
+      this.getUser();
+    }, 500);
+
     this.setState({
       responseMsg: { msg: "Queued", className: "alert-success" },
     });
+
     setTimeout(() => {
       this.setState({ responseMsg: null });
     }, 2000);
@@ -332,6 +335,7 @@ export class App extends React.Component<{}, IState> {
     setTimeout(() => {
       this.getCurrentTrack();
       this.getQueue();
+      this.getUser();
     }, 500);
     setTimeout(() => {
       this.setState({ responseMsg: null });
@@ -345,6 +349,21 @@ export class App extends React.Component<{}, IState> {
     setTimeout(() => {
       this.getCurrentTrack();
       this.getQueue();
+      this.getUser();
+    }, 500);
+    setTimeout(() => {
+      this.setState({ responseMsg: null });
+    }, 2000);
+  }
+
+  protected onRemove() {
+    this.setState({
+      responseMsg: { msg: "Removed", className: "alert-success" },
+    });
+    setTimeout(() => {
+      this.getCurrentTrack();
+      this.getQueue();
+      this.getUser();
     }, 500);
     setTimeout(() => {
       this.setState({ responseMsg: null });
@@ -420,15 +439,15 @@ export class App extends React.Component<{}, IState> {
             <p>You'll get points from the following events:</p>
             <ul>
               <li>+1 point if you have a song queued when someone else's song ends.</li>
-              <li>Points you spent to queue a song when that song ends.</li>
+              <li>Points for how many minutes your song played. Maximum is the same amount it cost.</li>
               <li>Same amount of points how much votes your song gets. Can be negative as well.</li>
             </ul>
             <p>You can spend points on the following:</p>
             <ul>
               <li>Add a song to queue. 1min song costs 2 points, 2min song 3 points etc.</li>
               <li>-5 points to move your song one step forward in the queue.</li>
-              <li>-15 points to protect a song to be skipped or removed.</li>
-              <li>-20 points to skip or remove another user's song from the queue.</li>
+              <li>-5 points/min to protect a song from being skipped or removed. Eg. 5min song costs 25 points.</li>
+              <li>-5 points/min to skip or remove another user's song from the queue.</li>
             </ul>
           </ReactTooltip>
         </div>
@@ -467,6 +486,7 @@ export class App extends React.Component<{}, IState> {
                   queue={this.state.queuedItems}
                   isOwner={this.state.isOwner}
                   onSkip={this.onSkip}
+                  onRemove={this.onRemove}
                   onProtected={this.onProtected}
                   settings={this.state.settings}
                   user={this.state.user}

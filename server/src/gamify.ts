@@ -1,9 +1,10 @@
 import * as express from "express";
-import { User, FullQueue } from "./queue";
+import { User, FullQueue, CurrentTrack, QueueItem } from "./queue";
 import SpotifyService from "./spotify.service";
 import { logger } from "./logger.service";
 import QueueService from "./queue.service";
 import config from "./config";
+import { SpotifyTrack } from "./spotify";
 
 export namespace Gamify {
 
@@ -21,63 +22,69 @@ export namespace Gamify {
         return next();
       }
 
-      if (isPlaying) {
-        // No cost for track owner
-        if (!queue.currentTrack || queue.currentTrack.userId === userId) {
-          return next();
-        }
-        if (user.points < config.gamify.skipCost) {
-          return res.status(403).json({
-            message: `You don't have enough points (${queue.users[userIdx].points}). ` +
-              `Skipping a song added by someone else costs ${config.gamify.skipCost} points.`
-          });
-        }
-        logger.info(`Skipping someone else's song...`, { user: userId, passcode });
-
-        if (queue.currentTrack.protected) {
-          logger.info(`Track is protected from skipping...`, { user: userId, passcode });
-          return res.status(403).json({
-            message: `Can't skip because this song is protected from skipping.`
-          });
-        }
-
-        if (queue.owner !== userId || queue.currentTrack.playlistTrack) {
-          QueueService.addPoints(passcode, user.id, -config.gamify.skipCost);
-        }
-        QueueService.skip(passcode, queue.currentTrack!.userId!, trackId);
-        return res.status(200).json({ message: "OK" });
-      } else {
-        for (let i = queue.tracks.length - 1; i >= 0; --i) {
-          // Removing own track
-          if (queue.tracks[i].track.id === trackId && queue.tracks[i].userId === userId) {
-            const refund = millisToPoints(queue.tracks[i].track.duration);
-            logger.info(`Refunding ${refund} points`, { user: userId, passcode });
-            QueueService.addPoints(passcode, user.id, refund);
-            return next();
-          } else if (queue.tracks[i].track.id === trackId && queue.tracks[i].userId !== userId) {
-            // Trying to remove someone else's track
-            if (user.points < config.gamify.skipCost) {
-              return res.status(403).json({
-                message: `You don't have enough points (${user.points}). ` +
-                  `Removing a song added by someone else costs ${config.gamify.skipCost} points.`
-              });
-            }
-
-            logger.info(`Removing someone else's song...`, { user: userId, passcode });
-
-            if (queue.tracks[i].protected) {
-              logger.info(`Track is protected from removal...`, { user: userId, passcode });
-              return res.status(403).json({
-                message: `Can't remove because this song is protected from removal.`
-              });
-            }
-            QueueService.addPoints(passcode, user.id, -config.gamify.skipCost);
-            QueueService.removeFromQueue(passcode, queue.tracks[i].userId!, trackId);
-            return res.status(200).json({ message: "OK" });
-          }
-        }
+      if (isPlaying && !queue.currentTrack) {
+        return res.status(404).json({
+          message: `Can't skip current song since no current song found.`
+        });
+      } else if (!isPlaying && (!queue.tracks || queue.tracks.length === 0) && (!queue.playlistTracks || queue.playlistTracks.length === 0)) {
+        return res.status(404).json({
+          message: `Can't remove anything since the queue is empty.`
+        });
       }
-      return next();
+
+      const queueItem = queue.tracks.find(queuedItem => queuedItem.id === trackId);
+      const playlistTrack = queue.playlistTracks.find(pt => pt.id === trackId);
+      if (!isPlaying && !queueItem && !playlistTrack) {
+        return res.status(404).json({
+          message: `Unable to find given song from the queue.`
+        });
+      }
+
+      const removeTrackId = isPlaying ? queue.currentTrack!.id : queueItem!.id || playlistTrack!.id;
+      const removeTrack: SpotifyTrack = isPlaying ? queue.currentTrack!.track : queueItem!.track || playlistTrack!.track;
+      const track: QueueItem | CurrentTrack = isPlaying ? queue.currentTrack! : queueItem || playlistTrack!;
+      removeTrack.progress = isPlaying ? queue.currentTrack!.progress : 0;
+      const removeCost = calculateSkipCost(removeTrack);
+
+      if (track.playlistTrack && queue.owner === userId) {
+        await QueueService.skip(passcode, track.userId!, trackId);
+        return res.status(200).json({ message: "OK" });
+      }
+
+      // No cost for track owner
+      if (track.userId === userId) {
+        if (!isPlaying) {
+          // Refund queueing cost. Current track's reward comes from trackEndReward function
+          const refund = millisToPoints(removeTrack.duration);
+          logger.info(`Refunding ${refund} points`, { user: userId, passcode });
+          await QueueService.addPoints(passcode, user.id, refund);
+        }
+        return next();
+      }
+
+      if (user.points < removeCost) {
+        return res.status(403).json({
+          message: `You don't have enough points (${user.points}). ` +
+            `Removing this song from the queue costs ${removeCost} points.`
+        });
+      }
+
+      if (track.protected) {
+        logger.info(`Track is protected from skipping...`, { user: userId, passcode });
+        return res.status(403).json({
+          message: `Can't skip because this song is protected from skipping.`
+        });
+      }
+
+      if (isPlaying) {
+        logger.info(`Skipping someone else's song with cost ${removeCost}...`, { user: userId, passcode });
+        await QueueService.skip(passcode, track.userId!, trackId);
+      } else {
+        logger.info(`Removing someone else's song from queue with cost ${removeCost}...`, { user: userId, passcode });
+        await QueueService.removeFromQueue(passcode, userId, removeTrackId);
+      }
+      await QueueService.addPoints(passcode, user.id, -removeCost);
+      return res.status(200).json({ message: "OK" });
     },
     "moveUpInQueue": async (req: express.Request, res: express.Response, next: () => any) => {
       try {
@@ -99,8 +106,8 @@ export namespace Gamify {
             logger.info(`Moving track from idx ${i} to idx ${(i - 1)}`, { user: userId, passcode });
             const moveTrack = queue.tracks[i];
             const earlierTrack = queue.tracks[i - 1];
-            QueueService.switchTrackPositions(moveTrack, earlierTrack);
-            QueueService.addPoints(passcode, user.id, -config.gamify.moveUpCost);
+            await QueueService.switchTrackPositions(moveTrack, earlierTrack);
+            await QueueService.addPoints(passcode, user.id, -config.gamify.moveUpCost);
             return res.status(200).json({ message: "OK" });
           }
         }
@@ -123,38 +130,40 @@ export namespace Gamify {
       const queue = await QueueService.getFullQueue(passcode);
       const userIdx = getUser(queue, userId);
       const user = queue.users[userIdx];
-      if (user.points < config.gamify.protectCost) {
-        return res.status(403).json({
-          message: `You don't have enough points (${user.points}). ` +
-            `Protecting a song costs ${config.gamify.protectCost} points.`
+
+      if (isPlaying && !queue.currentTrack) {
+        return res.status(404).json({
+          message: `Can't protect current song since no songs was found.`
+        });
+      } else if (!isPlaying && (!queue.tracks || queue.tracks.length === 0) && (!queue.playlistTracks || queue.playlistTracks.length === 0)) {
+        return res.status(404).json({
+          message: `Can't protect anything since the queue is empty.`
         });
       }
 
-      if (isPlaying) {
-        if (!queue.currentTrack) {
-          return res.status(404).json({
-            message: `Can't protect currently playing track since there is nothing playing right now.`
-          });
-        }
-        QueueService.protectTrack(passcode, queue.currentTrack.id);
-      } else {
-        if (!queue.tracks || queue.tracks.length === 0) {
-          return res.status(404).json({
-            message: `Can't protect selected song from queue since the queue is empty.`
-          });
-        }
-        const trackIdx = queue.tracks.findIndex(queuedItem => queuedItem.id === trackId);
-        if (trackIdx < 0) {
-          return res.status(404).json({
-            message: `Unable to find given song from the queue.`
-          });
-        }
-
-        QueueService.protectTrack(passcode, queue.tracks[trackIdx].id);
+      const queueItem = queue.tracks.find(queuedItem => queuedItem.id === trackId);
+      const playlistTrack = queue.playlistTracks.find(pt => pt.id === trackId);
+      if (!isPlaying && !queueItem && !playlistTrack) {
+        return res.status(404).json({
+          message: `Unable to find given song from the queue.`
+        });
       }
 
+      const protectTrackId = isPlaying ? queue.currentTrack!.id : queueItem!.id || playlistTrack!.id;
+      const protectTrack: SpotifyTrack = isPlaying ? queue.currentTrack!.track : queueItem!.track || playlistTrack!.track;
+      protectTrack.progress = isPlaying ? queue.currentTrack!.progress : 0;
+      const protectCost = calculateProtectCost(protectTrack);
+      if (user.points < protectCost) {
+        return res.status(403).json({
+          message: `You don't have enough points (${user.points}). ` +
+            `Protecting a song costs ${protectCost} points.`
+        });
+      }
+
+      await QueueService.protectTrack(passcode, protectTrackId);
+
       logger.info(`Protecting a song from skipping...`, { user: userId, passcode });
-      QueueService.addPoints(passcode, user.id, -config.gamify.protectCost);
+      await QueueService.addPoints(passcode, user.id, -protectCost);
       return res.status(200).json({ message: "OK" });
     }
   };
@@ -175,7 +184,7 @@ export namespace Gamify {
         const user = queue.users[userIdx];
         if (user.points - cost >= 0) {
           logger.info(`Reducing ${cost} points from ${user.points}`, { user: userId, passcode });
-          QueueService.addPoints(passcode, user.id, -cost);
+          await QueueService.addPoints(passcode, user.id, -cost);
           return next();
         } else {
           logger.info(`${user.points} points is not enough to pay ${cost} points`, { user: userId, passcode });
@@ -194,6 +203,18 @@ export namespace Gamify {
     } else {
       return userIdx;
     }
+  }
+
+  const calculateProtectCost = (track: SpotifyTrack) => {
+    const millisLeft = track.duration - (track.progress || 0);
+    const minutesLeft = Math.floor(millisLeft / 60000);
+    return (minutesLeft + 1) * config.gamify.protectCostPerMinute;
+  }
+
+  const calculateSkipCost = (track: SpotifyTrack) => {
+    const millisLeft = track.duration - (track.progress || 0);
+    const minutesLeft = Math.floor(millisLeft / 60000);
+    return (minutesLeft + 1) * config.gamify.skipCostPerMinute;
   }
 
   const millisToPoints = (millis: number) => {
@@ -218,16 +239,16 @@ export namespace Gamify {
           if (!currentTrack.playlistTrack) {
             if (currentTrack.userId === user.id) {
               logger.info(`${votes} vote points for user`, { passcode, user: user.id });
-              QueueService.addPoints(passcode, user.id, reward + votes);
-              QueueService.addKarma(passcode, user.id, votes);
+              await QueueService.addPoints(passcode, user.id, reward + votes);
+              await QueueService.addKarma(passcode, user.id, votes);
             } else if (queue.tracks.some(t => t.userId === user.id)) {
               // Give points only if user has queued something
-              QueueService.addPoints(passcode, user.id, 1);
+              await QueueService.addPoints(passcode, user.id, 1);
             }
           }
         });
       } else if (currentTrack && currentTrack.userId) {
-        QueueService.addKarma(passcode, currentTrack.userId, votes);
+        await QueueService.addKarma(passcode, currentTrack.userId, votes);
       }
     } catch (err) {
       logger.error("Error while giving gamify points for users.", { passcode });

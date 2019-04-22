@@ -365,17 +365,7 @@ button.iconButton:focus {
 
 .coverImageContainer {
     position: relative;
-}
-
-@media (max-width: 770px) {
-    .coverImageContainer {
-        min-height: 250px;
-    }
-}
-@media (max-width: 380px) {
-    .coverImageContainer {
-        min-height: 250px;
-    }
+    min-height: 240px;
 }
 
 .coverImageLayer {
@@ -554,6 +544,7 @@ h1 {
     position: absolute;
     padding: 6px 12px 4px;
     cursor: pointer;
+    z-index: 100;
 }
 
 ul {
