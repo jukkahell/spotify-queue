@@ -417,6 +417,12 @@ button.iconButton:focus {
     align-self: center;
 }
 
+@media (max-width: 770px) {
+  #gamifyHelp {
+    left: 10px!important;
+  }
+}
+
 .userPoints {
     padding: 0 0 0 10px;
     margin: 0;
