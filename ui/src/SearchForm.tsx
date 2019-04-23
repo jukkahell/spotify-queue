@@ -307,7 +307,7 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
         name={track.name}
         artist={track.artist}
         id={track.id}
-        trackId={track.trackId}
+        trackId={track.id}
         artistId={track.artistId}
         duration={track.duration}
         key={i + "-" + track.id}

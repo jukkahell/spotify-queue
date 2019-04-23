@@ -788,7 +788,7 @@ class QueueService {
           user_id, track_uri, data, source
         ) 
       VALUES (
-        $1, $2, $3, $4, $5
+        $1, $2, $3, $4
       )
       ON CONFLICT DO NOTHING`;
     await db.query(query, [userId, trackUri, track, source]);
