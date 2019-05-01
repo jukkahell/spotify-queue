@@ -8,6 +8,7 @@ import "./App.css";
 import config from "./config";
 import CurrentlyPlaying from "./CurrentlyPlaying";
 import { DeviceSelect } from "./DeviceSelect";
+import { IPerk, PerkStore } from "./PerkStore";
 import { IQueuedItem, Queue } from "./Queue";
 import QueueList, { IUserQueue } from "./QueueList";
 import SearchForm from "./SearchForm";
@@ -20,6 +21,7 @@ import YouTubeSearchForm from "./YouTubeSearchForm";
 export interface IUser {
   id: string;
   points: number;
+  karma: number;
   spotifyUserId?: string;
   username: string;
 }
@@ -39,6 +41,7 @@ export interface IState {
   user: IUser | null;
   users: IUser[] | null;
   userQueues: IUserQueue[];
+  perks: IPerk[];
 }
 
 export class App extends React.Component<{}, IState> {
@@ -62,6 +65,7 @@ export class App extends React.Component<{}, IState> {
       user: null,
       users: null,
       userQueues: [],
+      perks: [],
     };
 
     this.createQueue = this.createQueue.bind(this);
@@ -99,6 +103,7 @@ export class App extends React.Component<{}, IState> {
     this.logout = this.logout.bind(this);
     this.removeQueue = this.removeQueue.bind(this);
     this.goHome = this.goHome.bind(this);
+    this.getPerks = this.getPerks.bind(this);
   }
 
   public componentDidMount() {
@@ -198,6 +203,7 @@ export class App extends React.Component<{}, IState> {
           this.getCurrentTrack();
           this.getQueue();
           this.getSettings();
+          this.getPerks();
 
           clearInterval(this.authInterval);
           this.setState({
@@ -233,7 +239,7 @@ export class App extends React.Component<{}, IState> {
       "?client_id=" +
       client_id +
       "&response_type=code" +
-      "&scope=user-modify-playback-state,user-read-currently-playing,user-read-playback-state,playlist-read-private,playlist-read-collaborative,user-read-private" +
+      "&scope=user-modify-playback-state,user-read-currently-playing,user-read-playback-state,playlist-read-private,playlist-read-collaborative,user-read-private,playlist-modify-private,playlist-modify-public" +
       "&redirect_uri=" +
       encodeURIComponent(redirect_uri);
 
@@ -266,6 +272,7 @@ export class App extends React.Component<{}, IState> {
     this.getCurrentTrack();
     this.getQueue();
     this.getSettings();
+    this.getPerks();
   }
 
   protected onSongEnd() {
@@ -564,6 +571,14 @@ export class App extends React.Component<{}, IState> {
               leaveQueue={this.leaveQueue}
               removeQueue={this.removeQueue}
             />
+            {this.state.user && this.state.settings && this.state.settings.gamify ? (
+              <PerkStore
+                perks={this.state.perks}
+                user={this.state.user}
+                onBuyOrUpgrade={this.refreshData}
+                onError={this.onError}
+              />
+            ) : null}
             {this.state.isOwner ? <DeviceSelect onError={this.onError} /> : null}
             {this.state.isOwner && this.state.settings ? (
               <Settings
@@ -663,6 +678,21 @@ export class App extends React.Component<{}, IState> {
         if (response.status === 200) {
           this.setState({
             users: response.data,
+          });
+        }
+      })
+      .catch(err => {
+        this.onError(err.response.data.message);
+      });
+  }
+
+  private getPerks() {
+    axios
+      .get(config.backend.url + "/getAllPerks")
+      .then(response => {
+        if (response.status === 200) {
+          this.setState({
+            perks: response.data,
           });
         }
       })

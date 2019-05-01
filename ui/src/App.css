@@ -584,3 +584,40 @@ ul {
 .youtubeCover {
     margin-right: 0.4em;
 }
+
+@media (max-width: 770px) {
+  .perksDropdown {
+      left: 0;
+      position: fixed;
+      bottom: 35px !important;
+  }
+}
+@media (max-width: 370px) {
+  .perksDropdown {
+      font-size: 0.8em;
+  }
+}
+
+.perksListItem {
+  cursor: pointer;
+  margin: 0;
+  display: grid;
+  grid-template-columns: min-content auto min-content;
+}
+
+.ownedPerk {
+  margin-right: 0.3em;
+}
+.availablePerk {
+  color: #1ed760;
+}
+.unavailablePerk {
+  color: red;
+}
+
+.saveToSpotify {
+  margin-left: 0.7em;
+  font-size: 0.7em;
+  color: #1ed760;
+  cursor: pointer;
+}

@@ -6,36 +6,6 @@
     "auditLog": ".40d8d725627cb11364289712757cbec57f65aa74-audit.json",
     "files": [
         {
-            "date": 1554940237875,
-            "name": "spotiqu-2019-04-11.log",
-            "hash": "962f97cb673c55d9e122858f3f166c21"
-        },
-        {
-            "date": 1555016709312,
-            "name": "spotiqu-2019-04-12.log",
-            "hash": "6494d16e20bc428c558d067b64889c95"
-        },
-        {
-            "date": 1555168946225,
-            "name": "spotiqu-2019-04-13.log",
-            "hash": "0cd0c79c79099369bfa034dd0871000b"
-        },
-        {
-            "date": 1555189983968,
-            "name": "spotiqu-2019-04-14.log",
-            "hash": "8da58585067025e1e196d5887c65bc3c"
-        },
-        {
-            "date": 1555275864663,
-            "name": "spotiqu-2019-04-15.log",
-            "hash": "ddba3219400f66e2e272a254827ab794"
-        },
-        {
-            "date": 1555445276402,
-            "name": "spotiqu-2019-04-16.log",
-            "hash": "bccd293a835720a9c46fbcbb8700a5eb"
-        },
-        {
             "date": 1555449641600,
             "name": "spotiqu-2019-04-17.log",
             "hash": "78334665c8ee48172b3e60a8485afe9b"
@@ -54,6 +24,21 @@
             "date": 1555882756006,
             "name": "spotiqu-2019-04-22.log",
             "hash": "de52339f0f0420134613783b86bf05fc"
+        },
+        {
+            "date": 1556559742909,
+            "name": "spotiqu-2019-04-29.log",
+            "hash": "b0f71ba1bc9a226730ae82b928346c0b"
+        },
+        {
+            "date": 1556654236811,
+            "name": "spotiqu-2019-04-30.log",
+            "hash": "34a139aabf30f6e8b86cb72779b812b9"
+        },
+        {
+            "date": 1556658046584,
+            "name": "spotiqu-2019-05-01.log",
+            "hash": "d48bdfb0605f83023c084dee8524c97b"
         }
     ]
 }

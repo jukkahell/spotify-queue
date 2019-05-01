@@ -1,7 +1,7 @@
 import * as randomstring from "randomstring";
 import { QueryResult } from "../node_modules/@types/pg";
 import * as db from "./db";
-import { QueueDao, QueueItem, FullQueue, Queue, CurrentTrack, Settings, Vote, User, UserDao, TrackDao, SettingsDao, VoteDao, CurrentState } from "./queue";
+import { QueueDao, QueueItem, FullQueue, Queue, CurrentTrack, Settings, Vote, User, UserDao, TrackDao, SettingsDao, VoteDao, CurrentState, Perk, PerkName } from "./queue";
 import { SpotifyTrack } from "./spotify";
 import SpotifyService from "./spotify.service";
 import { getCurrentSeconds } from "./util";
@@ -294,7 +294,7 @@ class QueueService {
 
   public static addKarma(passcode: string, userId: string, karma: number) {
     logger.info(`Adding ${karma} karma...`, { passcode, user: userId });
-    const query = "UPDATE user_queues SET karma = karma + $1 WHERE user_id = $2 AND passcode = $3";
+    const query = "UPDATE user_queues SET karma = karma + $1 WHERE user_id = $2 AND passcode = $3 AND karma > 0";
     db.query(query, [karma, userId, passcode]);
   }
 
@@ -794,8 +794,63 @@ class QueueService {
     await db.query(query, [userId, trackUri, track, source]);
   }
 
-  public static async removeFromFavorites(passcode: string, userId: string, trackUri: string) {
-    await db.query("DELETE FROM favorites WHERE passcode = $1 AND user_id = $2 AND track_uri = $3", [passcode, userId, trackUri]);
+  public static async removeFromFavorites(userId: string, trackUri: string) {
+    await db.query("DELETE FROM favorites WHERE user_id = $1 AND track_uri = $2", [userId, trackUri]);
+  }
+
+  public static getAllPerks(): Perk[] {
+    return [
+      { name: "move_up", price: 50, requiredKarma: 5, level: 0 },
+      { name: "queue_more_1", price: 100, requiredKarma: 10, level: 0 },
+      { name: "queue_sequential_1", price: 100, requiredKarma: 15, level: 0 },
+      { name: "remove_song", price: 200, requiredKarma: 20, level: 0 },
+      { name: "skip_song", price: 200, requiredKarma: 20, level: 0 },
+      { name: "queue_more_2", price: 200, requiredKarma: 20, level: 0 },
+      { name: "queue_sequential_2", price: 250, requiredKarma: 25, level: 0 },
+      { name: "move_first", price: 300, requiredKarma: 30, level: 0 },
+    ];
+  }
+
+  public static async getAllPerksWithUserLevel(passcode: string, userId: string): Promise<Perk[]> {
+    const all = QueueService.getAllPerks();
+    const userPerks = await QueueService.getUserPerks(passcode, userId);
+    return all.map(p => {
+      const userPerk = userPerks.find(up => up.name === p.name);
+      const userLevel = userPerk ? userPerk.level : 0;
+      return { ...p, level: userLevel };
+    });
+  }
+
+  public static getPerk(name: PerkName) {
+    return QueueService.getAllPerks().find(perk => perk.name === name);
+  }
+
+  public static async getUserPerks(passcode: string, userId: string): Promise<Perk[]> {
+    const query = "SELECT * FROM user_perks WHERE user_id = $1 AND passcode = $2";
+    const userPerkRows = await db.query(query, [userId, passcode]);
+    if (userPerkRows.rowCount > 0) {
+      return userPerkRows.rows.map(userPerk => ({ ...QueueService.getPerk(userPerk.perk) as Perk, level: userPerk.level }));
+    }
+    return [];
+  }
+
+  public static async buyPerk(passcode: string, userId: string, perkName: PerkName) {
+    const user = await QueueService.getUser(passcode, userId);
+    const perk = QueueService.getPerk(perkName);
+    logger.info(`Buying ${perkName}...`, { passcode, user: userId });
+
+    if (!perk) {
+      throw { status: 400, message: "Given perk not found" };
+    }
+
+    if (user.points >= perk.price) {
+      QueueService.addPoints(passcode, userId, -perk.price);
+      logger.info(`Adding ${perkName} for user...`, { passcode, user: userId });
+      const query = "INSERT INTO user_perks (perk, user_id, passcode, level) VALUES ($1, $2, $3, $4)";
+      await db.query(query, [perk.name, userId, passcode, 1]);
+    } else {
+      throw { status: 403, message: "Not enough points to buy this perk" }
+    }
   }
 
   public static async removeFromQueue(passcode: string, userId: string, trackId: string) {
@@ -823,10 +878,14 @@ class QueueService {
         throw { status: 403, message: "Can't skip when the queue is not playing." };
       }
       const currentTrack = await QueueService.getCurrentTrack(passcode, userId);
+
       if (currentTrack &&
         queue.accessToken &&
         currentTrack.id === trackId &&
-        currentTrack.userId === userId) {
+        (
+          (currentTrack.playlistTrack && queue.owner === userId) ||
+          currentTrack.userId === userId
+        )) {
         QueueService.startNextTrack(passcode, userId, currentTrack);
         return;
       } else {
@@ -874,6 +933,31 @@ class QueueService {
   public static async addFavoritesToPlaylistQueue(userId: string, passcode: string) {
     const favorites = await QueueService.getFavorites(userId);
     await QueueService.addToPlaylistQueue(userId, passcode, favorites, "favorites");
+  }
+
+  public static async exportFavoritesToSpotify(passcode: string, userId: string) {
+    const user = await QueueService.getUser(passcode, userId);
+    if (!user.accessToken || !user.spotifyUserId) {
+      throw { status: 401, message: "Login with spotify to export favorites"};
+    }
+
+    const playlists = await SpotifyService.getPlaylists(user.accessToken, userId, passcode);
+    const favoritesPlaylist = playlists.find((p: any) => p.name === SpotifyService.favoritesName);
+    let favoritesId = favoritesPlaylist ? favoritesPlaylist.id : null;
+    if (!favoritesId) {
+      try {
+        const createResponse = await SpotifyService.createFavoritesPlaylist(user.accessToken, user.spotifyUserId);
+        favoritesId = createResponse.data.id;
+      } catch (err) {
+        logger.error("Unable to create favorites playlist", { passcode, user: userId });
+        logger.error(err.response.data);
+        throw { status: err.response.status, message: "Unable to create favorites playlist" };
+      }
+    }
+
+    const favorites = await QueueService.getFavorites(userId);
+    const trackIds = favorites.map(f => f.id);
+    await SpotifyService.updateFavoriteTracks(user.accessToken, favoritesId, trackIds);
   }
 
   public static async addToQueue(userId: string, passcode: string, trackUri: string, source: string): Promise<FullQueue> {

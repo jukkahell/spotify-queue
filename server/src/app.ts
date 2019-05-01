@@ -9,7 +9,7 @@ import * as Keygrip from "keygrip";
 import { env } from "process";
 import * as randomstring from "randomstring";
 import config, { passcodeCookieExpire, userCookieExpire } from "./config";
-import { Settings } from "./queue";
+import { Settings, PerkName } from "./queue";
 import QueueService from "./queue.service";
 import secrets from "./secrets";
 import { SpotifySearchQuery } from "./spotify";
@@ -327,6 +327,17 @@ app.get("/favorites", async (req, res) => {
   }
 });
 
+app.post("/exportFavorites", async (req, res) => {
+  const userId = req.cookies.get("user", { signed: true });
+  const passcode = req.cookies.get("passcode");
+  try {
+    await QueueService.exportFavoritesToSpotify(passcode, userId);
+    res.status(200).json({ message: "Favorites exported successfully" });
+  } catch (err) {
+    res.status(err.status).json({ message: err.message });
+  }
+});
+
 app.post("/addToFavorites", (req, res) => {
   const passcode = req.cookies.get("passcode");
   const user = req.cookies.get("user", { signed: true });
@@ -347,11 +358,47 @@ app.post("/removeFromFavorites", (req, res) => {
   const trackId = req.body.trackId;
 
   logger.info(`Removing ${trackId} from favorites`, { user, passcode });
-  QueueService.removeFromFavorites(passcode, user, trackId).then(() => {
+  QueueService.removeFromFavorites(user, trackId).then(() => {
     res.status(200).json({ msg: "OK" });
   }).catch(err => {
     res.status(err.status).json({ message: err.message });
   });
+});
+
+app.get("/getAllPerks", async (req, res) => {
+  const passcode = req.cookies.get("passcode");
+  const user = req.cookies.get("user", { signed: true });
+  try {
+    const perks = await QueueService.getAllPerksWithUserLevel(passcode, user);
+    res.status(200).json(perks);
+  } catch(err) {
+    res.status(err.status).json({ message: err.message });
+  }
+});
+
+app.get("/getUserPerks", async (req, res) => {
+  const passcode = req.cookies.get("passcode");
+  const user = req.cookies.get("user", { signed: true });
+
+  try {
+    const perks = await QueueService.getUserPerks(passcode, user);
+    res.status(200).json(perks);
+  } catch(err) {
+    res.status(err.status).json({ message: err.message });
+  }
+});
+
+app.post("/buyPerk", async (req, res) => {
+  const passcode = req.cookies.get("passcode");
+  const user = req.cookies.get("user", { signed: true });
+  const perk: PerkName = req.body.perk;
+
+  try {
+    await QueueService.buyPerk(passcode, user, perk);
+    res.status(200).json("OK");
+  } catch(err) {
+    res.status(err.status).json({ message: err.message });
+  }
 });
 
 app.delete("/removeFromQueue", (req, res) => {

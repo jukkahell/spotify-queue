@@ -28,6 +28,7 @@ class SpotifyService {
   private static readonly clientId = config.spotify.clientId;
   private static readonly secret = secrets.spotify.secret;
   private static readonly authHeader = "Basic " + Buffer.from(SpotifyService.clientId + ":" + SpotifyService.secret).toString('base64');
+  public static readonly favoritesName = "My Spotiqu favorites";
 
   public static getUser = (accessToken: string) => {
     return axios.get("https://api.spotify.com/v1/me", {
@@ -200,6 +201,38 @@ class SpotifyService {
         reject({ status: 500, message: "Unable to fetch albums from Spotify. Please try again later." });
       });
     });
+  }
+
+  public static createFavoritesPlaylist = (accessToken: string, spotifyUserId: string) => {
+    return axios.post(
+      `https://api.spotify.com/v1/users/${spotifyUserId}/playlists`,
+      {
+        name: SpotifyService.favoritesName,
+        public: false,
+        description: "Songs marked as favorite in Spotiqu app"
+      },
+      {
+        headers: {
+          "Content-Type": "text/plain",
+          "Authorization": "Bearer " + accessToken
+        }
+      }
+    );
+  }
+
+  public static updateFavoriteTracks = (accessToken: string, playlistId: string, trackIds: string[]) => {
+    return axios.put(
+      `https://api.spotify.com/v1/playlists/${playlistId}/tracks`,
+      {
+        uris: trackIds
+      },
+      {
+        headers: {
+          "Content-Type": "text/plain",
+          "Authorization": "Bearer " + accessToken
+        }
+      }
+    );
   }
 
   public static startSong = (accessToken: string, ids: string[], deviceId: string) => {

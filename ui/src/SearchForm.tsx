@@ -71,6 +71,7 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
     this.submitForm = this.submitForm.bind(this);
     this.clearSearch = this.clearSearch.bind(this);
     this.toggleFavorite = this.toggleFavorite.bind(this);
+    this.exportToSpotify = this.exportToSpotify.bind(this);
     this.hashSearch();
   }
 
@@ -301,7 +302,14 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
     }
 
     const tracks = [];
-    tracks.push(<h4 key="title">{this.state.title}</h4>);
+    tracks.push(
+      <h4 key="title">
+        {this.state.title}
+        {this.state.title === "My Spotiqu favorites"
+          ? <span className="saveToSpotify" title="Save as Spotify playlist" onClick={this.exportToSpotify}><FontAwesomeIcon icon="save" /></span>
+          : null}
+      </h4>
+    );
     return tracks.concat(this.state.tracks.map((track, i) => (
       <Track
         name={track.name}
@@ -353,6 +361,15 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
           playlists: [],
           title: "Tracks",
         });
+      }).catch(err => {
+        this.props.onError(err.response.data.message);
+      });
+  }
+
+  public exportToSpotify() {
+    axios.post(config.backend.url + "/exportFavorites")
+      .then(response => {
+        console.log(response);
       }).catch(err => {
         this.props.onError(err.response.data.message);
       });
