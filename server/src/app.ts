@@ -708,7 +708,7 @@ app.post("/youtubeSearch", async (req, res) => {
     if (err) {
       logger.error(`Unable to search from YouTube`, [passcode, user]);
       logger.error(err);
-      throw { status: 500, message: "Error occurred while searching from YouTube. Please try again." };
+      return res.status(500).json({ message: "Error occurred while searching from YouTube. Please try again." });
     }
 
     if (!results) {

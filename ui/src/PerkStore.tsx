@@ -130,21 +130,7 @@ export class PerkStore extends React.Component<IPerkStoreProps, IPerkStoreState>
 
   public render() {
     return (
-      <div className="dropup">
-        <button className="btn btn-secondary footerMenu"
-          onClick={this.dropdownClicked}
-          type="button"
-          id="perksButton"
-          data-toggle="dropdown"
-          aria-haspopup="true"
-          aria-expanded="false">
-          <FontAwesomeIcon icon="store" />
-        </button>
-        <div className={"dropdown-menu perksDropdown " + (this.state.dropdownVisible ? "show" : "hide")} aria-labelledby="perksButton">
-          {this.renderPerks()}
-        </div>
-        <div className={"menuOverlay " + (this.state.dropdownVisible ? "visible" : "hidden")} onClick={this.hideMenu} />
-      </div>
+      this.renderPerks()
     );
   }
 

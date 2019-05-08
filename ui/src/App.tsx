@@ -81,7 +81,7 @@ export class App extends React.Component<{}, IState> {
     this.authorize = this.authorize.bind(this);
     this.onPlaylistSelected = this.onPlaylistSelected.bind(this);
     this.onPauseResume = this.onPauseResume.bind(this);
-    this.refreshCurrentlyPlaying = this.refreshCurrentlyPlaying.bind(this);
+    this.onVoted = this.onVoted.bind(this);
     this.getSettings = this.getSettings.bind(this);
     this.updateSettings = this.updateSettings.bind(this);
     this.closeAlert = this.closeAlert.bind(this);
@@ -104,6 +104,7 @@ export class App extends React.Component<{}, IState> {
     this.removeQueue = this.removeQueue.bind(this);
     this.goHome = this.goHome.bind(this);
     this.getPerks = this.getPerks.bind(this);
+    this.goStore = this.goStore.bind(this);
   }
 
   public componentDidMount() {
@@ -114,6 +115,13 @@ export class App extends React.Component<{}, IState> {
 
   protected goHome() {
     window.location.hash = "";
+    this.refreshData();
+  }
+
+  protected goStore() {
+    console.log(window.location.hash);
+    window.location.hash = "store";
+    this.getPerks();
   }
 
   protected joinQueue() {
@@ -384,8 +392,11 @@ export class App extends React.Component<{}, IState> {
     }, 500);
   }
 
-  protected refreshCurrentlyPlaying() {
-    setTimeout(this.getCurrentTrack, 500);
+  protected onVoted() {
+    setTimeout(() => {
+      this.getCurrentTrack();
+      this.getQueue();
+    }, 500);
   }
   protected onPlaylistSelected() {
     this.getCurrentTrack();
@@ -471,6 +482,14 @@ export class App extends React.Component<{}, IState> {
           {this.state.responseMsg ? (
             <AlertBox alert={this.state.responseMsg} close={this.closeAlert} />
           ) : null}
+          <div className="row navIcons">
+            <div className="col-md-8 offset-md-4">
+              <span className="navIcon" title="Home" onClick={this.goHome}><FontAwesomeIcon icon="home" /></span>
+              {this.state.user && this.state.settings && this.state.settings.gamify
+                ? <span className="navIcon" title="Store" onClick={this.goStore}><FontAwesomeIcon icon="store" /></span>
+                : null}
+            </div>
+          </div>
           <div className="row">
             <div className="col-md-4">
               <div className="row">
@@ -479,7 +498,7 @@ export class App extends React.Component<{}, IState> {
                   currentTrack={this.state.currentTrack}
                   isOwner={this.state.isOwner}
                   user={this.state.user}
-                  onVoted={this.refreshCurrentlyPlaying}
+                  onVoted={this.onVoted}
                   onPauseResume={this.onPauseResume}
                   onSongEnd={this.onSongEnd}
                   refreshData={this.refreshData}
@@ -503,11 +522,18 @@ export class App extends React.Component<{}, IState> {
                 />
               </div>
             </div>
-            <div className="col-md-8">
+            {window.location.hash === "#store"
+              ? <div className="col-md-8">
+                  <h1>{this.state.settings ? this.state.settings.name : ""} Store</h1>
+                  <PerkStore
+                    perks={this.state.perks}
+                    user={this.state.user!}
+                    onBuyOrUpgrade={this.refreshData}
+                    onError={this.onError}
+                  />
+                </div>
+            : <div className="col-md-8">
               <h1>{this.state.settings ? this.state.settings.name : ""}</h1>
-              <div className="homeIcon" onClick={this.goHome}>
-                  <FontAwesomeIcon icon="home" />
-              </div>
               <Tabs
                 selectedTabClassName="source-tab--selected"
                 selectedTabPanelClassName="source-tab-panel--selected"
@@ -542,7 +568,7 @@ export class App extends React.Component<{}, IState> {
                   />
                 </TabPanel>
               </Tabs>
-            </div>
+            </div>}
           </div>
           <div className="footer fixed-bottom d-flex">
             {this.state.user ? (
@@ -571,14 +597,6 @@ export class App extends React.Component<{}, IState> {
               leaveQueue={this.leaveQueue}
               removeQueue={this.removeQueue}
             />
-            {this.state.user && this.state.settings && this.state.settings.gamify ? (
-              <PerkStore
-                perks={this.state.perks}
-                user={this.state.user}
-                onBuyOrUpgrade={this.refreshData}
-                onError={this.onError}
-              />
-            ) : null}
             {this.state.isOwner ? <DeviceSelect onError={this.onError} /> : null}
             {this.state.isOwner && this.state.settings ? (
               <Settings
@@ -622,18 +640,14 @@ export class App extends React.Component<{}, IState> {
                     placeholder="Passcode"
                     onChange={this.handleChangeEvent}
                   />
-                  <button type="submit" className="btn btn-primary w-100" onClick={this.joinQueue}>
-                    Join
-                                    </button>
+                  <button type="submit" className="btn btn-primary w-100" onClick={this.joinQueue}>Join</button>
                   <p className="error">{this.state.joinError}</p>
                   {this.state.reactivate ? (
                     <button
                       type="submit"
                       className="btn btn-primary w-100"
                       onClick={this.reactivate}
-                    >
-                      Reactivate
-                                        </button>
+                    >Reactivate</button>
                   ) : null}
                 </div>
               </div>
@@ -664,9 +678,6 @@ export class App extends React.Component<{}, IState> {
         }
       })
       .catch(err => {
-        axios.get(config.backend.url + "/logout").then(resp => {
-          window.location.replace("/");
-        });
         this.onError(err.response.data.message);
       });
   }

@@ -174,7 +174,7 @@ input.search {
     padding-top: 1em;
 }
 .searchForm.stuck {
-    background-color: #393939;
+    background-color: #151515;
 }
 
 .queue {
@@ -545,12 +545,13 @@ h1 {
     color: red;
 }
 
-.homeIcon {
-    display: inline-block;
-    position: absolute;
-    padding: 6px 12px 4px;
+.navIcons {
+    padding: 6px 0 4px;
     cursor: pointer;
     z-index: 100;
+}
+.navIcon {
+  margin-right: 0.7em;
 }
 
 ul {
@@ -559,6 +560,7 @@ ul {
 
 .source-tab-list {
     margin-bottom: -16px;
+    padding-left: 21px;
 }
 
 .source-tab {

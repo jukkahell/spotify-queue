@@ -2,9 +2,9 @@ import { library } from "@fortawesome/fontawesome-svg-core";
 import { fab } from "@fortawesome/free-brands-svg-icons";
 import { far } from "@fortawesome/free-regular-svg-icons";
 import {
-    faArrowCircleUp, faBars, faCheckCircle, faClipboardCheck, faClipboardList, faClone,
+    faArrowCircleUp, faBan, faBars, faCheckCircle, faClipboardCheck, faClipboardList, faClone,
     faCog, faCoins, faDesktop, faDice, faEdit, faExchangeAlt, faForward, faGamepad, faHandshake, faHome,
-    faLayerGroup, faLevelUpAlt, faLink, faMinusCircle, faMobile, faPauseCircle, faPlayCircle, faPlusCircle,
+    faLayerGroup, faLevelUpAlt, faLink, faListOl, faMinusCircle, faMobile, faPauseCircle, faPlayCircle, faPlusCircle,
     faRandom, faSave, faSearch, faShare, faShareAlt, faShieldAlt, faSignInAlt, faSignOutAlt, faSlidersH,
     faStar, faStore, faThumbsDown, faThumbsUp, faTimesCircle, faTrashAlt, faUndo, faUnlock, faUser, faUsers,
     faVolumeOff, faVolumeUp,
@@ -24,7 +24,8 @@ library.add(
     faMinusCircle, faClone, faArrowCircleUp, faClipboardCheck, faShare,
     faSearch, faClipboardList, faDice, faLayerGroup, faTimesCircle, faUsers,
     faUndo, faEdit, faSave, faShieldAlt, faUser, faStar, faHandshake,
-    faSignInAlt, faHome, faStore, faLevelUpAlt, faCoins, fab, far
+    faSignInAlt, faHome, faStore, faLevelUpAlt, faCoins, faBan, faListOl,
+    fab, far
 );
 axios.defaults.withCredentials = true;
 

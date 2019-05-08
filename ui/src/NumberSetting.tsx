@@ -4,6 +4,8 @@ import * as React from "react";
 export interface INumberSettingProps {
     value: number;
     step: number;
+    min?: number;
+    max?: number;
     updateValue: (val: number) => void;
 }
 
@@ -23,7 +25,10 @@ export class NumberSetting extends React.Component<INumberSettingProps> {
 
     protected decrease(e: React.MouseEvent<HTMLElement>) {
         e.preventDefault();
-        this.props.updateValue((this.props.value || 0) - this.props.step);
+        const newValue = (this.props.value || 0) - this.props.step;
+        let cappedValue = this.props.min ? Math.max(newValue, this.props.min) : newValue;
+        cappedValue = this.props.max ? Math.min(newValue, this.props.max) : cappedValue;
+        this.props.updateValue(cappedValue);
     }
 
     public render() {

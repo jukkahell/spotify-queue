@@ -84,6 +84,7 @@ export interface SettingsDao {
   playlist: string;
   max_sequential_tracks: number;
   spotify_login: boolean;
+  ban_vote_count: number;
 }
 
 export interface Settings {
@@ -97,6 +98,7 @@ export interface Settings {
   playlist: string | null;
   maxSequentialTracks: number;
   spotifyLogin: boolean;
+  banVoteCount: number;
 }
 
 export interface UserDao {

@@ -46,7 +46,7 @@ class SpotifyService {
         currentlyRefreshing[passcode] = 1;
         logger.info("Getting refresh token...", { user, passcode });
         const response: any = await SpotifyService.refreshAccessToken(refreshToken);
-        delete currentlyRefreshing[passcode];
+        setTimeout(() => delete currentlyRefreshing[passcode], 1000);
         return response.data;
       } else {
         return undefined;

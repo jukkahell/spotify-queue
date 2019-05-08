@@ -109,7 +109,11 @@ class QueueService {
     if (users && users.rowCount === 1) {
       return QueueService.mapUserDao(users.rows[0]);
     }
-    throw { status: 404, message: "User not found with given id" };
+    let message = "User not found with given id."
+    if (userId) {
+      message += " Maybe try logging in again."
+    }
+    throw { status: 404, message };
   }
 
   public static async findUserBySpotifyId(spotifyUserId: string): Promise<User> {
@@ -216,6 +220,7 @@ class QueueService {
       playlist: settingsDao.playlist,
       maxSequentialTracks: settingsDao.max_sequential_tracks,
       spotifyLogin: settingsDao.spotify_login,
+      banVoteCount: settingsDao.ban_vote_count,
     };
   }
 
@@ -340,6 +345,7 @@ class QueueService {
       const voteSum = votes.reduce((sum, v) => sum + v.value, 0);
       if (voteSum <= -settings.skipThreshold) {
         logger.info(`Got downvote form ${Math.abs(voteSum)}/${settings.skipThreshold} users. Skipping this song...`, { user, passcode });
+        currentTrack.votes = votes;
         QueueService.startNextTrack(passcode, user, currentTrack);
       }
     } catch(err) {
@@ -441,18 +447,20 @@ class QueueService {
       randomQueue: false,
       skipThreshold: 5,
       spotifyLogin: false,
+      banVoteCount: 10,
     };
 
     const createSettingsQuery = `
       INSERT INTO settings (
         passcode, name, gamify, max_duplicate_tracks, number_of_tracks_per_user, random_playlist, 
-        random_queue, skip_threshold, max_sequential_tracks, spotify_login
+        random_queue, skip_threshold, max_sequential_tracks, spotify_login, ban_vote_count
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`;
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`;
 
     await db.query(createSettingsQuery, [
       passcode, settings.name, settings.gamify, settings.maxDuplicateTracks, settings.numberOfTracksPerUser,
-      settings.randomPlaylist, settings.randomQueue, settings.skipThreshold, settings.maxSequentialTracks, settings.spotifyLogin
+      settings.randomPlaylist, settings.randomQueue, settings.skipThreshold, settings.maxSequentialTracks, settings.spotifyLogin,
+      settings.banVoteCount,
     ]);
 
     return settings;
@@ -977,25 +985,40 @@ class QueueService {
         }
       }
 
-      // If sequential tracks are restricted and the last song in the queue is added by this user
       const tracks = queue.tracks;
-      if (settings.maxSequentialTracks && tracks.length > 0 && tracks[tracks.length - 1].userId === userId) {
-        let sequentialCount = 0
-        for (let i = tracks.length - 1; i >= 0; i--) {
-          if (tracks[i].userId === userId) {
-            sequentialCount++;
-          } else {
-            break;
-          }
-        }
+      // If total number of tracks per user is restricted. Start from 1 if current song is this user's.
+      const startFrom = queue.currentTrack && queue.currentTrack.userId === userId ? 1 : 0;
+      const userAddedTracks = tracks.reduce((sum, track) => track.userId === userId ? sum + 1 : sum, startFrom);
+      if (settings.numberOfTracksPerUser <= userAddedTracks) {
+        throw {
+          status: 403,
+          message: `Queuing failed. Max queued songs per user is set to ${settings.numberOfTracksPerUser}.`
+        };
+      }
 
-        logger.info(`${sequentialCount}/${settings.maxSequentialTracks} sequential songs for user...`, { passcode, user: userId });
-        if (sequentialCount >= settings.maxSequentialTracks) {
-          throw {
-            status: 403,
-            message: `Queuing failed. Max sequential songs per user is set to ${settings.maxSequentialTracks}.`
-          };
+      let sequentialCount = queue.currentTrack && queue.currentTrack.userId === userId ? 1 : 0;
+      for (let i = tracks.length - 1; i >= 0; i--) {
+        if (tracks[i].userId === userId) {
+          sequentialCount++;
+        } else {
+          break;
         }
+      }
+      logger.info(`${sequentialCount}/${settings.maxSequentialTracks} sequential songs for user...`, { passcode, user: userId });
+      if (sequentialCount >= settings.maxSequentialTracks) {
+        throw {
+          status: 403,
+          message: `Queuing failed. Max sequential songs per user is set to ${settings.maxSequentialTracks}.`
+        };
+      }
+
+      // If track is banned due too many minus votes
+      const trackVotesResult = await db.query("SELECT votes FROM history WHERE track_uri = $1", [trackUri]);
+      if (trackVotesResult.rowCount > 0 && -settings.banVoteCount >= trackVotesResult.rows[0].votes) {
+        throw {
+          status: 403,
+          message: `Queuing failed. Song is banned due to too many (${trackVotesResult.rows[0].votes}) downvotes.`
+        };
       }
 
       logger.info(`Getting track info for ${trackUri}`, { user: userId, passcode });
@@ -1205,12 +1228,14 @@ class QueueService {
         random_queue = $6,
         skip_threshold = $7,
         max_sequential_tracks = $8,
-        spotify_login = $9
-      WHERE passcode = $10`;
+        spotify_login = $9,
+        ban_vote_count = $10
+      WHERE passcode = $11`;
       db.query(updateQuery, [
         settings.name, settings.gamify, settings.maxDuplicateTracks, 
         settings.numberOfTracksPerUser, settings.randomPlaylist, settings.randomQueue, 
         settings.skipThreshold, settings.maxSequentialTracks, settings.spotifyLogin,
+        settings.banVoteCount,
         passcode,
       ]);
       return settings;
@@ -1249,6 +1274,7 @@ class QueueService {
       if (queue.tracks.length === 0 && queue.playlistTracks.length === 0) {
         logger.info("No more songs in queue. Stop playing.", { user, passcode });
         await QueueService.stopPlaying(queue, user);
+        await db.query("UPDATE settings SET playlist = null WHERE passcode = $1", [passcode]);
         return;
       }
       const nextIndex = (queue.tracks.length > 0) ?
@@ -1271,7 +1297,7 @@ class QueueService {
         }
       } else {
         logger.info(`YouTube track ${queuedItem.track.id} started. Client will trigger the next song.`, { user, passcode });
-        QueueService.stopPlaying(queue, user);
+        await QueueService.startPlaying(queue.accessToken!, passcode, user, { ...queuedItem, progress: 0, currentlyPlaying: false, votes: [] });
       }
     } catch (err) {
       logger.error("Error occurred while starting next track", { user, passcode });
@@ -1395,7 +1421,7 @@ class QueueService {
         if (err.status === 404) {
           throw { status: 204, message: "" }
         }
-
+        logger.warn(err);
         logger.warn("Unable to get track progress from Spotify...mobile device?", { user: userId, passcode });
         // If we think we are playing, just start playing
         if (queue.isPlaying && queue.deviceId) {

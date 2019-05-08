@@ -24,10 +24,12 @@ class Acl {
     if (refreshToken) {
       queue.refreshToken = refreshToken;
     }
-    QueueService.activateQueue(queue).catch(err => {
+    try {
+      await QueueService.activateQueue(queue);
+    } catch(err) {
       logger.error("Failed to update queue refresh token.", { id: userId });
       logger.error(err);
-    });
+    }
   }
 
   public static async saveUserAccessToken(passcode: string, userId: string, accessToken: string, expiresIn: number, refreshToken?: string) {
@@ -83,16 +85,16 @@ class Acl {
         throw { status: 403, message: "Queue inactive. Owner should reactivate it." };
       } else {
         const authResponse: any = await SpotifyService.isAuthorized(passcode, userId, queue.accessTokenAcquired, queue.expiresIn, queue.refreshToken);
+        const isOwner = queue.owner === userId;
         if (authResponse) {
-          logger.info(`Got refresh token. Saving it...`, { user: userId, passcode });
-          if (userId === queue.owner) {
+          if (isOwner) {
+            logger.info(`Got refresh token. Saving it...`, { user: userId, passcode });
             await Acl.saveAccessToken(passcode, userId, authResponse.access_token,
               authResponse.expires_in, authResponse.refresh_token);
             await Acl.saveUserAccessToken(passcode, userId, authResponse.access_token,
             authResponse.expires_in, authResponse.refresh_token);
           }
         }
-        const isOwner = queue.owner === userId;
         return { isAuthorized: true, passcode, isOwner };
       }
     } catch (err) {

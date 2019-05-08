@@ -13,6 +13,7 @@ export interface ISettings {
     playlist: string;
     maxSequentialTracks: number;
     spotifyLogin: boolean;
+    banVoteCount: number;
 }
 
 export interface IShareProps {
@@ -46,6 +47,8 @@ export class Settings extends React.Component<IShareProps, IShareState> {
         this.updateSkipThreshold = this.updateSkipThreshold.bind(this);
         this.updateDuplicates = this.updateDuplicates.bind(this);
         this.updateSequential = this.updateSequential.bind(this);
+        this.updateBanVoteCount = this.updateBanVoteCount.bind(this);
+        this.updateNumberOfTracksPerUser = this.updateNumberOfTracksPerUser.bind(this);
         this.toggleSpotifyLogin = this.toggleSpotifyLogin.bind(this);
         this.editName = this.editName.bind(this);
         this.updateName = this.updateName.bind(this);
@@ -101,6 +104,16 @@ export class Settings extends React.Component<IShareProps, IShareState> {
     public updateSequential(value: number) {
         this.props.settings.maxSequentialTracks = value;
         this.props.updateSettings(this.props.settings);
+    }
+
+    public updateBanVoteCount(value: number) {
+      this.props.settings.banVoteCount = value;
+      this.props.updateSettings(this.props.settings);
+    }
+
+    public updateNumberOfTracksPerUser(value: number) {
+      this.props.settings.numberOfTracksPerUser = value;
+      this.props.updateSettings(this.props.settings);
     }
 
     public editName() {
@@ -167,17 +180,27 @@ export class Settings extends React.Component<IShareProps, IShareState> {
             <a className="dropdown-item settingsMenuItem" key="skipThreshold" href="#" id="skipThreshold">
                 <FontAwesomeIcon icon="thumbs-down" />
                 <span className="settingName">Skip if downvoted by {this.props.settings.skipThreshold} users</span>
-                <NumberSetting value={this.props.settings.skipThreshold} step={1} updateValue={this.updateSkipThreshold} />
+                <NumberSetting value={this.props.settings.skipThreshold} min={1} step={1} updateValue={this.updateSkipThreshold} />
+            </a>,
+            <a className="dropdown-item settingsMenuItem " key="numberOfTracksPerUser" href="#" id="numberOfTracksPerUser">
+                <FontAwesomeIcon icon="list-ol" />
+                <span className="settingName">Max {this.props.settings.numberOfTracksPerUser} songs in queue per user</span>
+                <NumberSetting value={this.props.settings.numberOfTracksPerUser} min={1} step={1} updateValue={this.updateNumberOfTracksPerUser} />
             </a>,
             <a className="dropdown-item settingsMenuItem " key="duplicates" href="#" id="duplicates">
                 <FontAwesomeIcon icon="clone" />
                 <span className="settingName">Max {this.props.settings.maxDuplicateTracks} duplicate songs in queue</span>
-                <NumberSetting value={this.props.settings.maxDuplicateTracks} step={1} updateValue={this.updateDuplicates} />
+                <NumberSetting value={this.props.settings.maxDuplicateTracks} min={1} step={1} updateValue={this.updateDuplicates} />
             </a>,
             <a className="dropdown-item settingsMenuItem " key="sequential" href="#" id="sequential">
                 <FontAwesomeIcon icon="layer-group" />
                 <span className="settingName">Max {this.props.settings.maxSequentialTracks} sequential songs per user</span>
-                <NumberSetting value={this.props.settings.maxSequentialTracks} step={1} updateValue={this.updateSequential} />
+                <NumberSetting value={this.props.settings.maxSequentialTracks} min={1} step={1} updateValue={this.updateSequential} />
+            </a>,
+            <a className="dropdown-item settingsMenuItem " key="banVoteCount" href="#" id="banVoteCount">
+                <FontAwesomeIcon icon="ban" />
+                <span className="settingName">Ban song after {this.props.settings.banVoteCount} minus votes</span>
+                <NumberSetting value={this.props.settings.banVoteCount} min={0} step={1} updateValue={this.updateBanVoteCount} />
             </a>,
             <a className="dropdown-item settingsMenuItem " key="spotifyLogin" href="#" id="spotifyLogin" onClick={this.toggleSpotifyLogin}>
                 <FontAwesomeIcon icon={["fab", "spotify"]} />
