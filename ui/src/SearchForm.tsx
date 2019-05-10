@@ -20,6 +20,7 @@ interface ISearchFormProps {
   isOwner: boolean;
   user: IUser | null;
   onQueued: () => void;
+  onSavedToSpotify: () => void;
   onPlaylistSelected: () => void;
   onError: (msg: string) => void;
   onToggleFromFavorites: (trackId: string, source: string, isFavorite: boolean) => void;
@@ -369,7 +370,7 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
   public exportToSpotify() {
     axios.post(config.backend.url + "/exportFavorites")
       .then(response => {
-        console.log(response);
+        this.props.onSavedToSpotify();
       }).catch(err => {
         this.props.onError(err.response.data.message);
       });

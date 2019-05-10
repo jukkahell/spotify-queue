@@ -105,6 +105,7 @@ export class App extends React.Component<{}, IState> {
     this.goHome = this.goHome.bind(this);
     this.getPerks = this.getPerks.bind(this);
     this.goStore = this.goStore.bind(this);
+    this.onSavedToSpotify = this.onSavedToSpotify.bind(this);
   }
 
   public componentDidMount() {
@@ -304,6 +305,16 @@ export class App extends React.Component<{}, IState> {
 
     this.setState({
       responseMsg: { msg: "Queued", className: "alert-success" },
+    });
+
+    setTimeout(() => {
+      this.setState({ responseMsg: null });
+    }, 2000);
+  }
+
+  protected onSavedToSpotify() {
+    this.setState({
+      responseMsg: { msg: "Playlist exported to Spotify", className: "alert-success" },
     });
 
     setTimeout(() => {
@@ -552,6 +563,7 @@ export class App extends React.Component<{}, IState> {
                     isOwner={this.state.isOwner}
                     user={this.state.user}
                     onQueued={this.onQueued}
+                    onSavedToSpotify={this.onSavedToSpotify}
                     onPlaylistSelected={this.onPlaylistSelected}
                     onToggleFromFavorites={this.onToggleFromFavorites}
                     onError={this.onError}
