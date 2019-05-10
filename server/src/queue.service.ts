@@ -996,7 +996,7 @@ class QueueService {
         };
       }
 
-      let sequentialCount = queue.currentTrack && queue.currentTrack.userId === userId ? 1 : 0;
+      let sequentialCount = tracks.length === 0 && queue.currentTrack && queue.currentTrack.userId === userId ? 1 : 0;
       for (let i = tracks.length - 1; i >= 0; i--) {
         if (tracks[i].userId === userId) {
           sequentialCount++;
