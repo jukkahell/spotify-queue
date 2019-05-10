@@ -543,8 +543,7 @@ class QueueService {
         realUser.id = userId;
       } catch (err) {
         logger.error(err);
-        const spotifyUser = await QueueService.findUserBySpotifyId(spotifyUserId);
-        realUser = spotifyUser || await QueueService.getUser(passcode, userId);
+        realUser = await QueueService.getUser(passcode, userId);
       }
       
       if (!realUser) {
