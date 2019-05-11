@@ -342,6 +342,7 @@ class QueueService {
       // Skip the song if enough downvotes
       const votes = await QueueService.getTrackVotes(passcode, currentTrack.id);
       const settings = await QueueService.getSettings(passcode);
+      await QueueService.addPoints(passcode, user, 1);
       const voteSum = votes.reduce((sum, v) => sum + v.value, 0);
       if (voteSum <= -settings.skipThreshold) {
         logger.info(`Got downvote form ${Math.abs(voteSum)}/${settings.skipThreshold} users. Skipping this song...`, { user, passcode });
@@ -735,9 +736,9 @@ class QueueService {
   public static async getTop(passcode: string, userId: string): Promise<SpotifyTrack[]> {
     try {
       logger.info(`Getting top songs...`, { passcode, user: userId });
-      const tracks = await db.query("SELECT * FROM history WHERE passcode = $1 ORDER BY votes DESC, times_played DESC LIMIT 100", [passcode]);
+      const tracks = await db.query("SELECT * FROM history WHERE passcode = $1 AND votes >= 0 ORDER BY votes DESC, times_played DESC LIMIT 100", [passcode]);
       if (tracks.rowCount > 0) {
-        const top: SpotifyTrack[] = tracks.rows.map(t => (t.data));
+        const top: SpotifyTrack[] = tracks.rows.map(t => ({ ...t.data, votes: t.votes }));
         return await QueueService.markFavorites(passcode, userId, top);
       }
       return [];
@@ -807,24 +808,30 @@ class QueueService {
 
   public static getAllPerks(): Perk[] {
     return [
-      { name: "move_up", price: 50, requiredKarma: 5, level: 0 },
-      { name: "queue_more_1", price: 100, requiredKarma: 10, level: 0 },
-      { name: "queue_sequential_1", price: 100, requiredKarma: 15, level: 0 },
-      { name: "remove_song", price: 200, requiredKarma: 20, level: 0 },
-      { name: "skip_song", price: 200, requiredKarma: 20, level: 0 },
-      { name: "queue_more_2", price: 200, requiredKarma: 20, level: 0 },
-      { name: "queue_sequential_2", price: 250, requiredKarma: 25, level: 0 },
-      { name: "move_first", price: 300, requiredKarma: 30, level: 0 },
+      { name: "move_up", price: 50, requiredKarma: 5, level: 0, maxLevel: 2, karmaAllowedLevel: 0 },
+      { name: "queue_more_1", price: 100, requiredKarma: 10, level: 0, maxLevel: 5, karmaAllowedLevel: 0 },
+      { name: "queue_sequential_1", price: 150, requiredKarma: 15, level: 0, maxLevel: 3, karmaAllowedLevel: 0 },
+      { name: "protect_song", price: 150, requiredKarma: 15, level: 0, maxLevel: 1, karmaAllowedLevel: 0 },
+      { name: "remove_song", price: 200, requiredKarma: 20, level: 0, maxLevel: 2, karmaAllowedLevel: 0 },
+      { name: "skip_song", price: 200, requiredKarma: 20, level: 0, maxLevel: 2, karmaAllowedLevel: 0 },
+      { name: "move_first", price: 300, requiredKarma: 30, level: 0, maxLevel: 2, karmaAllowedLevel: 0 },
     ];
   }
 
   public static async getAllPerksWithUserLevel(passcode: string, userId: string): Promise<Perk[]> {
     const all = QueueService.getAllPerks();
     const userPerks = await QueueService.getUserPerks(passcode, userId);
+    const user = await QueueService.getUser(passcode, userId);
     return all.map(p => {
       const userPerk = userPerks.find(up => up.name === p.name);
       const userLevel = userPerk ? userPerk.level : 0;
-      return { ...p, level: userLevel };
+      return { 
+        ...p,
+        level: userLevel,
+        upgradeKarma: p.requiredKarma * (userLevel + 1),
+        price: p.price * (userLevel + 1),
+        karmaAllowedLevel: Math.min(Math.floor(user.karma / p.requiredKarma), userLevel)
+      };
     });
   }
 
@@ -857,6 +864,26 @@ class QueueService {
       await db.query(query, [perk.name, userId, passcode, 1]);
     } else {
       throw { status: 403, message: "Not enough points to buy this perk" }
+    }
+  }
+
+  public static async upgradePerk(passcode: string, userId: string, perkName: PerkName) {
+    const user = await QueueService.getUser(passcode, userId);
+    const perks = await QueueService.getAllPerksWithUserLevel(passcode, userId);
+    logger.info(`Trying to upgrade ${perkName}...`, { passcode, user: userId });
+
+    const perk = perks.find(p => p.name === perkName);
+    if (!perk) {
+      throw { status: 400, message: "Given perk not found" };
+    }
+
+    if (user.points >= perk.price) {
+      QueueService.addPoints(passcode, userId, -perk.price);
+      logger.info(`Upgrading ${perkName} for user...`, { passcode, user: userId });
+      const query = "UPDATE user_perks SET level = $1 WHERE passcode = $2 AND user_id = $3 AND perk = $4";
+      await db.query(query, [perk.level + 1, passcode, userId, perk.name]);
+    } else {
+      throw { status: 403, message: "Not enough points to upgrade this perk" }
     }
   }
 
@@ -970,6 +997,10 @@ class QueueService {
   public static async addToQueue(userId: string, passcode: string, trackUri: string, source: string): Promise<FullQueue> {
     try {
       const queue = await QueueService.getFullQueue(passcode, userId);
+      const perks = await QueueService.getAllPerksWithUserLevel(passcode, userId);
+      const queuePerkLevel = Gamify.userPerkLevel("queue_more_1", perks);
+      const sequentialPerkLevel = Gamify.userPerkLevel("queue_sequential_1", perks);
+
       const settings = queue.settings;
       if (settings.maxDuplicateTracks) {
         const duplicateCountQuery = "SELECT COUNT(*) as count FROM tracks WHERE currently_playing = false AND playlist_track = false AND track_uri = $1 AND passcode = $2";
@@ -988,7 +1019,7 @@ class QueueService {
       // If total number of tracks per user is restricted. Start from 1 if current song is this user's.
       const startFrom = queue.currentTrack && queue.currentTrack.userId === userId ? 1 : 0;
       const userAddedTracks = tracks.reduce((sum, track) => track.userId === userId ? sum + 1 : sum, startFrom);
-      if (settings.numberOfTracksPerUser <= userAddedTracks) {
+      if (settings.numberOfTracksPerUser + queuePerkLevel <= userAddedTracks) {
         throw {
           status: 403,
           message: `Queuing failed. Max queued songs per user is set to ${settings.numberOfTracksPerUser}.`
@@ -1004,14 +1035,14 @@ class QueueService {
         }
       }
       logger.info(`${sequentialCount}/${settings.maxSequentialTracks} sequential songs for user...`, { passcode, user: userId });
-      if (sequentialCount >= settings.maxSequentialTracks) {
+      if (sequentialCount >= settings.maxSequentialTracks + sequentialPerkLevel) {
         throw {
           status: 403,
           message: `Queuing failed. Max sequential songs per user is set to ${settings.maxSequentialTracks}.`
         };
       }
 
-      // If track is banned due too many minus votes
+      // If track is banned due too many downvotes
       const trackVotesResult = await db.query("SELECT votes FROM history WHERE track_uri = $1", [trackUri]);
       if (trackVotesResult.rowCount > 0 && -settings.banVoteCount >= trackVotesResult.rows[0].votes) {
         throw {

@@ -3,6 +3,7 @@ import axios from "axios";
 import * as React from "react";
 import { IUser } from "./App";
 import config from "./config";
+import { IPerk, PerkName } from "./PerkStore";
 import { ISettings } from "./Settings";
 import Track, { ITrackProps } from "./Track";
 
@@ -32,6 +33,7 @@ interface IQueueProps {
   currentTrack: IQueuedItem | null;
   settings: ISettings | null;
   user: IUser | null;
+  perks: IPerk[] | null;
   isOwner: boolean;
 }
 
@@ -39,6 +41,7 @@ interface IQueueState {
   contextMenuId: string | null;
   contextMenuTrack: IQueuedItem | null;
   contextMenuTargetPlaying: boolean;
+  contextMenuIndex: number;
 }
 
 export class Queue extends React.Component<IQueueProps, IQueueState> {
@@ -50,6 +53,7 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
       contextMenuId: null,
       contextMenuTrack: null,
       contextMenuTargetPlaying: false,
+      contextMenuIndex: 0,
     };
 
     this.removeFromQueue = this.removeFromQueue.bind(this);
@@ -75,6 +79,7 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
             artistId={this.props.currentTrack.track.artistId}
             duration={this.props.currentTrack.track.duration}
             key={"current-" + this.props.currentTrack.track.id}
+            index={-1}
             isPlaying={true}
             source={this.props.currentTrack.source}
             protectedTrack={this.props.currentTrack.protected}
@@ -155,45 +160,48 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
     }
 
     const menu = [];
-
     const playlistTrackForOwner = this.state.contextMenuTrack.playlistTrack && this.props.isOwner;
-    const skipCost = this.calculateSkipCost(this.state.contextMenuTrack.track);
+    const trackOwner = this.state.contextMenuTrack.userId === this.props.user!.id;
+    const removePerkLevel = this.userPerkLevel("remove_song");
+    const moveUpPerkLevel = this.userPerkLevel("move_up");
+    const skipPerkLevel = this.userPerkLevel("skip_song");
+    const protectPerkLevel = this.userPerkLevel("protect_song");
+    const removeOrSkipPerkLevel = this.state.contextMenuTargetPlaying ? skipPerkLevel : removePerkLevel;
+    const skipCost = this.calculateSkipCost(this.state.contextMenuTrack.track, removeOrSkipPerkLevel);
     const showPoints =
-      (this.props.settings!.gamify && this.state.contextMenuTrack.userId !== this.props.user!.id && !playlistTrackForOwner)
+      (this.props.settings!.gamify && !trackOwner && !playlistTrackForOwner)
         ? "(-" + skipCost + " pts)"
         : "";
-    if (this.props.settings!.gamify || this.state.contextMenuTrack.userId === this.props.user!.id || playlistTrackForOwner) {
-      if (!this.state.contextMenuTargetPlaying) {
+    if (!this.state.contextMenuTargetPlaying) {
+      if (trackOwner || removePerkLevel > 0) {
         menu.push(
           <a className={"dropdown-item"} key={"removeFromQueue"} href="#" onClick={this.removeFromQueue}>
             <FontAwesomeIcon icon="trash-alt" /> Remove from queue {showPoints}
           </a>
         );
-        if (this.props.settings && this.props.settings.gamify) {
-          menu.push(
-            <a className={"dropdown-item"} key={"moveUp"} href="#" onClick={this.moveUp}>
-              <FontAwesomeIcon icon="arrow-circle-up" /> Move up in queue (-5 pts)
-                        </a>
-          );
-        }
-      } else {
+      }
+      if (this.state.contextMenuIndex > 0 && moveUpPerkLevel > 0) {
         menu.push(
-          <a className={"dropdown-item"} key={"removeFromQueue"} href="#" onClick={this.removeFromQueue}>
-            <FontAwesomeIcon icon="forward" /> Skip {showPoints}
+          <a className={"dropdown-item"} key={"moveUp"} href="#" onClick={this.moveUp}>
+            <FontAwesomeIcon icon="arrow-circle-up" /> Move up in queue (-5 pts)
           </a>
         );
       }
+    } else if (playlistTrackForOwner || trackOwner || skipPerkLevel > 0) {
+      menu.push(
+        <a className={"dropdown-item"} key={"removeFromQueue"} href="#" onClick={this.removeFromQueue}>
+          <FontAwesomeIcon icon="forward" /> Skip {showPoints}
+        </a>
+      );
     }
 
     // If gamify enabled
-    if (this.props.settings
-      && this.props.settings.gamify
-      && !this.state.contextMenuTrack.protected) {
+    if (!this.state.contextMenuTrack.protected && protectPerkLevel > 0) {
       const protectCost = this.calculateProtectCost(this.state.contextMenuTrack.track);
       menu.push(
         <a className={"dropdown-item"} key={"protectTrack"} href="#" onClick={this.protectTrack}>
           <FontAwesomeIcon icon="shield-alt" /> Protect from skip (-{protectCost} pts)
-                </a>
+        </a>
       );
     }
 
@@ -203,7 +211,7 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
 
     return menu;
   }
-  protected showContextMenu(targetId: string, isPlaying: boolean) {
+  protected showContextMenu(targetId: string, isPlaying: boolean, index: number) {
     const track: IQueuedItem = (!isPlaying)
       ? this.props.queue!.find(q => q.id === targetId)!
       : this.props.currentTrack!;
@@ -211,6 +219,7 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
       contextMenuId: targetId,
       contextMenuTrack: track,
       contextMenuTargetPlaying: isPlaying,
+      contextMenuIndex: index,
     }));
   }
   protected hideMenu() {
@@ -239,6 +248,7 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
             artistId={queuedItem.track.artistId}
             duration={queuedItem.track.duration}
             key={i + "-" + queuedItem.track.id}
+            index={i}
             isPlaying={false}
             source={queuedItem.source}
             protectedTrack={queuedItem.protected}
@@ -274,9 +284,18 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
     const minutesLeft = Math.floor(millisLeft / 60000);
     return (minutesLeft + 1) * 5;
   }
-  private calculateSkipCost(track: ITrackProps) {
+  private calculateSkipCost(track: ITrackProps, perkLevel: number) {
     const millisLeft = track.duration - (track.progress || 0);
     const minutesLeft = Math.floor(millisLeft / 60000);
-    return (minutesLeft + 1) * 5;
+    const perkDiscount = perkLevel > 1 ? perkLevel : 0;
+    return (minutesLeft + 1) * (5 - perkDiscount);
+  }
+
+  private userPerkLevel(perkName: PerkName) {
+    if (!this.props.settings || !this.props.settings.gamify || !this.props.perks) {
+      return 0;
+    }
+    const perk = this.props.perks.find(perk => perk.name === perkName);
+    return perk ? perk.karmaAllowedLevel : 0;
   }
 }

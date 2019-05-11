@@ -401,6 +401,19 @@ app.post("/buyPerk", async (req, res) => {
   }
 });
 
+app.put("/upgradePerk", async (req, res) => {
+  const passcode = req.cookies.get("passcode");
+  const user = req.cookies.get("user", { signed: true });
+  const perk: PerkName = req.body.perk;
+
+  try {
+    await QueueService.upgradePerk(passcode, user, perk);
+    res.status(200).json("OK");
+  } catch(err) {
+    res.status(err.status).json({ message: err.message });
+  }
+});
+
 app.delete("/removeFromQueue", (req, res) => {
   const passcode = req.cookies.get("passcode");
   const user = req.cookies.get("user", { signed: true });

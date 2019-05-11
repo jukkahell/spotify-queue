@@ -140,7 +140,10 @@ export interface Perk {
   name: PerkName;
   price: number;
   requiredKarma: number;
+  upgradeKarma?: number;
   level: number;
+  karmaAllowedLevel: number;
+  maxLevel: number;
 }
 
-export type PerkName = "move_up" | "queue_more_1" | "queue_sequential_1" | "remove_song" | "skip_song" | "queue_more_2" | "queue_sequential_2" | "move_first";
+export type PerkName = "move_up" | "queue_more_1" | "queue_sequential_1" | "protect_song" | "remove_song" | "skip_song" | "move_first";

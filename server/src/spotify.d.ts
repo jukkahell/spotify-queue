@@ -8,6 +8,7 @@ export interface SpotifyTrack {
     cover: string;
     isFavorite: boolean;
     source: string;
+    votes?: number;
 }
 
 export interface SpotifyCurrentTrack {

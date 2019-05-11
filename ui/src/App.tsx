@@ -120,7 +120,6 @@ export class App extends React.Component<{}, IState> {
   }
 
   protected goStore() {
-    console.log(window.location.hash);
     window.location.hash = "store";
     this.getPerks();
   }
@@ -470,6 +469,7 @@ export class App extends React.Component<{}, IState> {
               <li>+1 point if you have a song queued when someone else's song ends.</li>
               <li>Points for how many minutes your song played. Maximum is the same amount it cost.</li>
               <li>Same amount of points how much votes your song gets. Can be negative as well.</li>
+              <li>+1 point for voting the currently playing song up or down.</li>
             </ul>
             <p>You can spend points on the following:</p>
             <ul>
@@ -527,6 +527,7 @@ export class App extends React.Component<{}, IState> {
                   onProtected={this.onProtected}
                   settings={this.state.settings}
                   user={this.state.user}
+                  perks={this.state.perks}
                   onQueued={this.onQueued}
                   onError={this.onError}
                   onToggleFromFavorites={this.onToggleFromFavorites}
@@ -539,6 +540,7 @@ export class App extends React.Component<{}, IState> {
                   <PerkStore
                     perks={this.state.perks}
                     user={this.state.user!}
+                    settings={this.state.settings}
                     onBuyOrUpgrade={this.refreshData}
                     onError={this.onError}
                   />

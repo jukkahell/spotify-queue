@@ -19,7 +19,9 @@ export interface ITrackProps {
     owned: boolean;
     source?: "youtube" | "spotify";
     isFavorite: boolean;
-    selectTrack: (targetId: string, isPlaying: boolean) => void;
+    votes?: number;
+    index: number;
+    selectTrack: (targetId: string, isPlaying: boolean, index: number) => void;
     selectArtist?: (targetId: string,  isPlaying: boolean) => void;
     toggleFromFavorites: (targetId: string, source: string, isFavorite: boolean) => void;
 }
@@ -36,7 +38,7 @@ export class Track extends React.Component<ITrackProps> {
 
     public selectTrack(e: React.MouseEvent<HTMLElement>) {
         e.preventDefault();
-        this.props.selectTrack(e.currentTarget.id, this.props.isPlaying);
+        this.props.selectTrack(e.currentTarget.id, this.props.isPlaying, this.props.index);
     }
 
     public selectArtist(e: React.MouseEvent<HTMLElement>) {
@@ -62,16 +64,20 @@ export class Track extends React.Component<ITrackProps> {
             protectedTrack,
             owned,
             source,
-            isFavorite
+            isFavorite,
+            votes,
         } = this.props;
 
         return (
-            <div className={this.props.className + (isPlaying ? " currentTrack " : "") + " trackItem"}>
+            <div className={this.props.className + " trackItem" + (isPlaying ? " currentTrack " : "")}>
                 <div className="toggleFavorite">
                     {this.toggleFromFavorites
                       ? <a className={"favorited"} href="#" onClick={this.toggleFromFavorites} title={isFavorite ? "Remove from favorites" : "Add to favorites"}>
                           <FontAwesomeIcon icon={[isFavorite ? "fas" : "far", "star"]} />
                         </a>
+                      : null}
+                    {votes || votes === 0
+                      ? <div className="votes">{votes}</div>
                       : null}
                 </div>
                 <div className="trackInfo">

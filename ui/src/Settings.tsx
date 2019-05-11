@@ -199,7 +199,7 @@ export class Settings extends React.Component<IShareProps, IShareState> {
             </a>,
             <a className="dropdown-item settingsMenuItem " key="banVoteCount" href="#" id="banVoteCount">
                 <FontAwesomeIcon icon="ban" />
-                <span className="settingName">Ban song after {this.props.settings.banVoteCount} minus votes</span>
+                <span className="settingName">Ban song after {this.props.settings.banVoteCount} downvotes</span>
                 <NumberSetting value={this.props.settings.banVoteCount} min={0} step={1} updateValue={this.updateBanVoteCount} />
             </a>,
             <a className="dropdown-item settingsMenuItem " key="spotifyLogin" href="#" id="spotifyLogin" onClick={this.toggleSpotifyLogin}>

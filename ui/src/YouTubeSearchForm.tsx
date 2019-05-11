@@ -139,6 +139,7 @@ export class SearchForm extends React.Component<IYouTubeSearchFormProps, IYouTub
                     name={track.name}
                     artist={track.artist}
                     id={track.id}
+                    index={i}
                     trackId={track.trackId}
                     artistId={track.artistId}
                     duration={track.duration}

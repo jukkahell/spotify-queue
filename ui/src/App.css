@@ -105,6 +105,11 @@ a.showMore:hover {
     border-color: #1ed760;
     font-weight: bold;
 }
+.btn-primary:disabled,
+.btn-primary:disabled:hover {
+    background: grey !important;
+    border-color: grey !important;
+}
 
 img.coverImage {
     width: 100%;
@@ -265,7 +270,7 @@ input.passcode {
 }
 .trackItem {
     display: grid;
-    grid-template-columns: 1.4em auto 3em;
+    grid-template-columns: min-content auto 3em;
     padding-bottom: 0.7em;
     width: 100%;
 }
@@ -604,17 +609,13 @@ ul {
   cursor: pointer;
   margin: 0;
   display: grid;
-  grid-template-columns: min-content auto min-content;
+  grid-template-columns: auto min-content;
 }
 
-.ownedPerk {
-  margin-right: 0.3em;
-}
-.availablePerk {
-  color: #1ed760;
-}
-.unavailablePerk {
-  color: red;
+.perkDescription {
+  font-size: 0.8em;
+  display: block;
+  margin-bottom: 0.3em;
 }
 
 .saveToSpotify {
@@ -622,4 +623,27 @@ ul {
   font-size: 0.7em;
   color: #1ed760;
   cursor: pointer;
+}
+
+.toggleFavorite {
+  display: flex;
+}
+.favorited {
+  margin-right: 0.3em;
+}
+.votes {
+  background-color: grey;
+  height: 18px;
+  width: 18px;
+  text-align: center;
+  border-radius: 1em;
+  font-size: 0.6em;
+  margin-top: 2px;
+  padding-top: 2px;
+  margin-right: 0.5em;
+}
+
+.exclamation {
+  color: yellow;
+  margin: 0 0.4em;
 }

@@ -320,12 +320,14 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
         artistId={track.artistId}
         duration={track.duration}
         key={i + "-" + track.id}
+        index={i}
         isPlaying={false}
         protectedTrack={false}
         owned={false}
         isFavorite={track.isFavorite}
         selectTrack={this.addToQueue}
         source={track.source}
+        votes={track.votes}
         toggleFromFavorites={this.toggleFavorite} />
     )));
   }

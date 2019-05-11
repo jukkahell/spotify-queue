@@ -44,6 +44,21 @@
             "date": 1557349311618,
             "name": "spotiqu-2019-05-09.log",
             "hash": "daa28ede9bd51efa03abe9655222bb69"
+        },
+        {
+            "date": 1557514127466,
+            "name": "spotiqu-2019-05-10.log",
+            "hash": "2727093950c0eabb2017f930e791a003"
+        },
+        {
+            "date": 1557567832936,
+            "name": "spotiqu-2019-05-11.log",
+            "hash": "ae448d1d401636b6b93c2f9e64393060"
+        },
+        {
+            "date": 1557610603848,
+            "name": "spotiqu-2019-05-12.log",
+            "hash": "d253ea9837574d298c30ac026e11f89e"
         }
     ]
 }

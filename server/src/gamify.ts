@@ -1,5 +1,5 @@
 import * as express from "express";
-import { User, FullQueue, CurrentTrack, QueueItem } from "./queue";
+import { User, FullQueue, CurrentTrack, QueueItem, PerkName, Perk } from "./queue";
 import SpotifyService from "./spotify.service";
 import { logger } from "./logger.service";
 import QueueService from "./queue.service";
@@ -17,6 +17,8 @@ export namespace Gamify {
       const queue = await QueueService.getFullQueue(passcode);
       const userIdx = getUser(queue, userId);
       const user = queue.users[userIdx];
+      const perks = await QueueService.getAllPerksWithUserLevel(passcode, userId);
+      const perkLevel = isPlaying ? userPerkLevel("skip_song", perks) : userPerkLevel("remove_song", perks);
 
       if (!queue.isPlaying) {
         return next();
@@ -29,6 +31,10 @@ export namespace Gamify {
       } else if (!isPlaying && (!queue.tracks || queue.tracks.length === 0) && (!queue.playlistTracks || queue.playlistTracks.length === 0)) {
         return res.status(404).json({
           message: `Can't remove anything since the queue is empty.`
+        });
+      } else if (perkLevel <= 0) {
+        return res.status(403).json({
+          message: `You don't own the perk or don't have enough karma to ${isPlaying ? "skip this song." : "remove songs from the queue."}`
         });
       }
 
@@ -44,7 +50,7 @@ export namespace Gamify {
       const removeTrack: SpotifyTrack = isPlaying ? queue.currentTrack!.track : queueItem!.track || playlistTrack!.track;
       const track: QueueItem | CurrentTrack = isPlaying ? queue.currentTrack! : queueItem || playlistTrack!;
       removeTrack.progress = isPlaying ? queue.currentTrack!.progress : 0;
-      const removeCost = calculateSkipCost(removeTrack);
+      const removeCost = calculateSkipCost(removeTrack, perkLevel);
 
       if (track.playlistTrack && queue.owner === userId) {
         await QueueService.skip(passcode, track.userId!, trackId);
@@ -95,6 +101,15 @@ export namespace Gamify {
         const userIdx = getUser(queue, userId);
         const user = queue.users[userIdx];
         let alreadyFirst = false;
+        const perks = await QueueService.getAllPerksWithUserLevel(passcode, userId);
+        const perkLevel = userPerkLevel("move_up", perks);
+
+        if (perkLevel <= 0) {
+          return res.status(403).json({
+            message: `You don't own the perk or don't have enough karma to move song up in the queue.`
+          });
+        }
+
         for (let i = 0; i < queue.tracks.length; i++) {
           if (queue.tracks[i].id === trackId && i == 0) {
             alreadyFirst = true;
@@ -103,9 +118,10 @@ export namespace Gamify {
             if (user.points < config.gamify.moveUpCost) {
               return res.status(403).json({ message: `You don't have enough points (${user.points}). Moving costs ${config.gamify.moveUpCost} points.` });
             }
-            logger.info(`Moving track from idx ${i} to idx ${(i - 1)}`, { user: userId, passcode });
+            const newIndex = (i - perkLevel) >= 0 ? i - perkLevel : 0;
+            logger.info(`Moving track from idx ${i} to idx ${newIndex}`, { user: userId, passcode });
             const moveTrack = queue.tracks[i];
-            const earlierTrack = queue.tracks[i - 1];
+            const earlierTrack = queue.tracks[newIndex];
             await QueueService.switchTrackPositions(moveTrack, earlierTrack);
             await QueueService.addPoints(passcode, user.id, -config.gamify.moveUpCost);
             return res.status(200).json({ message: "OK" });
@@ -130,8 +146,14 @@ export namespace Gamify {
       const queue = await QueueService.getFullQueue(passcode);
       const userIdx = getUser(queue, userId);
       const user = queue.users[userIdx];
+      const perks = await QueueService.getAllPerksWithUserLevel(passcode, userId);
+      const perkLevel = userPerkLevel("protect_song", perks);
 
-      if (isPlaying && !queue.currentTrack) {
+      if (perkLevel <= 0) {
+        return res.status(403).json({
+          message: `You don't own the perk or don't have enough karma to protect songs.`
+        });
+      } else if (isPlaying && !queue.currentTrack) {
         return res.status(404).json({
           message: `Can't protect current song since no songs was found.`
         });
@@ -211,15 +233,21 @@ export namespace Gamify {
     return (minutesLeft + 1) * config.gamify.protectCostPerMinute;
   }
 
-  const calculateSkipCost = (track: SpotifyTrack) => {
+  const calculateSkipCost = (track: SpotifyTrack, perkLevel: number) => {
     const millisLeft = track.duration - (track.progress || 0);
     const minutesLeft = Math.floor(millisLeft / 60000);
-    return (minutesLeft + 1) * config.gamify.skipCostPerMinute;
+    const perkDiscount = perkLevel > 1 ? perkLevel : 0;
+    return (minutesLeft + 1) * (config.gamify.skipCostPerMinute - perkDiscount);
   }
 
   const millisToPoints = (millis: number) => {
     const minutes = Math.floor(millis / 60000);
     return minutes + 1;
+  }
+
+  export const userPerkLevel = (perkName: PerkName, perks: Perk[]) => {
+    const perk = perks.find(perk => perk.name === perkName);
+    return perk ? perk.karmaAllowedLevel : 0;
   }
 
   export const trackEndReward = async (queue: FullQueue, passcode: string, votes: number) => {
