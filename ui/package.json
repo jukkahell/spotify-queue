@@ -26,12 +26,15 @@
     "typescript": "3.4.1"
   },
   "scripts": {
+    "compile:sass": "node-sass sass/App.scss src/App.css -w",
     "start": "react-scripts-ts start",
     "build": "react-scripts-ts build --env=production",
     "test": "react-scripts-ts test --env=jsdom",
     "eject": "react-scripts-ts eject"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "node-sass": "^4.12.0"
+  },
   "browserslist": [
     ">0.2%",
     "not dead",

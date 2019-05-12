@@ -1,0 +1,12 @@
+html {
+    min-height: 100vh;
+}
+
+body {
+    height: 100vh;
+    background: $color-primary linear-gradient(#131313, $color-primary) no-repeat fixed;
+    background-size: cover;
+    font-size: 1em;
+    color: $color-white;
+    font-family: "Montserrat", "Helvetica Neue", Helvetica, Arial, sans-serif !important;
+}

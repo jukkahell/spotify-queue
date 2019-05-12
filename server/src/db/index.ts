@@ -6,7 +6,7 @@ const pool = new Pool({
     host: "localhost",
     database: "spotiqu",
     password: secrets.db.password,
-    port: 5433,
+    port: 5432,
 });
 
 export const query = (text: string, params?: any[]) => pool.query(text, params);

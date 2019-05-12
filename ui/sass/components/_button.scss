@@ -1,0 +1,34 @@
+.btn {
+    font-size: 0.8em;
+    text-transform: uppercase;
+    border-radius: 2em;
+    height: 3em;
+}
+.btn:focus {
+    outline: none;
+    box-shadow: none;
+    border: none;
+    background-color: $color-secondary;
+}
+.btn:active {
+    color: $color-grey-light !important;
+    outline: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    background-color: $color-secondary-dark !important;
+}
+
+.btn-primary {
+    background-color: $color-secondary-dark;
+    border-color: $color-secondary-dark;
+}
+.btn-primary:hover {
+    background-color: $color-secondary;
+    border-color: $color-secondary;
+    font-weight: bold;
+}
+.btn-primary:disabled,
+.btn-primary:disabled:hover {
+    background: $color-grey !important;
+    border-color: $color-grey !important;
+}

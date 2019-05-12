@@ -1,0 +1,580 @@
+@import "abstracts/functions";
+@import "abstracts/mixins";
+@import "abstracts/variables";
+
+@import "base/animations";
+@import "base/base";
+@import "base/typography";
+@import "base/utilities";
+
+@import "components/button";
+
+#root {
+    height: 100vh;
+}
+
+.mainContent {
+    padding-bottom: 3em;
+}
+
+.loginContainer {
+    position: absolute;
+    width: 100%;
+    left: 0;
+    max-width: 100%;
+}
+
+a {
+    cursor: pointer;
+    color: $color-grey;
+}
+a:hover {
+    color: $color-grey-light;
+    text-decoration: none;
+}
+a.showMore {
+    color: $color-grey;
+    font-size: 0.8em;
+    text-transform: uppercase;
+}
+a.showMore:hover {
+    color: $color-grey-light;
+    text-decoration: underline !important;
+}
+
+img.coverImage {
+    width: 100%;
+}
+
+@media (max-width: 770px) {
+    img.coverImage {
+        width: 70%;
+        min-width: 250px;
+    }
+}
+@media (max-width: 380px) {
+    img.coverImage {
+        width: 70%;
+        min-width: 250px;
+    }
+}
+
+.currentlyPlaying {
+    text-align: center;
+    padding: 0;
+}
+
+input {
+    border-radius: 2em !important;
+}
+
+button.search {
+    margin: 0 5px;
+}
+input.search {
+    margin: 0 5px;
+    padding-left: 2em;
+}
+
+.searchIcon {
+    left: 1em;
+    position: absolute;
+    top: 1.7em;
+    color: $color-grey;
+    z-index: 10;
+}
+
+.clearSearch {
+    right: 1em;
+    position: absolute;
+    color: $color-grey-dark;
+    cursor: pointer;
+}
+
+.progress {
+    height: 4px;
+}
+
+.progress-bar {
+    background-color: $color-secondary-dark;
+}
+
+.searchResults {
+    margin-top: 0.5em;
+    padding-left: 15px;
+}
+
+.searchForm {
+    position: sticky;
+    top: 0;
+    padding-top: 1em;
+}
+.searchForm.stuck {
+    background-color: transparent;
+}
+
+.queue {
+    width: 100%;
+}
+
+li.queuedTrack {
+    position: relative;
+}
+li.queuedTrack > .dropdown-menu {
+    bottom: 100%;
+    top: initial;
+}
+.queuedTracks {
+    margin-top: 0.5em;
+}
+.queuedTracks.randomQueue {
+    list-style: none;
+}
+
+input.passcode {
+    margin-bottom: 2px;
+}
+
+.error {
+    color: $color-red;
+    font-size: 0.8rem;
+    text-align: center;
+}
+
+.Divider {
+    width: 100%;
+    display: flex;
+}
+.Divider > .Side {
+    width: 50%;
+}
+.Divider > .Middle {
+    padding: 5px;
+}
+.Side > hr {
+    background-color: $color-grey-light;
+}
+
+.dropup {
+    padding: 0 0.5em;
+    border-right: 1px solid $color-grey-secondary-light;
+    border-left: 1px solid $color-grey-secondary-light;
+}
+
+.dropdown-menu {
+    background-color: $color-grey-secondary;
+    padding: 0;
+}
+.dropdown-item {
+    color: $color-white;
+    padding: 0.65rem 1.5rem;
+}
+.dropdown-item.active {
+    background-color: $color-grey-secondary;
+    color: $color-secondary-dark;
+    cursor: default;
+}
+.dropdown-item:hover {
+    background-color: $color-grey-secondary-light;
+    color: $color-white;
+}
+.dropdown-item.active:hover {
+    background-color: $color-grey-secondary-light;
+    color: $color-secondary-dark;
+}
+.dropdown-item:focus {
+    background-color: $color-grey-secondary-light;
+    color: $color-white;
+}
+.playlistItem.active {
+    color: $color-secondary;
+}
+.currentTrack a {
+    color: $color-secondary;
+}
+.trackDuration {
+    text-align: right;
+    color: $color-grey;
+}
+.estimatedPlayTime {
+    font-size: 0.6em;
+}
+.trackItem {
+    display: grid;
+    grid-template-columns: min-content auto 3em;
+    padding-bottom: 0.7em;
+    width: 100%;
+}
+.trackArtist {
+    font-size: 0.7em;
+}
+.trackInfo {
+    display: flex;
+    flex-direction: column;
+}
+.albumInfo {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 0.7em;
+}
+
+button.footerMenu {
+    background-color: transparent;
+    border: none;
+    padding: 0;
+    font-size: 1.5em;
+    height: 1.5em;
+    color: $color-grey-light;
+}
+button.footerMenu:active,
+button.footerMenu:hover,
+button.footerMenu:focus {
+    background-color: transparent !important;
+    border: none;
+    color: $color-grey-light;
+    box-shadow: none !important;
+}
+
+button.iconButton {
+    background: none;
+    color: $color-grey-light;
+    border: none;
+    cursor: pointer;
+}
+button.iconButton:active,
+button.iconButton:hover,
+button.iconButton:focus {
+    background-color: transparent !important;
+    border: none;
+    color: $color-grey-light;
+    box-shadow: none !important;
+}
+
+.footer {
+    background-color: $color-grey-secondary;
+    justify-content: center;
+}
+
+.queuedItemIcon {
+    display: inline;
+    margin-left: 8px;
+}
+
+.voteButtons {
+    width: 100%;
+    justify-content: space-between;
+    margin: 0;
+    display: flex;
+    padding: 5px 30px;
+}
+.voteButton {
+    width: 40%;
+    font-size: 1em;
+    color: $color-grey-light;
+}
+
+.voteButton.down {
+    background-color: $color-red;
+    border-color: $color-red;
+}
+.voteButton.voted {
+    background-color: $color-grey-dark;
+    border-color: $color-grey-dark;
+}
+.voteButton.down:hover {
+    background-color: $color-red-light !important;
+}
+.voteButton.down:active {
+    background: $color-red-dark !important;
+}
+.voteButton:disabled,
+.voteButton:disabled:hover {
+    background: $color-grey !important;
+    border-color: $color-grey !important;
+}
+
+.voteCount {
+    display: flex;
+    align-items: center;
+    font-size: 2em;
+}
+
+.coverImageContainer {
+    position: relative;
+    min-height: 240px;
+}
+
+.coverImageLayer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    text-align: center;
+    background-color: black;
+    opacity: 0.2;
+    font-size: 10em;
+    cursor: pointer;
+}
+.coverImageLayer:hover {
+    visibility: visible;
+    opacity: 0.6;
+}
+
+.menuOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10;
+    visibility: hidden;
+}
+
+.settingName {
+    padding: 0 1em 0 0.5em;
+}
+.settingOptionCheckmark.active {
+    color: $color-secondary;
+}
+.settingOptionCheckmark.inactive {
+    color: $color-grey;
+}
+.settingsMenuItem {
+    display: grid;
+    grid-template-columns: min-content auto min-content;
+    align-items: center;
+}
+
+.pointsContainer {
+    display: flex;
+    align-self: center;
+}
+
+@media (max-width: 770px) {
+  #gamifyHelp {
+    left: 10px!important;
+  }
+}
+
+.userPoints {
+    padding: 0 0 0 10px;
+    margin: 0;
+    cursor: default;
+}
+.userPoints.positive {
+    color: $color-secondary-dark;
+}
+.userPoints.negative {
+    color: $color-red;
+}
+
+.numberSettingContainer {
+    display: flex;
+}
+.numberSettingContainer > div {
+    margin-left: 3px;
+}
+
+.addPlaylistToQueue {
+    margin-right: 5px;
+    cursor: pointer;
+    color: $color-grey;
+}
+.addPlaylistToQueue.active {
+    color: $color-secondary;
+}
+
+@media (max-width: 770px) {
+    .settingsDropdown {
+        left: 0;
+        position: fixed;
+        bottom: 35px !important;
+    }
+}
+@media (max-width: 370px) {
+    .settingsDropdown {
+        font-size: 0.8em;
+    }
+}
+
+.usersDropdown {
+    max-height: 50vh;
+    overflow-y: scroll;
+}
+@media (max-width: 770px) {
+    .usersDropdown {
+        left: 0;
+        position: fixed;
+        bottom: 35px !important;
+    }
+}
+@media (max-width: 460px) {
+    .usersDropdown {
+        font-size: 0.8em;
+    }
+}
+
+.alert {
+    cursor: pointer !important;
+}
+
+.userListItem {
+    cursor: pointer;
+    margin: 0;
+    display: grid;
+    grid-template-columns: auto min-content;
+}
+
+.userListContextMenu {
+    display: flex;
+    justify-content: space-around;
+}
+
+.userId {
+    padding-right: 1em;
+}
+
+form.queueName > input,
+form.username > input,
+form.joinCode > input {
+    padding-left: 0.5em;
+}
+form.queueName > button,
+form.username > button,
+form.joinCode > button {
+    background: none;
+    border: none;
+    padding: 0;
+    margin-left: 0.5em;
+    color: $color-white;
+    cursor: pointer;
+}
+
+h1 {
+    font-size: 2rem;
+    margin: 0;
+}
+
+.userQueueListItem {
+    display: grid;
+    grid-template-columns: min-content auto;
+    cursor: pointer;
+}
+.userQueueListItem.selected {
+    cursor: default;
+}
+.queueName,
+.username {
+    margin-left: 0.5em;
+}
+.selected {
+    color: $color-secondary;
+}
+
+.spotify-tab {
+    color: $color-secondary;
+}
+.youtube-tab {
+    color: $color-red;
+}
+
+.navIcons {
+    padding: 6px 0 4px;
+    cursor: pointer;
+    z-index: 100;
+}
+.navIcon {
+  margin-right: 0.7em;
+}
+
+ul {
+    margin: 0;
+}
+
+.source-tab-list {
+    margin-bottom: -16px;
+    padding-left: 21px;
+}
+
+.source-tab {
+    display: inline-block;
+    position: relative;
+    list-style: none;
+    padding: 6px 12px 4px;
+    cursor: pointer;
+    border-radius: 5px 5px 0 0;
+    margin-right: 2px;
+}
+
+.source-tab--selected {
+    box-shadow: 2px -1px 2px 0px rgba(0, 0, 0, 0.5);
+    z-index: 3;
+    background: $color-primary linear-gradient(#525252, #353535) no-repeat;
+    border-left: 1px solid #5a5a5a;
+}
+
+.youtubeVideo {
+    display: flex;
+}
+.youtubeCover {
+    margin-right: 0.4em;
+}
+
+@media (max-width: 770px) {
+  .perksDropdown {
+      left: 0;
+      position: fixed;
+      bottom: 35px !important;
+  }
+}
+@media (max-width: 370px) {
+  .perksDropdown {
+      font-size: 0.8em;
+  }
+}
+
+.perksListItem {
+  cursor: pointer;
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto min-content;
+}
+
+.perkDescription {
+  font-size: 0.8em;
+  display: block;
+  margin-bottom: 0.3em;
+}
+
+.saveToSpotify {
+  margin-left: 0.7em;
+  font-size: 0.7em;
+  color: $color-secondary;
+  cursor: pointer;
+}
+
+.toggleFavorite {
+  display: flex;
+}
+.favorited {
+  margin-right: 0.3em;
+}
+.votes {
+  background-color: $color-grey;
+  height: 18px;
+  width: 18px;
+  text-align: center;
+  border-radius: 1em;
+  font-size: 0.6em;
+  margin-top: 2px;
+  padding-top: 2px;
+  margin-right: 0.5em;
+}
+
+.exclamation {
+  color: yellow;
+  margin: 0 0.4em;
+}
