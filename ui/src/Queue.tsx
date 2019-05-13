@@ -61,6 +61,7 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
     this.protectTrack = this.protectTrack.bind(this);
     this.hideMenu = this.hideMenu.bind(this);
     this.moveUp = this.moveUp.bind(this);
+    this.moveFirst = this.moveFirst.bind(this);
     this.calculateProtectCost = this.calculateProtectCost.bind(this);
   }
 
@@ -154,6 +155,27 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
     });
   }
 
+  protected moveFirst(e: React.MouseEvent<HTMLElement>) {
+    e.preventDefault();
+
+    if (this.props.perks!.find(perk => perk.name === "move_first")!.cooldownLeft! > 0) {
+      return;
+    }
+
+    axios.post(config.backend.url + "/moveFirstInQueue", {
+      trackId: this.state.contextMenuTrack!.id
+    }).then(() => {
+      this.props.onQueued();
+      this.setState({
+        contextMenuId: null,
+        contextMenuTrack: null,
+        contextMenuTargetPlaying: false
+      });
+    }).catch(err => {
+      this.props.onError(err.response.data.message);
+    });
+  }
+
   protected renderContextMenu() {
     if (!this.state.contextMenuTrack) {
       return null;
@@ -166,6 +188,7 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
     const moveUpPerkLevel = this.userPerkLevel("move_up");
     const skipPerkLevel = this.userPerkLevel("skip_song");
     const protectPerkLevel = this.userPerkLevel("protect_song");
+    const moveFirstPerkLevel = this.userPerkLevel("move_first");
     const removeOrSkipPerkLevel = this.state.contextMenuTargetPlaying ? skipPerkLevel : removePerkLevel;
     const skipCost = this.calculateSkipCost(this.state.contextMenuTrack.track, removeOrSkipPerkLevel);
     const showPoints =
@@ -184,6 +207,15 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
         menu.push(
           <a className={"dropdown-item"} key={"moveUp"} href="#" onClick={this.moveUp}>
             <FontAwesomeIcon icon="arrow-circle-up" /> Move up in queue (-5 pts)
+          </a>
+        );
+      }
+      if (this.state.contextMenuIndex > 0 && moveFirstPerkLevel > 0) {
+        const perk = this.props.perks!.find(perk => perk.name === "move_first")!;
+        const cooldownLeft = perk.cooldownLeft!;
+        menu.push(
+          <a className={"dropdown-item" + (cooldownLeft ? " disabled" : "")} key={"moveFirst"} href="#" onClick={this.moveFirst}>
+            <FontAwesomeIcon icon="angle-double-up" /> {"Move first " + (cooldownLeft > 0 ? `(${cooldownLeft} min cooldown)` : "")}
           </a>
         );
       }

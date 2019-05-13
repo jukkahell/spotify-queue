@@ -138,6 +138,51 @@ export namespace Gamify {
         return res.status(500).json({ message: `Error occurred when tried to move track up` });
       }
     },
+    "moveFirstInQueue": async (req: express.Request, res: express.Response, next: () => any) => {
+      try {
+        const passcode = req.cookies.get("passcode");
+        const userId = req.cookies.get("user", { signed: true });
+        const trackId = req.body.trackId;
+        const queue = await QueueService.getFullQueue(passcode);
+        const userIdx = getUser(queue, userId);
+        const user = queue.users[userIdx];
+        const perks = await QueueService.getAllPerksWithUserLevel(passcode, userId);
+        const perk = perks.find(perk => perk.name === "move_first");
+
+        if (!perk || perk.karmaAllowedLevel <= 0) {
+          return res.status(403).json({
+            message: `You don't own the perk or don't have enough karma to move song first in the queue.`
+          });
+        }
+
+        if (queue.tracks.length === 0) {
+          return res.status(400).json({ message: "Queue is empty, so we can't move a song to first in queue." });
+        } else if (queue.tracks[0].id === trackId) {
+          return res.status(400).json({ message: `Track is already first in the queue. You need to skip the current song if you want to play this song now.` });
+        } else if (perk.cooldownLeft! > 0) {
+          return res.status(400).json({ message: `Cooldown active. You can use this again after ${perk.cooldownLeft!} minutes.` });
+        }
+
+        const moveTrack = queue.tracks.find(t => t.id === trackId);
+        if (!moveTrack) {
+          return res.status(404).json({ message: `Given track was not found from the queue.` });
+        }
+        if (user.points < config.gamify.moveUpCost) {
+          return res.status(403).json({ message: `You don't have enough points (${user.points}). Moving costs ${config.gamify.moveUpCost} points.` });
+        }
+
+        logger.info(`Moving track ${trackId} to first in queue`, { user: userId, passcode });
+        const firstTrack = queue.tracks[0];
+        moveTrack.timestamp = firstTrack.timestamp - 10;
+        await QueueService.moveTrack(moveTrack);
+        await QueueService.updatePerkUsedTime(passcode, userId, "move_first");
+        await QueueService.addPoints(passcode, user.id, -config.gamify.moveUpCost);
+        return res.status(200).json({ message: "OK" });
+      } catch (err) {
+        logger.error(err);
+        return res.status(500).json({ message: `Error occurred when tried to move track up` });
+      }
+    },
     "protectTrack": async (req: express.Request, res: express.Response, next: () => any) => {
       const passcode = req.cookies.get("passcode");
       const userId = req.cookies.get("user", { signed: true });
@@ -285,7 +330,7 @@ export namespace Gamify {
   }
 
   export const pre = async (req: express.Request, res: express.Response, next: () => any) => {
-    const gameEndpoints = ["/removeFromQueue", "/moveUpInQueue", "/protectTrack"];
+    const gameEndpoints = ["/removeFromQueue", "/moveUpInQueue", "/moveFirstInQueue", "/protectTrack"];
     if (gameEndpoints.includes(req.path)) {
       const passcode = req.cookies.get("passcode");
       if (passcode) {

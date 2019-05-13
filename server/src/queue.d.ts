@@ -85,6 +85,7 @@ export interface SettingsDao {
   max_sequential_tracks: number;
   spotify_login: boolean;
   ban_vote_count: number;
+  use_perk_shop: boolean;
 }
 
 export interface Settings {
@@ -99,6 +100,7 @@ export interface Settings {
   maxSequentialTracks: number;
   spotifyLogin: boolean;
   banVoteCount: number;
+  usePerkShop: boolean;
 }
 
 export interface UserDao {
@@ -144,6 +146,9 @@ export interface Perk {
   level: number;
   karmaAllowedLevel: number;
   maxLevel: number;
+  lastUsed?: Date;
+  cooldown: number;
+  cooldownLeft?: number;
 }
 
 export type PerkName = "move_up" | "queue_more_1" | "queue_sequential_1" | "protect_song" | "remove_song" | "skip_song" | "move_first";

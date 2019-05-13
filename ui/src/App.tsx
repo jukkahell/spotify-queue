@@ -496,7 +496,7 @@ export class App extends React.Component<{}, IState> {
           <div className="row navIcons">
             <div className="col-md-8 offset-md-4">
               <span className="navIcon" title="Home" onClick={this.goHome}><FontAwesomeIcon icon="home" /></span>
-              {this.state.user && this.state.settings && this.state.settings.gamify
+              {this.state.user && this.state.settings && this.state.settings.gamify && this.state.settings.usePerkShop
                 ? <span className="navIcon" title="Store" onClick={this.goStore}><FontAwesomeIcon icon="store" /></span>
                 : null}
             </div>

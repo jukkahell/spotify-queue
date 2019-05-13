@@ -221,6 +221,7 @@ class QueueService {
       maxSequentialTracks: settingsDao.max_sequential_tracks,
       spotifyLogin: settingsDao.spotify_login,
       banVoteCount: settingsDao.ban_vote_count,
+      usePerkShop: settingsDao.use_perk_shop,
     };
   }
 
@@ -262,12 +263,16 @@ class QueueService {
     }
   }
 
-  public static switchTrackPositions(moveTrack: QueueItem, earlierTrack: QueueItem) {
+  public static async moveTrack(track: QueueItem) {
+    await db.query("UPDATE tracks SET timestamp = $1 WHERE id = $2", [track.timestamp, track.id]);
+  }
+
+  public static async switchTrackPositions(moveTrack: QueueItem, earlierTrack: QueueItem) {
     const tmp = moveTrack.timestamp;
     moveTrack.timestamp = earlierTrack.timestamp;
     earlierTrack.timestamp = tmp;
-    db.query("UPDATE tracks SET timestamp = $1 WHERE id = $2", [moveTrack.timestamp, moveTrack.id]);
-    db.query("UPDATE tracks SET timestamp = $1 WHERE id = $2", [earlierTrack.timestamp, earlierTrack.id]);
+    await QueueService.moveTrack(moveTrack);
+    await QueueService.moveTrack(earlierTrack);
   }
 
   public static protectTrack(passcode: string, trackId: string) {
@@ -449,6 +454,7 @@ class QueueService {
       skipThreshold: 5,
       spotifyLogin: false,
       banVoteCount: 10,
+      usePerkShop: false,
     };
 
     const createSettingsQuery = `
@@ -808,13 +814,13 @@ class QueueService {
 
   public static getAllPerks(): Perk[] {
     return [
-      { name: "move_up", price: 50, requiredKarma: 5, level: 0, maxLevel: 2, karmaAllowedLevel: 0 },
-      { name: "queue_more_1", price: 100, requiredKarma: 10, level: 0, maxLevel: 5, karmaAllowedLevel: 0 },
-      { name: "queue_sequential_1", price: 150, requiredKarma: 15, level: 0, maxLevel: 3, karmaAllowedLevel: 0 },
-      { name: "protect_song", price: 150, requiredKarma: 15, level: 0, maxLevel: 1, karmaAllowedLevel: 0 },
-      { name: "remove_song", price: 200, requiredKarma: 20, level: 0, maxLevel: 2, karmaAllowedLevel: 0 },
-      { name: "skip_song", price: 200, requiredKarma: 20, level: 0, maxLevel: 2, karmaAllowedLevel: 0 },
-      { name: "move_first", price: 300, requiredKarma: 30, level: 0, maxLevel: 2, karmaAllowedLevel: 0 },
+      { name: "move_up", price: 50, requiredKarma: 5, level: 0, maxLevel: 2, karmaAllowedLevel: 0, cooldown: 0 },
+      { name: "queue_more_1", price: 100, requiredKarma: 10, level: 0, maxLevel: 5, karmaAllowedLevel: 0, cooldown: 0 },
+      { name: "queue_sequential_1", price: 150, requiredKarma: 15, level: 0, maxLevel: 3, karmaAllowedLevel: 0, cooldown: 0 },
+      { name: "protect_song", price: 150, requiredKarma: 15, level: 0, maxLevel: 1, karmaAllowedLevel: 0, cooldown: 0 },
+      { name: "remove_song", price: 200, requiredKarma: 20, level: 0, maxLevel: 2, karmaAllowedLevel: 0, cooldown: 0 },
+      { name: "skip_song", price: 200, requiredKarma: 20, level: 0, maxLevel: 2, karmaAllowedLevel: 0, cooldown: 0 },
+      { name: "move_first", price: 300, requiredKarma: 30, level: 0, maxLevel: 4, karmaAllowedLevel: 0, cooldown: 45 },
     ];
   }
 
@@ -822,17 +828,41 @@ class QueueService {
     const all = QueueService.getAllPerks();
     const userPerks = await QueueService.getUserPerks(passcode, userId);
     const user = await QueueService.getUser(passcode, userId);
+    const settings = await QueueService.getSettings(passcode);
     return all.map(p => {
       const userPerk = userPerks.find(up => up.name === p.name);
-      const userLevel = userPerk ? userPerk.level : 0;
+      const userLevel = settings.usePerkShop
+        ? userPerk ? userPerk.level : 0
+        : 1;
+      const karmaAllowedLevel = settings.usePerkShop
+        ? Math.min(Math.floor(user.karma / p.requiredKarma), userLevel)
+        : 1;
       return { 
         ...p,
         level: userLevel,
         upgradeKarma: p.requiredKarma * (userLevel + 1),
         price: p.price * (userLevel + 1),
-        karmaAllowedLevel: Math.min(Math.floor(user.karma / p.requiredKarma), userLevel)
+        karmaAllowedLevel,
+        lastUsed: userPerk ? userPerk.lastUsed : undefined,
+        cooldownLeft: userPerk ? QueueService.perkCooldownLeft(userPerk, karmaAllowedLevel) : undefined,
       };
     });
+  }
+
+  public static perkCooldownLeft(perk: Perk, level: number) {
+    if (!perk.lastUsed) {
+      return 100000;
+    }
+    const now = new Date();
+    const diff = Math.abs(now.getTime() - perk.lastUsed.getTime());
+    const minutesSinceLastUsage = Math.floor((diff / 1000) / 60);
+    const COOLDOWN = perk.cooldown - (level * 5);
+    return Math.max(0, COOLDOWN - minutesSinceLastUsage);
+  }
+
+  public static async updatePerkUsedTime(passcode: string, userId: string, name: PerkName) {
+    const query = "UPDATE user_perks SET last_used = $1 WHERE perk = $2 AND user_id = $3 AND passcode = $4";
+    await db.query(query, [new Date().toISOString(), name, userId, passcode]);
   }
 
   public static getPerk(name: PerkName) {
@@ -843,7 +873,11 @@ class QueueService {
     const query = "SELECT * FROM user_perks WHERE user_id = $1 AND passcode = $2";
     const userPerkRows = await db.query(query, [userId, passcode]);
     if (userPerkRows.rowCount > 0) {
-      return userPerkRows.rows.map(userPerk => ({ ...QueueService.getPerk(userPerk.perk) as Perk, level: userPerk.level }));
+      return userPerkRows.rows.map(userPerk => ({
+        ...QueueService.getPerk(userPerk.perk) as Perk,
+        level: userPerk.level,
+        lastUsed: new Date(Date.parse(userPerk.last_used)) 
+      }));
     }
     return [];
   }
@@ -1259,13 +1293,14 @@ class QueueService {
         skip_threshold = $7,
         max_sequential_tracks = $8,
         spotify_login = $9,
-        ban_vote_count = $10
-      WHERE passcode = $11`;
+        ban_vote_count = $10,
+        use_perk_shop = $11
+      WHERE passcode = $12`;
       db.query(updateQuery, [
         settings.name, settings.gamify, settings.maxDuplicateTracks, 
         settings.numberOfTracksPerUser, settings.randomPlaylist, settings.randomQueue, 
         settings.skipThreshold, settings.maxSequentialTracks, settings.spotifyLogin,
-        settings.banVoteCount,
+        settings.banVoteCount, settings.usePerkShop,
         passcode,
       ]);
       return settings;

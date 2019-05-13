@@ -13,6 +13,8 @@ export interface IPerk {
   level: number;
   karmaAllowedLevel: number;
   maxLevel: number;
+  cooldown: number | null;
+  cooldownLeft: number | null;
 }
 
 export interface IPerkStoreProps {
