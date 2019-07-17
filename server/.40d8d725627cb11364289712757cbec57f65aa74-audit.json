@@ -6,64 +6,9 @@
     "auditLog": ".40d8d725627cb11364289712757cbec57f65aa74-audit.json",
     "files": [
         {
-            "date": 1556654236811,
-            "name": "spotiqu-2019-04-30.log",
-            "hash": "34a139aabf30f6e8b86cb72779b812b9"
-        },
-        {
-            "date": 1556658046584,
-            "name": "spotiqu-2019-05-01.log",
-            "hash": "d48bdfb0605f83023c084dee8524c97b"
-        },
-        {
-            "date": 1556829225172,
-            "name": "spotiqu-2019-05-02.log",
-            "hash": "8c83632ccd7d5f24347173a4f52e1786"
-        },
-        {
-            "date": 1556830840575,
-            "name": "spotiqu-2019-05-03.log",
-            "hash": "5d14ce1370107878375dc77e89fe9ec8"
-        },
-        {
-            "date": 1557069596881,
-            "name": "spotiqu-2019-05-05.log",
-            "hash": "20cb12559d96062095acc3b323fd69e5"
-        },
-        {
-            "date": 1557342310053,
-            "name": "spotiqu-2019-05-08.log",
-            "hash": "ab612b4917963fb550abc29a4a4c1529"
-        },
-        {
-            "date": 1557349311618,
-            "name": "spotiqu-2019-05-09.log",
-            "hash": "daa28ede9bd51efa03abe9655222bb69"
-        },
-        {
-            "date": 1557514127466,
-            "name": "spotiqu-2019-05-10.log",
-            "hash": "2727093950c0eabb2017f930e791a003"
-        },
-        {
-            "date": 1557567832936,
-            "name": "spotiqu-2019-05-11.log",
-            "hash": "ae448d1d401636b6b93c2f9e64393060"
-        },
-        {
-            "date": 1557610603848,
-            "name": "spotiqu-2019-05-12.log",
-            "hash": "d253ea9837574d298c30ac026e11f89e"
-        },
-        {
-            "date": 1557780885934,
-            "name": "spotiqu-2019-05-13.log",
-            "hash": "744603402b762ac3f75dfb4441a46a29"
-        },
-        {
-            "date": 1557781313521,
-            "name": "spotiqu-2019-05-14.log",
-            "hash": "f338a7e1747d366ffae5a82e2392f06e"
+            "date": 1563401012097,
+            "name": "spotiqu-2019-07-18.log",
+            "hash": "c2d78a567b87387430bd3cee5bf5ece9"
         }
     ]
 }

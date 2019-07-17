@@ -1348,12 +1348,11 @@ class QueueService {
       const queuedItem = (queue.tracks.length > 0) ?
         queue.tracks.splice(nextIndex, 1)[0] :
         queue.playlistTracks.splice(nextIndex, 1)[0];
-      const trackIds = [queuedItem.track.id];
 
       logger.info(`Next track is ${queuedItem.track.id}`, { user, passcode });
       if (queuedItem.source === "spotify") {
         try {
-          await SpotifyService.startSong(queue.accessToken!, trackIds, queue.deviceId!);
+          SpotifyService.startSong(queue.accessToken!, [queuedItem.track.id], queue.deviceId!);
           await QueueService.startPlaying(queue.accessToken!, passcode, user, { ...queuedItem, progress: 0, currentlyPlaying: false, votes: [] });
           logger.info(`Track ${queuedItem.track.id} successfully started.`, { user, passcode });
         } catch(err) {

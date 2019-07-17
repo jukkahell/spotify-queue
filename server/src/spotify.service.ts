@@ -393,7 +393,7 @@ class SpotifyService {
 
   public static search = (user: string, passcode: string, accessToken: string, query: SpotifySearchQuery) => {
     return new Promise<SearchResults>((resolve, reject) => {
-      axios.get("https://api.spotify.com/v1/search?" + Querystring.stringify(query), {
+      axios.get("https://api.spotify.com/v1/search?" + Querystring.stringify(query as any), {
         headers: {
           "Content-Type": "text/plain",
           "Authorization": "Bearer " + accessToken
@@ -441,12 +441,18 @@ class SpotifyService {
         resolve(results);
       }).catch(err => {
         if (err.response) {
+          const errorMessage = err.response.data.error.message;
           logger.error(`Error with search query ${query.q}`, { user, passcode });
-          logger.error(err.response.data.error.message, { user, passcode });
+          logger.error(errorMessage, { user, passcode });
+          if (errorMessage.indexOf("access token expired") >= 0) {
+            reject({ status: err.response.status, message: "Unable to search from Spotify. Queue owner needs to refresh the access token." });
+          } else {
+            reject({ status: err.response.status, message: "Unable to get search results from Spotify. Error: " + err.response.data.error.message });
+          }
         } else {
           logger.error(err, { user, passcode });
+          reject({ status: err.response.status, message: "Unable to get search results from Spotify" });
         }
-        reject({ status: err.response.status, message: "Unable to get search results from Spotify." });
       });
     });
   }
