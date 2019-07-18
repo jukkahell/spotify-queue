@@ -814,13 +814,13 @@ class QueueService {
 
   public static getAllPerks(): Perk[] {
     return [
-      { name: "move_up", price: 50, requiredKarma: 5, level: 0, maxLevel: 2, karmaAllowedLevel: 0, cooldown: 0 },
-      { name: "queue_more_1", price: 100, requiredKarma: 10, level: 0, maxLevel: 5, karmaAllowedLevel: 0, cooldown: 0 },
-      { name: "queue_sequential_1", price: 150, requiredKarma: 15, level: 0, maxLevel: 3, karmaAllowedLevel: 0, cooldown: 0 },
-      { name: "protect_song", price: 150, requiredKarma: 15, level: 0, maxLevel: 1, karmaAllowedLevel: 0, cooldown: 0 },
-      { name: "remove_song", price: 200, requiredKarma: 20, level: 0, maxLevel: 2, karmaAllowedLevel: 0, cooldown: 0 },
-      { name: "skip_song", price: 200, requiredKarma: 20, level: 0, maxLevel: 2, karmaAllowedLevel: 0, cooldown: 0 },
-      { name: "move_first", price: 300, requiredKarma: 30, level: 0, maxLevel: 4, karmaAllowedLevel: 0, cooldown: 45 },
+      { name: "move_up", price: 50, requiredKarma: 50, level: 0, maxLevel: 2, karmaAllowedLevel: 0, cooldown: 0 },
+      { name: "queue_more_1", price: 100, requiredKarma: 100, level: 0, maxLevel: 5, karmaAllowedLevel: 0, cooldown: 0 },
+      { name: "queue_sequential_1", price: 150, requiredKarma: 150, level: 0, maxLevel: 3, karmaAllowedLevel: 0, cooldown: 0 },
+      { name: "protect_song", price: 150, requiredKarma: 150, level: 0, maxLevel: 1, karmaAllowedLevel: 0, cooldown: 0 },
+      { name: "remove_song", price: 200, requiredKarma: 200, level: 0, maxLevel: 2, karmaAllowedLevel: 0, cooldown: 0 },
+      { name: "skip_song", price: 200, requiredKarma: 200, level: 0, maxLevel: 2, karmaAllowedLevel: 0, cooldown: 0 },
+      { name: "move_first", price: 300, requiredKarma: 300, level: 0, maxLevel: 4, karmaAllowedLevel: 0, cooldown: 45 },
     ];
   }
 
