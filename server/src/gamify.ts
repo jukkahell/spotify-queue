@@ -19,6 +19,7 @@ export namespace Gamify {
       const user = queue.users[userIdx];
       const perks = await QueueService.getAllPerksWithUserLevel(passcode, userId);
       const perkLevel = isPlaying ? userPerkLevel("skip_song", perks) : userPerkLevel("remove_song", perks);
+      const playlistTrack = queue.playlistTracks.find(pt => pt.id === trackId);
 
       if (!queue.isPlaying) {
         return next();
@@ -32,14 +33,14 @@ export namespace Gamify {
         return res.status(404).json({
           message: `Can't remove anything since the queue is empty.`
         });
-      } else if (perkLevel <= 0) {
+      } else if (perkLevel <= 0 && queue.owner !== userId || (queue.owner === userId && perkLevel <= 0 && !playlistTrack)) {
         return res.status(403).json({
           message: `You don't own the perk or don't have enough karma to ${isPlaying ? "skip this song." : "remove songs from the queue."}`
         });
       }
 
       const queueItem = queue.tracks.find(queuedItem => queuedItem.id === trackId);
-      const playlistTrack = queue.playlistTracks.find(pt => pt.id === trackId);
+      
       if (!isPlaying && !queueItem && !playlistTrack) {
         return res.status(404).json({
           message: `Unable to find given song from the queue.`
