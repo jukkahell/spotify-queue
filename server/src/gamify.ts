@@ -33,7 +33,7 @@ export namespace Gamify {
         return res.status(404).json({
           message: `Can't remove anything since the queue is empty.`
         });
-      } else if (perkLevel <= 0 && queue.owner !== userId || (queue.owner === userId && perkLevel <= 0 && !playlistTrack)) {
+      } else if ((perkLevel <= 0 && queue.owner !== userId) || (queue.owner === userId && perkLevel <= 0 && !playlistTrack)) {
         return res.status(403).json({
           message: `You don't own the perk or don't have enough karma to ${isPlaying ? "skip this song." : "remove songs from the queue."}`
         });
