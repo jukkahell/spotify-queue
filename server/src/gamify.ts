@@ -19,12 +19,27 @@ export namespace Gamify {
       const user = queue.users[userIdx];
       const perks = await QueueService.getAllPerksWithUserLevel(passcode, userId);
       const perkLevel = isPlaying ? userPerkLevel("skip_song", perks) : userPerkLevel("remove_song", perks);
-      const playlistTrack = queue.playlistTracks.find(pt => pt.id === trackId);
-
+      
       if (!queue.isPlaying) {
         return next();
       }
+  
+      const queueItem = queue.tracks.find(queuedItem => queuedItem.id === trackId);
 
+      if (!isPlaying && !queueItem) {
+        return res.status(404).json({
+          message: `Unable to find given song from the queue.`
+        });
+      }
+
+      const playlistTrack = queue.playlistTracks.find(pt => pt.id === trackId);
+      const track: QueueItem | CurrentTrack = isPlaying ? queue.currentTrack! : queueItem || playlistTrack!;
+
+      if (isPlaying && track.playlistTrack && queue.owner === userId) {
+        await QueueService.skip(passcode, track.userId!, trackId);
+        return res.status(200).json({ message: "OK" });
+      }
+  
       if (isPlaying && !queue.currentTrack) {
         return res.status(404).json({
           message: `Can't skip current song since no current song found.`
@@ -33,31 +48,15 @@ export namespace Gamify {
         return res.status(404).json({
           message: `Can't remove anything since the queue is empty.`
         });
-      } else if ((perkLevel <= 0 && queue.owner !== userId) || (queue.owner === userId && perkLevel <= 0 && !playlistTrack)) {
-        logger.info(`User ${userId} tried to skip track id ${trackId}. QueueOwner: ${queue.owner}, PerkLevel: ${perkLevel}, PlaylistTrack: ${playlistTrack}`);
+      } else if (perkLevel <= 0) {
         return res.status(403).json({
           message: `You don't own the perk or don't have enough karma to ${isPlaying ? "skip this song." : "remove songs from the queue."}`
         });
       }
-
-      const queueItem = queue.tracks.find(queuedItem => queuedItem.id === trackId);
-      
-      if (!isPlaying && !queueItem && !playlistTrack) {
-        return res.status(404).json({
-          message: `Unable to find given song from the queue.`
-        });
-      }
-
       const removeTrackId = isPlaying ? queue.currentTrack!.id : queueItem!.id || playlistTrack!.id;
       const removeTrack: SpotifyTrack = isPlaying ? queue.currentTrack!.track : queueItem!.track || playlistTrack!.track;
-      const track: QueueItem | CurrentTrack = isPlaying ? queue.currentTrack! : queueItem || playlistTrack!;
       removeTrack.progress = isPlaying ? queue.currentTrack!.progress : 0;
       const removeCost = calculateSkipCost(removeTrack, perkLevel);
-
-      if (track.playlistTrack && queue.owner === userId) {
-        await QueueService.skip(passcode, track.userId!, trackId);
-        return res.status(200).json({ message: "OK" });
-      }
 
       // No cost for track owner
       if (track.userId === userId) {
