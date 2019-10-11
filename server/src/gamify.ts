@@ -20,6 +20,8 @@ export namespace Gamify {
       const perks = await QueueService.getAllPerksWithUserLevel(passcode, userId);
       const perkLevel = isPlaying ? userPerkLevel("skip_song", perks) : userPerkLevel("remove_song", perks);
       
+      logger.info(`${isPlaying ? "Skipping" : "Removing from queue"} track ${trackId} by user ${user.id}`);
+
       if (!queue.isPlaying) {
         return next();
       }
@@ -60,6 +62,7 @@ export namespace Gamify {
 
       // No cost for track owner
       if (track.userId === userId) {
+        logger.info(`Removing/skipping own track. Let's do it...`);
         if (!isPlaying) {
           // Refund queueing cost. Current track's reward comes from trackEndReward function
           const refund = millisToPoints(removeTrack.duration);

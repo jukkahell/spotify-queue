@@ -296,13 +296,13 @@ class QueueService {
     return await QueueService.getUser(passcode, resetId);
   }
 
-  public static addPoints(passcode: string, userId: string, points: number) {
+  public static async addPoints(passcode: string, userId: string, points: number) {
     logger.info(`Adding ${points} points...`, { passcode, user: userId });
     const query = "UPDATE user_queues SET points = points + $1 WHERE user_id = $2 AND passcode = $3";
     db.query(query, [points, userId, passcode]);
   }
 
-  public static addKarma(passcode: string, userId: string, karma: number) {
+  public static async addKarma(passcode: string, userId: string, karma: number) {
     logger.info(`Adding ${karma} karma...`, { passcode, user: userId });
     const query = "UPDATE user_queues SET karma = karma + $1 WHERE user_id = $2 AND passcode = $3 AND karma > 0";
     db.query(query, [karma, userId, passcode]);
