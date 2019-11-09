@@ -36,16 +36,6 @@ export class DeviceSelect extends React.Component<IDeviceSelectProps, IDeviceSel
             loading: false
         };
 
-        axios.get(config.backend.url + "/devices")
-            .then(response => {
-                this.setState({
-                    devices: response.data
-                });
-            }).catch(error => {
-                this.props.onError(error.response.data.message);
-            }
-        );
-
         this.selectDevice = this.selectDevice.bind(this);
         this.dropdownClicked = this.dropdownClicked.bind(this);
         this.setDevice = this.setDevice.bind(this);

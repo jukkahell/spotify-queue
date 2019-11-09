@@ -50,7 +50,7 @@ export namespace Gamify {
         return res.status(404).json({
           message: `Can't remove anything since the queue is empty.`
         });
-      } else if (perkLevel <= 0 && user.id !== queueItem!.userId) {
+      } else if (perkLevel <= 0 && user.id !== track!.userId) {
         return res.status(403).json({
           message: `You don't own the perk or don't have enough karma to ${isPlaying ? "skip this song." : "remove songs from the queue."}`
         });
@@ -240,6 +240,7 @@ export namespace Gamify {
   };
 
   const postMethods = {
+    // After track has been queued
     "track": async (req: express.Request, res: express.Response, next: () => any) => {
       const passcode = req.cookies.get("passcode");
       const userId = req.cookies.get("user", { signed: true });
@@ -248,8 +249,12 @@ export namespace Gamify {
       if (source === "spotify") {
         const queue = await QueueService.getFullQueue(passcode);
         const userIdx = getUser(queue, userId);
-        const track = await SpotifyService.getTrack(queue.accessToken!, trackUri);
-        const millis = track.duration;
+        const queuedItem = queue.tracks.find(qi => qi.trackUri === trackUri);
+        if (!queuedItem) {
+          logger.info(`${trackUri} not found from queue. Not able to reduce points.`, { user: userId, passcode });
+          return next();
+        }
+        const millis = queuedItem.track.duration;
         const cost = millisToPoints(millis);
 
         const user = queue.users[userIdx];

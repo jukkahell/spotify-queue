@@ -133,7 +133,7 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
 
   protected hashSearch() {
     const hash = window.location.hash.substr(1);
-    if (!hash) {
+    if (!hash && this.state.playlists.length === 0) {
       this.getPlaylists();
       return;
     }
@@ -200,10 +200,10 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
 
   protected async selectPlaylist(id: string) {
     try {
-      const playlists = this.props.user && this.props.user.spotifyUserId ? (await axios.get(config.backend.url + "/playlists")).data : [];
+      const playlists = this.state.playlists;
       const playlistName = this.props.settings ? this.props.settings.name : "this queue";
-      playlists.unshift({ id: "top", name: "Top songs on " + playlistName });
-      playlists.unshift({ id: "favorites", name: "My Spotiqu favorites" });
+      playlists.unshift({ id: "top", name: "Top songs on " + playlistName, isOwner: false, settings: null, addToQueue: () => null });
+      playlists.unshift({ id: "favorites", name: "My Spotiqu favorites", isOwner: false, settings: null, addToQueue: () => null });
       const path = ["top", "favorites"].includes(id)
         ? `/${id}`
         : "/playlist?id=" + id;

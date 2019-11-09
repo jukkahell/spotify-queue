@@ -1207,7 +1207,7 @@ class QueueService {
       const queues = res.rows.map(q => QueueService.mapQueue(q));
       queues.forEach((queue: Queue) => {
         if (queue.accessToken) {
-          QueueService.checkTrackStatus(queue.passcode, queue.owner);
+          QueueService.checkTrackStatus(queue.passcode, queue.owner, true);
         }
       });
     } catch(err) {
@@ -1377,12 +1377,12 @@ class QueueService {
     }
   }
 
-  private static async checkTrackStatus(passcode: string, userId: string) {
-    logger.info(`Checking playback state for currently playing track...`, { user: userId, passcode });
+  private static async checkTrackStatus(passcode: string, ownerId: string, syncWithSpotify: boolean = false) {
+    logger.info(`Checking playback state for currently playing track...`, { user: ownerId, passcode });
     try {
-      const currentState = await QueueService.getCurrentState(passcode, userId);
+      const currentState = await QueueService.getCurrentState(passcode, ownerId, syncWithSpotify);
       if (!currentState.isSpotiquPlaying) {
-        logger.info(`We are paused so no need to do it...`, { user: userId, passcode });
+        logger.info(`We are paused so no need to do it...`, { user: ownerId, passcode });
         return;
       }
 
@@ -1391,10 +1391,10 @@ class QueueService {
 
       // We can start next if spotify isn't playing anymore
       if (!currentState.isSpotifyPlaying && currentState.isSpotiquPlaying) {
-        logger.info(`Track was already over...starting next`, { user: userId, passcode });
+        logger.info(`Track was already over...starting next`, { user: ownerId, passcode });
         QueueService.startNextTrack(passcode, "-", currentState.currentTrack);
       } else if (timeLeft < 5000) {
-        logger.info(`Less than 5 secs left...initiating timer to start the next song...`, { user: userId, passcode });
+        logger.info(`Less than 5 secs left...initiating timer to start the next song...`, { user: ownerId, passcode });
         // Start new song after timeLeft and check for that song's duration
         setTimeout(() => QueueService.startNextTrack(passcode, "-", currentState.currentTrack), timeLeft - 1000);
       } else {
@@ -1402,27 +1402,27 @@ class QueueService {
         const seconds = Math.round(timeLeft / 1000);
         logger.info(
           `Track ${currentState.currentTrack!.track.id} still playing for ${seconds} secs. Checking again after that.`,
-          { user: userId, passcode });
+          { user: ownerId, passcode });
 
         if (QueueService.timeouts[currentState.accessToken!]) {
           clearTimeout(QueueService.timeouts[currentState.accessToken!]);
         }
         QueueService.timeouts[currentState.accessToken!] = setTimeout(() =>
-          QueueService.checkTrackStatus(passcode, "-"),
+          QueueService.checkTrackStatus(passcode, ownerId, true),
           timeLeft - 1000
         );
       }
     } catch (err) {
       if (err.status === 404) {
-        logger.info(err.message, { user: userId, passcode });
+        logger.info(err.message, { user: ownerId, passcode });
       } else {
-        logger.error("Unable to get currently playing track from spotify.", { user: userId, passcode });
-        logger.error(err, { user: userId, passcode });
+        logger.error("Unable to get currently playing track from spotify.", { user: ownerId, passcode });
+        logger.error(err, { user: ownerId, passcode });
       }
     }
   }
 
-  public static async getCurrentState(passcode: string, userId: string) {
+  public static async getCurrentState(passcode: string, userId: string, syncWithSpotify: boolean = false) {
     try {
       const queue = await QueueService.getQueue(passcode);
       // Check that access token is still valid.
@@ -1443,15 +1443,20 @@ class QueueService {
         playlistId: settings.playlist,
         deviceId: queue.deviceId
       };
+
+      // Make spotify sync only for the automated check
+      if (!syncWithSpotify) {
+        return currentState;
+      }
       // Get response if Spotify is playing
       try {
         const spotifyCurrentTrack = await SpotifyService.currentlyPlaying(queue.accessToken!, userId, passcode);
 
         // Go with spotify's data if our current track equals to spotify's current track
-        const spotiquCurrenTrack = currentTrack;
-        if (spotifyCurrentTrack.item && spotiquCurrenTrack && spotifyCurrentTrack.item.id === spotiquCurrenTrack.track.id) {
+        const spotiquCurrentTrack = currentTrack;
+        if (spotifyCurrentTrack.item && spotiquCurrentTrack && spotifyCurrentTrack.item.id === spotiquCurrentTrack.track.id) {
           db.query("UPDATE queue SET device_id = $1 WHERE id = $2", [spotifyCurrentTrack.device.id, passcode]);
-          db.query("UPDATE tracks SET progress = $1 WHERE id = $2", [spotifyCurrentTrack.item.progress, spotiquCurrenTrack.id]);
+          db.query("UPDATE tracks SET progress = $1 WHERE id = $2", [spotifyCurrentTrack.item.progress, spotiquCurrentTrack.id]);
           queue.deviceId = spotifyCurrentTrack.device.id;
           currentTrack!.track.progress = spotifyCurrentTrack.item.progress;
         }
@@ -1470,11 +1475,11 @@ class QueueService {
             `progress: ${spotifyCurrentTrack.progress_ms}ms`, { user: userId, passcode });
         }
 
-        if (spotiquCurrenTrack) {
+        if (spotiquCurrentTrack) {
           logger.debug(
-            `Spotiqu state ${spotiquCurrenTrack.track.id}. ` +
+            `Spotiqu state ${spotiquCurrentTrack.track.id}. ` +
             `isPlaying: ${queue.isPlaying}, ` +
-            `progress: ${spotiquCurrenTrack.track.progress}ms`, { user: userId, passcode });
+            `progress: ${spotiquCurrentTrack.track.progress}ms`, { user: userId, passcode });
         } else {
           logger.debug(
             `Spotiqu has no current track. ` +
