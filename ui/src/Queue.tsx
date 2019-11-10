@@ -15,6 +15,7 @@ export interface IQueuedItem {
   protected: boolean;
   source: "spotify" | "youtube";
   playlistTrack: boolean;
+  progress: number;
 }
 
 export interface IVote {
@@ -190,7 +191,7 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
     const protectPerkLevel = this.userPerkLevel("protect_song");
     const moveFirstPerkLevel = this.userPerkLevel("move_first");
     const removeOrSkipPerkLevel = this.state.contextMenuTargetPlaying ? skipPerkLevel : removePerkLevel;
-    const skipCost = this.calculateSkipCost(this.state.contextMenuTrack.track, removeOrSkipPerkLevel);
+    const skipCost = this.calculateSkipCost(this.state.contextMenuTrack, removeOrSkipPerkLevel);
     const showPoints =
       (this.props.settings!.gamify && !trackOwner && !playlistTrackForOwner)
         ? "(-" + skipCost + " pts)"
@@ -229,7 +230,7 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
 
     // If gamify enabled
     if (!this.state.contextMenuTrack.protected && protectPerkLevel > 0) {
-      const protectCost = this.calculateProtectCost(this.state.contextMenuTrack.track);
+      const protectCost = this.calculateProtectCost(this.state.contextMenuTrack);
       menu.push(
         <a className={"dropdown-item"} key={"protectTrack"} href="#" onClick={this.protectTrack}>
           <FontAwesomeIcon icon="shield-alt" /> Protect from skip (-{protectCost} pts)
@@ -267,7 +268,7 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
       return null;
     }
 
-    const progress = this.props.currentTrack && this.props.currentTrack.track.progress ? this.props.currentTrack.track.progress : 0;
+    const progress = this.props.currentTrack && this.props.currentTrack.progress ? this.props.currentTrack.progress : 0;
     let totalDuration = this.props.currentTrack ? this.props.currentTrack.track.duration - progress : 0;
     return this.props.queue.map((queuedItem, i) => {
       const element = <li className="queuedTrack" key={"queue-" + i}>
@@ -311,13 +312,13 @@ export class Queue extends React.Component<IQueueProps, IQueueState> {
     );
   }
 
-  private calculateProtectCost(track: ITrackProps) {
-    const millisLeft = track.duration - (track.progress || 0);
+  private calculateProtectCost(queuedItem: IQueuedItem) {
+    const millisLeft = queuedItem.track.duration - (queuedItem.progress || 0);
     const minutesLeft = Math.floor(millisLeft / 60000);
     return (minutesLeft + 1) * 5;
   }
-  private calculateSkipCost(track: ITrackProps, perkLevel: number) {
-    const millisLeft = track.duration - (track.progress || 0);
+  private calculateSkipCost(queuedItem: IQueuedItem, perkLevel: number) {
+    const millisLeft = queuedItem.track.duration - (queuedItem.progress || 0);
     const minutesLeft = Math.floor(millisLeft / 60000);
     const perkDiscount = perkLevel > 1 ? perkLevel : 0;
     return (minutesLeft + 1) * (5 - perkDiscount);

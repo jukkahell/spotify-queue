@@ -51,11 +51,13 @@ export interface TrackDao {
   progress: number;
   timestamp: number;
   playlist_track: boolean;
+  started_time: string;
 }
 
 export interface CurrentTrack extends QueueItem {
   votes: Vote[];
   progress: number;
+  startedTime?: Date;
 }
 
 export interface VoteDao {
@@ -79,6 +81,7 @@ export interface SettingsDao {
   max_duplicate_tracks: number;
   number_of_tracks_per_user: number;
   random_playlist: boolean;
+  repeat_playlist: boolean;
   random_queue: boolean;
   skip_threshold: number;
   playlist: string;
@@ -94,6 +97,7 @@ export interface Settings {
   maxDuplicateTracks: number;
   numberOfTracksPerUser: number;
   randomPlaylist: boolean;
+  repeatPlaylist: boolean;
   randomQueue: boolean;
   skipThreshold: number;
   playlist: string | null;

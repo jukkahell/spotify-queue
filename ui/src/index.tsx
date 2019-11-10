@@ -4,7 +4,7 @@ import { far } from "@fortawesome/free-regular-svg-icons";
 import {
     faAngleDoubleUp, faArrowCircleUp, faBan, faBars, faCheckCircle, faClipboardCheck, faClipboardList, faClone,
     faCog, faCoins, faDesktop, faDice, faEdit, faExchangeAlt, faExclamationTriangle, faForward, faGamepad, faHandshake, faHome,
-    faLayerGroup, faLevelUpAlt, faLink, faListOl, faMinusCircle, faMobile, faPauseCircle, faPlayCircle, faPlusCircle,
+    faInfinity, faLayerGroup, faLevelUpAlt, faLink, faListOl, faMinusCircle, faMobile, faPauseCircle, faPlayCircle, faPlusCircle,
     faRandom, faSave, faSearch, faShare, faShareAlt, faShieldAlt, faSignInAlt, faSignOutAlt, faSlidersH,
     faStar, faStore, faThumbsDown, faThumbsUp, faTimesCircle, faTrashAlt, faUndo, faUnlock, faUser, faUsers,
     faVolumeOff, faVolumeUp,
@@ -25,7 +25,7 @@ library.add(
     faSearch, faClipboardList, faDice, faLayerGroup, faTimesCircle, faUsers,
     faUndo, faEdit, faSave, faShieldAlt, faUser, faStar, faHandshake,
     faSignInAlt, faHome, faStore, faLevelUpAlt, faCoins, faBan, faListOl,
-    faExclamationTriangle, faAngleDoubleUp, fab, far
+    faExclamationTriangle, faAngleDoubleUp, faInfinity, fab, far
 );
 axios.defaults.withCredentials = true;
 

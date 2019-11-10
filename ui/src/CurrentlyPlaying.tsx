@@ -62,7 +62,7 @@ export class CurrentlyPlaying extends React.Component<ICurrentlyPlayingProps, IC
         if (this.props.currentTrack && ((this.props.currentTrack.track.id !== this.state.trackId) || (!prevProps.isPlaying && this.props.isPlaying))) {
             this.setState({
                 trackId: this.props.currentTrack.track.id,
-                progress: this.props.currentTrack.track.progress!,
+                progress: this.props.currentTrack.progress!,
                 progressUpdated: (new Date).getTime(),
                 lastRefresh: (new Date).getTime()
             }, this.startProgress);

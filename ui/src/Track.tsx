@@ -12,7 +12,6 @@ export interface ITrackProps {
     artistId: string;
     duration: number;
     totalDuration?: number;
-    progress?: number;
     cover?: string;
     isPlaying: boolean;
     protectedTrack: boolean;

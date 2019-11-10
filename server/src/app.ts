@@ -613,12 +613,7 @@ app.put("/queuePlaylist", async (req, res) => {
   const playlistId = req.body.id;
   try {
     const queueDao = await QueueService.getQueue(req.cookies.get("passcode"));
-    const tracks = playlistId === "top"
-      ? await QueueService.getTop(passcode, user)
-      : playlistId === "favorites"
-        ? await QueueService.getFavorites(user)
-        : await SpotifyService.getPlaylistTracks(queueDao.accessToken!, queueDao.owner, playlistId, user, passcode);
-    QueueService.addToPlaylistQueue(user, passcode, tracks, playlistId).then(() => {
+    QueueService.queuePlaylist(user, passcode, queueDao.accessToken!, queueDao.owner, playlistId).then(() => {
       res.status(200).json({ message: "OK" });
     }).catch(err => {
       res.status(err.status).json({ message: err.message });

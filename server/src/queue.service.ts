@@ -11,6 +11,7 @@ import { Gamify } from "./gamify";
 import config from "./config";
 import YoutubeService from "./youtube.service";
 import * as uuid from "uuid/v1";
+import moment = require("moment");
 
 export interface QueueTimeout {
   [accessToken: string]: NodeJS.Timer;
@@ -215,6 +216,7 @@ class QueueService {
       maxDuplicateTracks: settingsDao.max_duplicate_tracks,
       numberOfTracksPerUser: settingsDao.number_of_tracks_per_user,
       randomPlaylist: settingsDao.random_playlist,
+      repeatPlaylist: settingsDao.repeat_playlist,
       randomQueue: settingsDao.random_queue,
       skipThreshold: settingsDao.skip_threshold,
       playlist: settingsDao.playlist,
@@ -450,6 +452,7 @@ class QueueService {
       numberOfTracksPerUser: 5,
       playlist: null,
       randomPlaylist: true,
+      repeatPlaylist: true,
       randomQueue: false,
       skipThreshold: 5,
       spotifyLogin: false,
@@ -460,14 +463,14 @@ class QueueService {
     const createSettingsQuery = `
       INSERT INTO settings (
         passcode, name, gamify, max_duplicate_tracks, number_of_tracks_per_user, random_playlist, 
-        random_queue, skip_threshold, max_sequential_tracks, spotify_login, ban_vote_count
+        repeat_playlist, random_queue, skip_threshold, max_sequential_tracks, spotify_login, ban_vote_count
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`;
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`;
 
     await db.query(createSettingsQuery, [
       passcode, settings.name, settings.gamify, settings.maxDuplicateTracks, settings.numberOfTracksPerUser,
-      settings.randomPlaylist, settings.randomQueue, settings.skipThreshold, settings.maxSequentialTracks, settings.spotifyLogin,
-      settings.banVoteCount,
+      settings.randomPlaylist, settings.repeatPlaylist, settings.randomQueue, settings.skipThreshold,
+      settings.maxSequentialTracks, settings.spotifyLogin, settings.banVoteCount,
     ]);
 
     return settings;
@@ -729,6 +732,7 @@ class QueueService {
       timestamp: trackDao.timestamp,
       votes: [],
       playlistTrack: trackDao.playlist_track,
+      startedTime: trackDao.started_time ? new Date(Date.parse(trackDao.started_time)) : undefined,
     };
   }
 
@@ -1153,7 +1157,7 @@ class QueueService {
 
     const timeLeft = currentTrack.track.duration - currentTrack.progress;
     await db.query("UPDATE queue SET is_playing = true WHERE id = $1", [passcode]);
-    await db.query("UPDATE tracks SET currently_playing = true WHERE passcode = $1 AND id = $2", [passcode, currentTrack.id]);
+    await db.query("UPDATE tracks SET currently_playing = true, started_time = $3 WHERE passcode = $1 AND id = $2", [passcode, currentTrack.id, currentTrack.startedTime!.toISOString()]);
 
     logger.info(`Starting ${Math.round(timeLeft / 1000)} second timer for ${currentTrack.id}...`, { user: userId, passcode });
     const queue = await QueueService.getQueue(passcode);
@@ -1171,7 +1175,12 @@ class QueueService {
 
     const updateToDb = async () => {
       try {
+        const currentTrack = await QueueService.getCurrentTrack(queue.passcode, userId);
+        const progress = new Date().getTime() - currentTrack!.startedTime!.getTime();
         await db.query("UPDATE queue SET is_playing = false WHERE id = $1", [queue.passcode]);
+        if (currentTrack) {
+          await db.query("UPDATE tracks SET progress = $1 WHERE id = $2", [progress, currentTrack.id]);
+        }
         logger.info(`Successfully stopped playing...`, { user: userId, passcode: queue.passcode });
         return true;
       } catch(err) {
@@ -1186,7 +1195,7 @@ class QueueService {
       return updateToDb();
     } catch(err) {
       if (err.response) {
-        if (err.response.status === 403 && err.response.data.error.message.indexOf("Already paused") >= 0) {
+        if (err.response.status === 403) {
           return updateToDb();
         }
         logger.error(err.response.data.error.message, { user: userId, passcode: queue.passcode });
@@ -1233,6 +1242,7 @@ class QueueService {
         if (currentTrack) {
           try {
             await SpotifyService.resume(queue.accessToken!, [currentTrack.track.id], currentTrack.progress, queue.deviceId!);
+            currentTrack.startedTime = moment().subtract(currentTrack.progress, 'seconds').toDate();
             QueueService.startPlaying(queue.accessToken!, passcode, user, currentTrack);
           } catch(err) {
             if (err.response) {
@@ -1240,6 +1250,7 @@ class QueueService {
                 logger.info("No device selected when trying to resume.", { user, passcode });
                 throw { status: 404, message: "No device selected. Please select a device from bottom left corner." };
               } else if (err.response.status === 403 && err.response.data.error.message.indexOf("Not paused") >= 0) {
+                currentTrack.startedTime = moment().subtract(currentTrack.progress, 'seconds').toDate();
                 QueueService.startPlaying(queue.accessToken!, passcode, user, currentTrack);
                 return true;
               } else {
@@ -1289,18 +1300,19 @@ class QueueService {
         max_duplicate_tracks = $3,
         number_of_tracks_per_user = $4,
         random_playlist = $5,
-        random_queue = $6,
-        skip_threshold = $7,
-        max_sequential_tracks = $8,
-        spotify_login = $9,
-        ban_vote_count = $10,
-        use_perk_shop = $11
-      WHERE passcode = $12`;
+        repeat_playlist = $6,
+        random_queue = $7,
+        skip_threshold = $8,
+        max_sequential_tracks = $9,
+        spotify_login = $10,
+        ban_vote_count = $11,
+        use_perk_shop = $12
+      WHERE passcode = $13`;
       db.query(updateQuery, [
         settings.name, settings.gamify, settings.maxDuplicateTracks, 
-        settings.numberOfTracksPerUser, settings.randomPlaylist, settings.randomQueue, 
-        settings.skipThreshold, settings.maxSequentialTracks, settings.spotifyLogin,
-        settings.banVoteCount, settings.usePerkShop,
+        settings.numberOfTracksPerUser, settings.randomPlaylist, settings.repeatPlaylist,
+        settings.randomQueue, settings.skipThreshold, settings.maxSequentialTracks,
+        settings.spotifyLogin, settings.banVoteCount, settings.usePerkShop,
         passcode,
       ]);
       return settings;
@@ -1310,6 +1322,21 @@ class QueueService {
       }
       logger.error(err, { user, passcode });
       throw { status: 500, message: "Unexpected error occurred while saving the settings." };
+    }
+  }
+
+  public static async queuePlaylist(userId: string, passcode: string, accessToken: string, spotifyUserId: string, playlistId: string) {
+    const tracks = playlistId === "top"
+      ? await QueueService.getTop(passcode, userId)
+      : playlistId === "favorites"
+        ? await QueueService.getFavorites(userId)
+        : await SpotifyService.getPlaylistTracks(accessToken, spotifyUserId, playlistId, userId, passcode);
+    if (tracks.length > 0) {
+      await QueueService.addToPlaylistQueue(userId, passcode, tracks, playlistId);
+      return true;
+    } else {
+      logger.info(`Found 0 playlist tracks for playlist ${playlistId}`, { user: userId, passcode });
+      return false;
     }
   }
 
@@ -1336,11 +1363,18 @@ class QueueService {
 
       // Delete finished track
       await db.query("DELETE FROM tracks WHERE currently_playing = true AND passcode = $1", [passcode]);
+      logger.info(`Tracks: ${queue.tracks.length}, playlist tracks: ${queue.playlistTracks.length}`, { user, passcode });
       if (queue.tracks.length === 0 && queue.playlistTracks.length === 0) {
-        logger.info("No more songs in queue. Stop playing.", { user, passcode });
-        await QueueService.stopPlaying(queue, user);
-        await db.query("UPDATE settings SET playlist = null WHERE passcode = $1", [passcode]);
-        return;
+        // Queue playlist again if repeat is on
+        if (queue.settings.repeatPlaylist && queue.settings.playlist) {
+          await QueueService.queuePlaylist(user, passcode, queue.accessToken!, queue.owner, queue.settings.playlist);
+          queue.playlistTracks = await QueueService.getTracks(passcode, user, true);
+        } else {
+          logger.info("No more songs in queue and repeat is off. Stop playing.", { user, passcode });
+          await QueueService.stopPlaying(queue, user);
+          await db.query("UPDATE settings SET playlist = null WHERE passcode = $1", [passcode]);
+          return;
+        }
       }
       const nextIndex = (queue.tracks.length > 0) ?
         QueueService.getNextTrackIdx(queue.tracks, queue.settings.randomQueue) :
@@ -1353,7 +1387,7 @@ class QueueService {
       if (queuedItem.source === "spotify") {
         try {
           SpotifyService.startSong(queue.accessToken!, [queuedItem.track.id], queue.deviceId!);
-          await QueueService.startPlaying(queue.accessToken!, passcode, user, { ...queuedItem, progress: 0, currentlyPlaying: false, votes: [] });
+          await QueueService.startPlaying(queue.accessToken!, passcode, user, { ...queuedItem, progress: 0, startedTime: new Date(), currentlyPlaying: false, votes: [] });
           logger.info(`Track ${queuedItem.track.id} successfully started.`, { user, passcode });
         } catch(err) {
           logger.error(err.response.data.error.message, { user, passcode });
@@ -1361,7 +1395,7 @@ class QueueService {
         }
       } else {
         logger.info(`YouTube track ${queuedItem.track.id} started. Client will trigger the next song.`, { user, passcode });
-        await QueueService.startPlaying(queue.accessToken!, passcode, user, { ...queuedItem, progress: 0, currentlyPlaying: false, votes: [] });
+        await QueueService.startPlaying(queue.accessToken!, passcode, user, { ...queuedItem, progress: 0, startedTime: new Date(), currentlyPlaying: false, votes: [] });
       }
     } catch (err) {
       logger.error("Error occurred while starting next track", { user, passcode });
@@ -1387,16 +1421,16 @@ class QueueService {
       }
 
       const timeLeft = currentState.currentTrack ?
-        currentState.currentTrack.track.duration - currentState.currentTrack.track.progress : 0;
+        currentState.currentTrack.track.duration - currentState.currentTrack.progress : 0;
 
       // We can start next if spotify isn't playing anymore
       if (!currentState.isSpotifyPlaying && currentState.isSpotiquPlaying) {
         logger.info(`Track was already over...starting next`, { user: ownerId, passcode });
-        QueueService.startNextTrack(passcode, "-", currentState.currentTrack);
+        QueueService.startNextTrack(passcode, ownerId, currentState.currentTrack);
       } else if (timeLeft < 5000) {
         logger.info(`Less than 5 secs left...initiating timer to start the next song...`, { user: ownerId, passcode });
         // Start new song after timeLeft and check for that song's duration
-        setTimeout(() => QueueService.startNextTrack(passcode, "-", currentState.currentTrack), timeLeft - 1000);
+        setTimeout(() => QueueService.startNextTrack(passcode, ownerId, currentState.currentTrack), timeLeft - 1000);
       } else {
         // If there's still time, check for progress again after a while
         const seconds = Math.round(timeLeft / 1000);
@@ -1433,6 +1467,10 @@ class QueueService {
       const currentTrack = await QueueService.getCurrentTrack(passcode, userId);
       if (currentTrack) {
         currentTrack.votes = await QueueService.getTrackVotes(passcode, currentTrack.id);
+        if (currentTrack.startedTime) {
+          currentTrack.progress = Math.round(new Date().getTime() - currentTrack.startedTime!.getTime());
+          logger.debug(`Current track progress: ${currentTrack.progress}`, { user: userId, passcode });
+        }
       }
 
       const currentState: CurrentState = {
@@ -1446,6 +1484,9 @@ class QueueService {
 
       // Make spotify sync only for the automated check
       if (!syncWithSpotify) {
+        if (currentTrack) {
+          db.query("UPDATE tracks SET progress = $1 WHERE id = $2", [currentTrack.progress, currentTrack.id]);
+        }
         return currentState;
       }
       // Get response if Spotify is playing
@@ -1458,7 +1499,7 @@ class QueueService {
           db.query("UPDATE queue SET device_id = $1 WHERE id = $2", [spotifyCurrentTrack.device.id, passcode]);
           db.query("UPDATE tracks SET progress = $1 WHERE id = $2", [spotifyCurrentTrack.item.progress, spotiquCurrentTrack.id]);
           queue.deviceId = spotifyCurrentTrack.device.id;
-          currentTrack!.track.progress = spotifyCurrentTrack.item.progress;
+          currentTrack!.progress = spotifyCurrentTrack.item.progress;
         }
 
         currentState.isSpotifyPlaying = spotifyCurrentTrack.is_playing;
@@ -1479,7 +1520,7 @@ class QueueService {
           logger.debug(
             `Spotiqu state ${spotiquCurrentTrack.track.id}. ` +
             `isPlaying: ${queue.isPlaying}, ` +
-            `progress: ${spotiquCurrentTrack.track.progress}ms`, { user: userId, passcode });
+            `progress: ${spotiquCurrentTrack.progress}ms`, { user: userId, passcode });
         } else {
           logger.debug(
             `Spotiqu has no current track. ` +

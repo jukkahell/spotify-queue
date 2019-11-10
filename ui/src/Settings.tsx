@@ -8,6 +8,7 @@ export interface ISettings {
   maxDuplicateTracks: number;
   numberOfTracksPerUser: number;
   randomPlaylist: boolean;
+  repeatPlaylist: boolean;
   randomQueue: boolean;
   skipThreshold: number;
   playlist: string;
@@ -42,6 +43,7 @@ export class Settings extends React.Component<IShareProps, IShareState> {
 
     this.toggleGamify = this.toggleGamify.bind(this);
     this.toggleRandomPlaylist = this.toggleRandomPlaylist.bind(this);
+    this.toggleRepeatPlaylist = this.toggleRepeatPlaylist.bind(this);
     this.toggleRandomQueue = this.toggleRandomQueue.bind(this);
     this.dropdownClicked = this.dropdownClicked.bind(this);
     this.hideMenu = this.hideMenu.bind(this);
@@ -78,6 +80,13 @@ export class Settings extends React.Component<IShareProps, IShareState> {
     e.preventDefault();
     const settings = this.props.settings;
     settings.randomPlaylist = !settings.randomPlaylist;
+    this.props.updateSettings(settings);
+  }
+
+  public toggleRepeatPlaylist(e: React.MouseEvent<HTMLElement>) {
+    e.preventDefault();
+    const settings = this.props.settings;
+    settings.repeatPlaylist = !settings.repeatPlaylist;
     this.props.updateSettings(settings);
   }
 
@@ -188,6 +197,11 @@ export class Settings extends React.Component<IShareProps, IShareState> {
         <FontAwesomeIcon icon="random" />
         <span className="settingName">Shuffle playlist</span>
         <FontAwesomeIcon className={"settingOptionCheckmark " + (this.props.settings.randomPlaylist ? "active" : "inactive")} icon="check-circle" />
+      </a>,
+      <a className="dropdown-item settingsMenuItem" key="repeatPlaylist" href="#" id="repeatPlaylist" onClick={this.toggleRepeatPlaylist}>
+        <FontAwesomeIcon icon="infinity" />
+        <span className="settingName">Repeat playlist</span>
+        <FontAwesomeIcon className={"settingOptionCheckmark " + (this.props.settings.repeatPlaylist ? "active" : "inactive")} icon="check-circle" />
       </a>,
       <a className="dropdown-item settingsMenuItem" key="randomQueue" href="#" id="randomQueue" onClick={this.toggleRandomQueue}>
         <FontAwesomeIcon icon="dice" />
