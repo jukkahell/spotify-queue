@@ -251,7 +251,7 @@ export class App extends React.Component<{}, IState> {
       "&redirect_uri=" +
       encodeURIComponent(redirect_uri);
 
-    window.open(url, "SpotiQu", "WIDTH=400,HEIGHT=550");
+    window.open(url, "Musifer", "WIDTH=400,HEIGHT=550");
 
     this.authInterval = setInterval(this.isAuthorized, 2000);
   }

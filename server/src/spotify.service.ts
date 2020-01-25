@@ -36,7 +36,7 @@ class SpotifyService {
     Buffer.from(SpotifyService.clientId + ":" + SpotifyService.secret).toString(
       "base64"
     );
-  public static readonly favoritesName = "My Spotiqu favorites";
+  public static readonly favoritesName = "My Musifer favorites";
 
   public static getUser = (accessToken: string) => {
     return axios.get("https://api.spotify.com/v1/me", {
@@ -279,7 +279,7 @@ class SpotifyService {
       {
         name: SpotifyService.favoritesName,
         public: false,
-        description: "Songs marked as favorite in Spotiqu app"
+        description: "Songs marked as favorite in Musifer app"
       },
       {
         headers: {

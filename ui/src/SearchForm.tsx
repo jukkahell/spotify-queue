@@ -203,7 +203,7 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
       const playlists = this.state.playlists;
       const playlistName = this.props.settings ? this.props.settings.name : "this queue";
       playlists.unshift({ id: "top", name: "Top songs on " + playlistName, isOwner: false, settings: null, addToQueue: () => null });
-      playlists.unshift({ id: "favorites", name: "My Spotiqu favorites", isOwner: false, settings: null, addToQueue: () => null });
+      playlists.unshift({ id: "favorites", name: "My Musifer favorites", isOwner: false, settings: null, addToQueue: () => null });
       const path = ["top", "favorites"].includes(id)
         ? `/${id}`
         : "/playlist?id=" + id;
@@ -306,7 +306,7 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
     tracks.push(
       <h4 key="title">
         {this.state.title}
-        {this.state.title === "My Spotiqu favorites"
+        {this.state.title === "My Musifer favorites"
           ? <span className="saveToSpotify" title="Save as Spotify playlist" onClick={this.exportToSpotify}><FontAwesomeIcon icon="save" /></span>
           : null}
       </h4>
@@ -381,7 +381,7 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
   public getPlaylists() {
     const queueName = this.props.settings ? this.props.settings.name : "this queue";
     const top: IPlaylistProps = { id: "top", name: "Top songs on " + queueName, isOwner: false, settings: null, addToQueue: () => this.props.onQueued };
-    const favorites: IPlaylistProps = { id: "favorites", name: "My Spotiqu favorites", isOwner: false, settings: null, addToQueue: () => this.props.onQueued };
+    const favorites: IPlaylistProps = { id: "favorites", name: "My Musifer favorites", isOwner: false, settings: null, addToQueue: () => this.props.onQueued };
     if (this.props.user && this.props.user.spotifyUserId) {
       axios.get(config.backend.url + "/playlists")
         .then(response => {

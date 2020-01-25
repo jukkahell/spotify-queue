@@ -168,7 +168,7 @@ export class UserMenu extends React.Component<IUserMenuProps, IUserMenuState> {
             "&scope=playlist-read-private,playlist-read-collaborative" +
             "&redirect_uri=" + encodeURIComponent(visitorCallback);
 
-        window.open(url, "SpotiQu", "WIDTH=400,HEIGHT=550");
+        window.open(url, "Musifer", "WIDTH=400,HEIGHT=550");
 
         this.authInterval = setInterval(this.isAuthorized, 2000);
     }
