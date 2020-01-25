@@ -18,7 +18,7 @@ export class Share extends React.Component<IShareProps, IShareState> {
     public constructor(props: IShareProps) {
         super(props);
 
-        const url = "https://spotiqu.eu/#join:" + this.props.passcode;
+        const url = "https://musifer.com/#join:" + this.props.passcode;
         const shareOptions = [url, `Copy link`];
         const navigator: any = window.navigator;
         if (navigator.share) {
@@ -38,7 +38,7 @@ export class Share extends React.Component<IShareProps, IShareState> {
     public selectShare(e: React.MouseEvent<HTMLElement>) {
         e.preventDefault();
 
-        const url = "https://spotiqu.eu/#join:" + this.props.passcode;
+        const url = "https://musifer.com/#join:" + this.props.passcode;
         switch (e.currentTarget.id) {
             case "Copy link":
                 this.copyText(url);

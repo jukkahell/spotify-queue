@@ -1,4 +1,4 @@
 export interface YoutubeSearchQuery {
-    q: string,
-    limit: number
+  q: string;
+  limit: number;
 }

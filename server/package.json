@@ -24,6 +24,7 @@
     "node-pg-migrate": "3.21.1",
     "pg": "7.11.0",
     "randomstring": "1.1.5",
+    "tslint": "^5.20.1",
     "typescript": "3.5.3",
     "uuid": "3.3.2",
     "winston": "3.2.1",
@@ -35,5 +36,9 @@
     "start": "npm run build && node build/dist/src/app.js",
     "migrate": "node-pg-migrate"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "prettier": "1.19.1",
+    "tslint-config-prettier": "1.18.0",
+    "tslint-plugin-prettier": "2.0.1"
+  }
 }

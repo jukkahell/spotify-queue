@@ -1,5 +1,5 @@
 {
-  "extends": ["tslint:recommended", "tslint-react", "tslint-config-prettier"],
+  "extends": ["tslint:recommended", "tslint-plugin-prettier", "tslint-config-prettier"],
   "linterOptions": {
     "exclude": [
       "config/**/*.js",
@@ -7,6 +7,7 @@
     ]
   },
   "rules": {
+    "prettier": true,
     "class-name": true,
     "comment-format": [
       true,
@@ -17,19 +18,24 @@
     "forin": true,
     "indent": [
       true,
-      "spaces"
+      "spaces",
+      2
     ],
     "label-position": true,
     "max-line-length": [
       true,
-      140
+      200
     ],
     "member-access": true,
     "member-ordering": [
       true,
-      "public-before-private",
-      "static-before-instance",
-      "variables-before-functions"
+      {
+        "order": [
+          "public-before-private",
+          "static-before-instance",
+          "variables-before-functions"
+        ]
+      }
     ],
     "no-arg": true,
     "no-bitwise": true,
@@ -61,8 +67,7 @@
       "check-catch",
       "check-else",
       "check-finally",
-      "check-whitespace",
-      "check-typecast"
+      "check-whitespace"
     ],
     "quotemark": [
       true,
@@ -70,7 +75,6 @@
       "avoid-escape"
     ],
     "radix": true,
-    "semicolon": true,
     "trailing-comma": [
       false,
       {

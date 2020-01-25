@@ -13,7 +13,7 @@ export interface QueueDao {
 
 export interface CurrentState {
   accessToken: string | null;
-  currentTrack: CurrentTrack | null,
+  currentTrack: CurrentTrack | null;
   isSpotifyPlaying: boolean;
   isSpotiquPlaying: boolean;
   playlistId: string | null;
@@ -30,7 +30,7 @@ export interface FullQueue extends Queue {
 
 export interface Queue {
   passcode: string;
-  owner: string,
+  owner: string;
   accessToken: string | null;
   accessTokenAcquired: number;
   refreshToken: string;
@@ -155,4 +155,11 @@ export interface Perk {
   cooldownLeft?: number;
 }
 
-export type PerkName = "move_up" | "queue_more_1" | "queue_sequential_1" | "protect_song" | "remove_song" | "skip_song" | "move_first";
+export type PerkName =
+  | "move_up"
+  | "queue_more_1"
+  | "queue_sequential_1"
+  | "protect_song"
+  | "remove_song"
+  | "skip_song"
+  | "move_first";
