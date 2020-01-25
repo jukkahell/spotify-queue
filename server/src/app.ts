@@ -2,11 +2,8 @@ import * as bodyParser from "body-parser";
 import * as Cookies from "cookies";
 import * as cors from "cors";
 import * as express from "express";
-import * as fs from "fs";
 import * as http from "http";
-import * as https from "https";
 import * as Keygrip from "keygrip";
-import { env } from "process";
 import * as randomstring from "randomstring";
 import * as youtubeSearch from "youtube-search";
 import Acl, { IAuthResult } from "./acl";
@@ -34,18 +31,7 @@ app.use(Acl.authFilter);
 app.use(Acl.adminFilter);
 app.use(Gamify.pre);
 
-const options =
-  env.NODE_ENV === "production"
-    ? {
-        key: fs.readFileSync(secrets.certPath + "privkey.pem"),
-        cert: fs.readFileSync(secrets.certPath + "fullchain.pem")
-      }
-    : {};
-
-const server =
-  env.NODE_ENV === "production"
-    ? https.createServer(options, app)
-    : http.createServer(app);
+const server = http.createServer(app);
 
 app.get("/createOrReactivate", async (req, res) => {
   try {
