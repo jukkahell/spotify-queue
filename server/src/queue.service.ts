@@ -537,7 +537,7 @@ class QueueService {
       if (spotifyUserResponse.data.product !== "premium") {
         throw {
           status: 403,
-          message: "You must have Spotify Premium to use Spotiqu."
+          message: "You must have Spotify Premium to use Musifer."
         };
       }
 
@@ -2393,14 +2393,14 @@ class QueueService {
 
         if (spotiquCurrentTrack) {
           logger.debug(
-            `Spotiqu state ${spotiquCurrentTrack.track.id}. ` +
+            `Musifer state ${spotiquCurrentTrack.track.id}. ` +
               `isPlaying: ${queue.isPlaying}, ` +
               `progress: ${spotiquCurrentTrack.progress}ms`,
             { user: userId, passcode }
           );
         } else {
           logger.debug(
-            `Spotiqu has no current track. ` + `isPlaying: ${queue.isPlaying}.`,
+            `Musifer has no current track. ` + `isPlaying: ${queue.isPlaying}.`,
             {
               user: userId,
               passcode

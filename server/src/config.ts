@@ -3,7 +3,7 @@ import { env } from "process";
 
 const prod = env.NODE_ENV === "production";
 const scheme = prod ? "https://" : "http://";
-const host = prod ? "musifer.com" : "musifer.fi";
+const host = prod ? "www.musifer.com" : "musifer.fi";
 const port = prod ? 7999 : 8001;
 const redirectUri = prod ? "backend.musifer.com" : host + ":" + port;
 const uiPort = prod ? 80 : 3000;
