@@ -1,0 +1,14 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 14
+    },
+    "auditLog": ".062ae2a8760ff379145cd2b8663ab88fd995cd93-audit.json",
+    "files": [
+        {
+            "date": 1579990320343,
+            "name": "musifer-2020-01-26.log",
+            "hash": "01251a35bcbfc064d0745a66bf0494e4"
+        }
+    ]
+}

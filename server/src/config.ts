@@ -3,7 +3,7 @@ import { env } from "process";
 
 const prod = env.NODE_ENV === "production";
 const scheme = prod ? "https://" : "http://";
-const host = prod ? "www.musifer.com" : "musifer.fi";
+const host = prod ? "musifer.com" : "musifer.fi";
 const port = prod ? 7999 : 8001;
 const redirectUri = prod ? "backend.musifer.com" : host + ":" + port;
 const uiPort = prod ? 80 : 3000;
@@ -11,8 +11,8 @@ const uiPort = prod ? 80 : 3000;
 const whitelist = [
   scheme + redirectUri + ":" + port,
   scheme + redirectUri,
-  scheme + host + ":" + uiPort,
-  scheme + host
+  scheme + "www." + host + ":" + uiPort,
+  scheme + "www." + host
 ];
 
 export interface IConfig {
