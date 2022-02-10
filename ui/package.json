@@ -33,7 +33,7 @@
     "eject": "react-scripts-ts eject"
   },
   "devDependencies": {
-    "node-sass": "^4.12.0"
+    "node-sass": "^7.0.0"
   },
   "browserslist": [
     ">0.2%",
