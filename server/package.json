@@ -18,17 +18,7 @@
     "uuid": "8.3.2",
     "winston": "3.7.2",
     "winston-daily-rotate-file": "4.6.1",
-    "youtube-search": "1.1.6"
-  },
-  "scripts": {
-    "build": "tsc -p ./",
-    "start": "npm run build && node build/dist/src/app.js",
-    "migrate": "node-pg-migrate"
-  },
-  "devDependencies": {
-    "prettier": "2.6.2",
-    "tslint-config-prettier": "1.18.0",
-    "tslint-plugin-prettier": "2.3.0",
+    "youtube-search": "1.1.6",
     "@types/axios": "0.14.0",
     "@types/cookies": "0.7.7",
     "@types/cors": "2.8.12",
@@ -41,5 +31,15 @@
     "@types/randomstring": "1.1.8",
     "@types/uuid": "8.3.4",
     "@types/winston": "2.4.4"
+  },
+  "scripts": {
+    "build": "tsc -p ./",
+    "start": "npm run build && node build/dist/src/app.js",
+    "migrate": "node-pg-migrate"
+  },
+  "devDependencies": {
+    "prettier": "2.6.2",
+    "tslint-config-prettier": "1.18.0",
+    "tslint-plugin-prettier": "2.3.0"
   }
 }
