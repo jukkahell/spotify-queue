@@ -1,7 +1,6 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import axios from "axios";
 import * as React from "react";
-import YouTube from "react-youtube";
 import { IUser } from "./App";
 import config from "./config";
 import { IQueuedItem, IVote } from "./Queue";
@@ -147,7 +146,7 @@ export class CurrentlyPlaying extends React.Component<ICurrentlyPlayingProps, IC
 
     protected renderYoutubeTrack() {
         const progress = (this.state.progress / this.props.currentTrack!.track.duration) * 100;
-        const autoplay: 1 | 0 = 1;
+        /* const autoplay: 1 | 0 = 1;
         const controls: 0 | 1 | 2 = 0;
         const loop: 0 | 1 = 0;
         const showinfo: 0 | 1 = 0;
@@ -169,11 +168,10 @@ export class CurrentlyPlaying extends React.Component<ICurrentlyPlayingProps, IC
                 modestbranding,
                 rel
             }
-        };
+        }; */
 
         return (
             <div className="currentlyPlaying col-md-12">
-                <YouTube videoId={this.props.currentTrack!.track.id} opts={opts} onStateChange={this.onStateChange} />
                 <div className="progress">
                     <div className="progress-bar" style={{width: progress + "%"}} role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100} />
                 </div>

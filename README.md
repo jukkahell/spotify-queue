@@ -17,7 +17,7 @@ At least db password and spotify secret are mandatory. Also check that the port 
 To acquire the spotify secret go to https://developer.spotify.com/ , create new app and use that app's secret.
 
 ```
-export DATABASE_URL=postgres://musifer:Password1@localhost:5432/musifer
+export DATABASE_URL=postgres://musifer:Password1@localhost:5433/musifer
 npm run migrate up
 npm start
 ```

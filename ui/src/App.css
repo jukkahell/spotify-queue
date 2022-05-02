@@ -173,7 +173,9 @@ input.passcode {
 
 .dropdown-menu {
   background-color: #282828;
-  padding: 0; }
+  padding: 0;
+  bottom: 35px;
+}
 
 .dropdown-item {
   color: #fff;

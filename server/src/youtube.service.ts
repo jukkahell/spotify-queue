@@ -1,4 +1,4 @@
-import * as google from "googleapis";
+import { google, youtube_v3 } from "googleapis";
 import * as moment from "moment";
 import { logger } from "./logger.service";
 import secrets from "./secrets";
@@ -6,21 +6,21 @@ import { SpotifyTrack } from "./spotify";
 
 class YoutubeService {
   public static async getTracks(ids: string) {
-    const service = new google.youtube_v3.Youtube({});
+    const youtube = google.youtube("v3");
     const options = {
-      id: ids,
-      part: "snippet,contentDetails",
+      id: ids.split(","),
+      part: ["snippet", "contentDetails"],
       key: secrets.youtube.key
     };
-    return await service.videos
+    return await youtube.videos
       .list(options)
-      .then(response => {
+      .then((response: any) => {
         if (!response.data.items) {
           throw { status: 404, message: "No videos found with given ids." };
         }
 
         const videos = response.data.items
-          .map((item: google.youtube_v3.Schema$Video) => {
+          .map((item: youtube_v3.Schema$Video) => {
             if (item.contentDetails && item.snippet) {
               const duration = moment
                 .duration(item.contentDetails.duration)
@@ -48,7 +48,7 @@ class YoutubeService {
               return null;
             }
           })
-          .filter(item => item !== null) as SpotifyTrack[];
+          .filter((item: SpotifyTrack) => item !== null);
 
         if (!videos || videos.length === 0) {
           throw { status: 404, message: "No videos found from YouTube." };
@@ -56,7 +56,7 @@ class YoutubeService {
 
         return videos;
       })
-      .catch(err => {
+      .catch((err: any) => {
         logger.error(err);
         throw {
           status: 500,

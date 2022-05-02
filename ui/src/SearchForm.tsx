@@ -141,7 +141,7 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
     const search = this.parseHash();
 
     if (search["q"]) {
-      this.state = {
+      this.setState({
         search: {
           q: decodeURIComponent(search["q"]),
           type: search["type"] ? decodeURIComponent(search["type"]) : this.defaultTypes,
@@ -152,7 +152,7 @@ export class SearchForm extends React.Component<ISearchFormProps, ISearchFormSta
         artists: [],
         playlists: [],
         title: "Tracks",
-      };
+      });
       this.search();
     } else if (search["album"]) {
       this.selectAlbum(search["album"]);

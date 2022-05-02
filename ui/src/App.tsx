@@ -2,7 +2,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import axios from "axios";
 import * as React from "react";
 import { Tab, TabList, TabPanel, Tabs } from "react-tabs";
-import * as ReactTooltip from "react-tooltip";
+import ReactTooltip from 'react-tooltip';
 import { AlertBox, IAlert } from "./AlertBox";
 import "./App.css";
 import config from "./config";
@@ -236,7 +236,7 @@ export class App extends React.Component<{}, IState> {
         }
       })
       .catch(error => {
-        this.onError(error.response.data.message);
+        this.onError(error.response?.data?.message);
       });
   }
 

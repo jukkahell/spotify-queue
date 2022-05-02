@@ -11,10 +11,10 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import "bootstrap/dist/css/bootstrap.min.css";
 import * as React from "react";
-import * as ReactDOM from "react-dom";
-import axios from "../node_modules/axios";
+import axios from "axios";
 import App from "./App";
 import "./index.css";
+import { createRoot } from "react-dom/client";
 
 library.add(
     faDesktop, faMobile, faVolumeOff, faPlayCircle, faVolumeUp,
@@ -29,7 +29,5 @@ library.add(
 );
 axios.defaults.withCredentials = true;
 
-ReactDOM.render(
-    <App />,
-    document.getElementById("root") as HTMLElement
-);
+const root = createRoot(document.getElementById("root") as HTMLElement);
+root.render(<App />);

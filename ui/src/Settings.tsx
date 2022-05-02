@@ -172,7 +172,7 @@ export class Settings extends React.Component<IShareProps, IShareState> {
   }
 
   public renderSettingsOptions() {
-    return ([
+    return <>
       <div className="dropdown-item settingsMenuItem" key="name" id="name" onClick={this.editName}>
         <FontAwesomeIcon icon="edit" />
         {this.state.editName ?
@@ -238,7 +238,7 @@ export class Settings extends React.Component<IShareProps, IShareState> {
         <span className="settingName">Require Spotify login for users</span>
         <FontAwesomeIcon className={"settingOptionCheckmark " + (this.props.settings.spotifyLogin ? "active" : "inactive")} icon="check-circle" />
       </a>
-    ]);
+    </>;
   }
 
   public hideMenu() {

@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { AxiosResponse } from "axios";
 import * as Querystring from "querystring";
 import config from "./config";
 import { logger } from "./logger.service";
@@ -6,7 +6,8 @@ import secrets from "./secrets";
 import {
   SpotifyCurrentTrack,
   SpotifySearchQuery,
-  SpotifyTrack
+  SpotifyTrack,
+  SpotifyTrackResponse
 } from "./spotify";
 import { getCurrentSeconds } from "./util";
 
@@ -103,7 +104,7 @@ class SpotifyService {
           Authorization: "Bearer " + accessToken
         }
       })
-      .then(trackResponse => {
+      .then((trackResponse: AxiosResponse<SpotifyTrackResponse>) => {
         const track: SpotifyTrack = {
           artist: trackResponse.data.artists[0].name,
           id: trackUri,

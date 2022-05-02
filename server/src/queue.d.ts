@@ -112,10 +112,10 @@ export interface UserDao {
   spotify_user_id: string | null;
   points: number;
   karma: number;
-  access_token: string | null;
-  refresh_token: string | null;
-  expires_in: number | null;
-  access_token_acquired: number | null;
+  access_token?: string;
+  refresh_token?: string;
+  expires_in?: number;
+  access_token_acquired?: number;
   username: string;
 }
 export interface User {
@@ -123,10 +123,10 @@ export interface User {
   spotifyUserId: string | null; // Ensure that the owner is always found even if cookie is deleted
   points: number;
   karma: number;
-  accessToken: string | null;
-  refreshToken: string | null;
-  expiresIn: number | null;
-  accessTokenAcquired: number | null;
+  accessToken?: string;
+  refreshToken?: string;
+  expiresIn?: number;
+  accessTokenAcquired?: number;
   username: string;
 }
 

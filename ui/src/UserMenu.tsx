@@ -1,7 +1,7 @@
 import { IconProp } from "@fortawesome/fontawesome-svg-core";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import * as React from "react";
-import axios from "../node_modules/axios";
+import axios from "axios";
 import { IUser } from "./App";
 import config from "./config";
 
@@ -116,9 +116,9 @@ export class UserMenu extends React.Component<IUserMenuProps, IUserMenuState> {
             </div>
         );
         menu.push(this.state.menuOptions.map((option: string, i: number) => (
-            <a className={"dropdown-item"} key={"usermenu-" + i} href="#" id={option} onClick={this.selectMenuItem}>
+            <button className={"dropdown-item"} key={"usermenu-" + i} id={option} onClick={this.selectMenuItem}>
                 <FontAwesomeIcon icon={this.optionToIcon(option)} /> {option}
-            </a>
+            </button>
         )));
 
         return menu;

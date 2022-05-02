@@ -12,7 +12,9 @@ const whitelist = [
   scheme + redirectUri + ":" + port,
   scheme + redirectUri,
   scheme + "www." + host + ":" + uiPort,
-  scheme + "www." + host
+  scheme + "www." + host,
+  scheme + host + ":" + uiPort,
+  scheme + host
 ];
 
 export interface IConfig {

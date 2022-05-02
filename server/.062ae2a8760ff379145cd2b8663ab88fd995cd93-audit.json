@@ -6,9 +6,10 @@
     "auditLog": ".062ae2a8760ff379145cd2b8663ab88fd995cd93-audit.json",
     "files": [
         {
-            "date": 1579990320343,
-            "name": "musifer-2020-01-26.log",
-            "hash": "01251a35bcbfc064d0745a66bf0494e4"
+            "date": 1651520510330,
+            "name": "musifer-2022-05-02.log",
+            "hash": "7e41a49572536ecee4ba85866adedf1b"
         }
-    ]
+    ],
+    "hashType": "md5"
 }

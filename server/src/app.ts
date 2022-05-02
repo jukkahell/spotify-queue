@@ -5,7 +5,7 @@ import * as express from "express";
 import * as http from "http";
 import * as Keygrip from "keygrip";
 import * as randomstring from "randomstring";
-import * as youtubeSearch from "youtube-search";
+import youtubeSearch = require("youtube-search");
 import Acl, { IAuthResult } from "./acl";
 import config, { passcodeCookieExpire, userCookieExpire } from "./config";
 import Gamify from "./gamify";
@@ -36,7 +36,7 @@ const server = http.createServer(app);
 
 app.get("/createOrReactivate", async (req, res) => {
   try {
-    const queue = await QueueService.create(req.query.code, true);
+    const queue = await QueueService.create(req.query.code as string, true);
     config.passcodeCookieOptions.expires = passcodeCookieExpire();
     config.userCookieOptions.expires = userCookieExpire();
     req.cookies.set("user", queue.owner, config.userCookieOptions);
@@ -49,7 +49,7 @@ app.get("/createOrReactivate", async (req, res) => {
 
 app.get("/create", async (req, res) => {
   try {
-    const queue = await QueueService.create(req.query.code, false);
+    const queue = await QueueService.create(req.query.code as string, false);
     config.passcodeCookieOptions.expires = passcodeCookieExpire();
     config.userCookieOptions.expires = userCookieExpire();
     req.cookies.set("user", queue.owner, config.userCookieOptions);
@@ -64,7 +64,7 @@ app.get("/reactivate", async (req, res) => {
   const passcode = req.cookies.get("reactivate");
   const user = req.cookies.get("user", { signed: true });
   try {
-    const queue = await QueueService.reactivate(passcode, user, req.query.code);
+    const queue = await QueueService.reactivate(passcode, user, req.query.code as string);
     config.passcodeCookieOptions.expires = passcodeCookieExpire();
     config.userCookieOptions.expires = userCookieExpire();
     req.cookies.set("user", queue.owner, config.userCookieOptions);
@@ -83,7 +83,7 @@ app.get("/visitorAuth", async (req, res) => {
     const user = await QueueService.visitorSpotifyLogin(
       passcode,
       userId,
-      req.query.code
+      req.query.code as string
     );
     config.userCookieOptions.expires = userCookieExpire();
     req.cookies.set("user", user.id, config.userCookieOptions);
@@ -220,7 +220,7 @@ app.get("/devices", async (req, res) => {
             accessToken,
             queue.isPlaying,
             activeDeviceId!
-          ).catch(err => {
+          ).catch((err: any) => {
             logger.error("Unable to set device to spotify...", {
               user,
               passcode
@@ -261,7 +261,7 @@ app.put("/device", async (req, res) => {
           });
           res.status(200).json({ message: "OK" });
         })
-        .catch(err => {
+        .catch((err: any) => {
           logger.error("Unable to update device to spotify.", {
             user,
             passcode
@@ -700,7 +700,7 @@ app.post("/updateSettings", async (req, res) => {
 app.get("/playlist", async (req, res) => {
   const user = req.cookies.get("user", { signed: true });
   const passcode = req.cookies.get("passcode");
-  const playlistId = req.query.id;
+  const playlistId = req.query.id as string;
   try {
     const queue = await QueueService.getQueue(passcode);
     const tracks = await SpotifyService.getPlaylistTracks(
@@ -768,7 +768,7 @@ app.get("/selectAlbum", async (req, res) => {
     );
     const albumTracks = await SpotifyService.getAlbum(
       accessToken,
-      req.query.id,
+      req.query.id as string,
       user,
       passcode
     );
@@ -790,13 +790,13 @@ app.get("/selectArtist", async (req, res) => {
     );
     const tracks = await SpotifyService.getArtistTopTracks(
       accessToken,
-      req.query.id,
+      req.query.id as string,
       user,
       passcode
     );
     const albums = await SpotifyService.getArtistAlbums(
       accessToken,
-      req.query.id,
+      req.query.id as string,
       user,
       passcode
     );

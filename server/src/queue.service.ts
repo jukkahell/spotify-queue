@@ -1,6 +1,6 @@
 import moment = require("moment");
 import * as randomstring from "randomstring";
-import * as uuid from "uuid/v1";
+import { v1 as uuid } from 'uuid';
 import { QueryResult } from "../node_modules/@types/pg";
 import Acl from "./acl";
 import config from "./config";
@@ -907,10 +907,10 @@ class QueueService {
           id: userId,
           spotifyUserId: null,
           points: config.gamify.initialPoints,
-          accessToken: null,
-          refreshToken: null,
-          expiresIn: null,
-          accessTokenAcquired: null,
+          accessToken: undefined,
+          refreshToken: undefined,
+          expiresIn: undefined,
+          accessTokenAcquired: undefined,
           username: userId,
           karma: 0
         };
@@ -1794,12 +1794,12 @@ class QueueService {
           queue.passcode,
           userId
         );
-        const progress =
-          new Date().getTime() - currentTrack!.startedTime!.getTime();
         await db.query("UPDATE queue SET is_playing = false WHERE id = $1", [
           queue.passcode
         ]);
         if (currentTrack) {
+          const progress =
+          new Date().getTime() - currentTrack!.startedTime!.getTime();
           await db.query("UPDATE tracks SET progress = $1 WHERE id = $2", [
             progress,
             currentTrack.id
@@ -2423,7 +2423,7 @@ class QueueService {
             queue.accessToken!,
             queue.isPlaying,
             queue.deviceId
-          ).catch(err => {
+          ).catch((err: any) => {
             logger.error("Unable to select device...", {
               user: userId,
               passcode

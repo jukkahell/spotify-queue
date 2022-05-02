@@ -48,4 +48,22 @@ export interface Spotify {
   searchQuery: SpotifySearchQuery;
 }
 
+export interface SpotifyTrackResponse {
+  name: string;
+  artists: SpotifyTrackArtist[];
+  duration_ms: number;
+  album: {
+    images: SpotifyTrackAlbum[]
+  }
+}
+
+export interface SpotifyTrackArtist {
+  id: string;
+  name: string;
+}
+
+export interface SpotifyTrackAlbum {
+  url: string;
+}
+
 export default Spotify;
