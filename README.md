@@ -1,30 +1,29 @@
-# Run server locally
-
-Install Postgres 11
+# Run server & ui locally
 
 ```
-cd server/
-npm i
-
-create database spotiqu;
-create user spotiqu with encrypted password 'Password1';
-grant all privileges on database spotiqu to spotiqu;
-
+cd server
 cp src/secrets.ts.template src/secrets.ts
+cp .env.example .env
 ```
 Set valid values to secret.ts
 At least db password and spotify secret are mandatory. Also check that the port is correct in db/index.ts.
 To acquire the spotify secret go to https://developer.spotify.com/ , create new app and use that app's secret.
 
 ```
-export DATABASE_URL=postgres://spotiqu:Password1@localhost:5433/spotiqu
-npm run migrate up
-npm start
+docker-compose up --build
 ```
 
-# Run ui locally
+# Build and deploy
 
-```
-npm i
-npm start
-```
+Open WSL2 (or wherever Docker is running)
+
+Server:
+cd server
+docker build . -t eu.gcr.io/spotiqu/server:latest
+docker push eu.gcr.io/spotiqu/server:latest
+
+UI:
+cd ui
+docker build . -t eu.gcr.io/spotiqu/ui:latest
+docker push eu.gcr.io/spotiqu/ui:latest
+

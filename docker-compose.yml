@@ -1,0 +1,49 @@
+version: '3.4'
+services:
+  server:
+    build:
+      dockerfile: Dockerfile
+      context: ./server
+      # Only will build development stage from our dockerfile
+      target: development
+    env_file:
+      - server/.env
+    volumes:
+      - ./server:/usr/src/app/
+      - /usr/src/app/server/node_modules
+    # Run a command against the development stage of the image
+    command: npm run start
+    ports:
+      - 8001:8001
+    depends_on:
+      - db
+  ui:
+    build:
+      dockerfile: Dockerfile
+      target: development
+      context: ./ui
+    volumes:
+      - ./ui:/usr/src/app
+      - /usr/src/app/server/node_modules
+    command: npm run start
+    stdin_open: true
+    ports:
+      - 3000:3000
+    depends_on:
+      - server
+    environment:
+      - NODE_ENV=development
+  db:
+    image: postgres:14.1-alpine
+    restart: always
+    environment:
+      - POSTGRES_DB=spotiqu
+      - POSTGRES_USER=spotiqu
+      - POSTGRES_PASSWORD=password1
+    ports:
+      - '5432:5432'
+    volumes: 
+      - db:/var/lib/postgresql/data
+volumes:
+  db:
+    driver: local

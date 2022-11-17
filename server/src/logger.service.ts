@@ -1,7 +1,6 @@
 import { format } from "winston";
 import * as winston from "winston";
 import config from "./config";
-const DailyRotateFile = require("winston-daily-rotate-file");
 
 const logFormat = format.printf(info => {
   const p = info.passcode ? info.passcode : "";
@@ -29,11 +28,5 @@ export const logger = winston.createLogger({
   format: format.combine(format.colorize(), format.timestamp(), logFormat),
   transports: [
     new winston.transports.Console(),
-    new DailyRotateFile({
-      filename: "musifer-%DATE%.log",
-      datePattern: "YYYY-MM-DD",
-      zippedArchive: false,
-      maxFiles: "14d"
-    })
   ]
 });
